@@ -1,3 +1,5 @@
+// Modified by the lenerdz/zmk-studio fork: keys are drawn with BindingLabel, which
+// adds icons and readable labels for behaviors that are not plain key presses.
 import {
   PhysicalLayout,
   Keymap as KeymapMsg,
@@ -8,7 +10,8 @@ import {
   LayoutZoom,
   PhysicalLayout as PhysicalLayoutComp,
 } from "./PhysicalLayout";
-import { HidUsageLabel } from "./HidUsageLabel";
+import { BindingLabel } from "./BindingLabel";
+import { getBindingDisplay } from "./bindingDisplay";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -48,11 +51,13 @@ export const Keymap = ({
       };
     }
 
+    const binding = keymap.layers[selectedLayerIndex].bindings[i];
+    const behavior = behaviors[binding.behaviorId];
+    const display = getBindingDisplay(binding, behavior, keymap.layers);
+
     return {
       id: `${keymap.layers[selectedLayerIndex].id}-${i}`,
-      header:
-        behaviors[keymap.layers[selectedLayerIndex].bindings[i].behaviorId]
-          ?.displayName || "Unknown",
+      header: display.header ?? (behavior?.displayName || "Unknown"),
       x: k.x / 100.0,
       y: k.y / 100.0,
       width: k.width / 100,
@@ -60,11 +65,7 @@ export const Keymap = ({
       r: (k.r || 0) / 100.0,
       rx: (k.rx || 0) / 100.0,
       ry: (k.ry || 0) / 100.0,
-      children: (
-        <HidUsageLabel
-          hid_usage={keymap.layers[selectedLayerIndex].bindings[i].param1}
-        />
-      ),
+      children: <BindingLabel display={display} />,
     };
   });
 
