@@ -61,8 +61,9 @@ changing it back makes it unsaved and then saved again.
 
 More than 16 slots are sent in several requests (`sendLedColors`), and a `BUSY` answer is
 tried again a few times (`src/lights/ledProtocol.ts`). The firmware has to be built with
-`CONFIG_ZMK_STUDIO_RPC_RX_BUF_SIZE=256`: a request with 16 entries is about 170 bytes
-and the default receive buffer of ZMK Studio holds 30.
+`CONFIG_ZMK_STUDIO_RPC_RX_BUF_SIZE=256` (corne-zmk does it in `config/corne_left.conf`):
+a request with 16 entries is 158 bytes with the framing, and the default receive buffer of
+ZMK Studio holds 30 and drops the bytes that do not fit.
 
 ## Files
 
@@ -77,7 +78,7 @@ and the default receive buffer of ZMK Studio holds 30.
 | `useKeyboardView.ts` | Loads the physical layout, the keymap and the behaviors to draw the keys |
 | `exportDtsi.ts`, `dtsiTemplate.ts` | The text of `led_colors.dtsi` (the template is generated) |
 | `keyNames.ts`, `text.ts` | The names of the keys for the comments of the exported file, in plain ASCII |
-| `ViewSwitch.tsx` | The Keyboard and Lights buttons of the header |
+| `ViewSwitch.tsx` | The Keys and Lights buttons of the header |
 | `demo/` | A keyboard that lives in the browser (see [`demo/README.md`](demo/README.md)) |
 | `testUtils.ts` | A helper of the tests; the app does not use it |
 

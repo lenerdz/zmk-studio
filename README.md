@@ -62,7 +62,7 @@ them.
 ## Light colors (the Lights tab)
 
 With a firmware that has editable light maps, the header has a second view, **Lights**,
-next to **Keyboard**. It draws the keyboard and lets you paint the color of every LED
+next to **Keys** (the key editor). It draws the keyboard and lets you paint the color of every LED
 (the one under each key and the underglow) of every layer:
 
 - Choose a layer, choose a color (one of the 14 colors of the palette of

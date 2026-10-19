@@ -63,7 +63,7 @@ Lights (abaixo) acrescenta requisições próprias e só é usada quando o firmw
 ## Cores das luzes (a aba Lights)
 
 Com um firmware que tem mapas de luzes editáveis, o cabeçalho ganha uma segunda visão,
-**Lights**, ao lado de **Keyboard**. Ela desenha o teclado e permite pintar a cor de cada
+**Lights**, ao lado de **Keys** (o editor de teclas). Ela desenha o teclado e permite pintar a cor de cada
 LED (o que fica sob cada tecla e o underglow) de cada camada:
 
 - Escolha uma camada, escolha uma cor (uma das 14 cores da paleta de `led_colors.dtsi`, o
