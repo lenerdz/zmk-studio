@@ -1,9 +1,35 @@
-import { defineConfig } from "vite";
+import { fileURLToPath } from "node:url";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react-swc";
+
+// Modified by the lenerdz/zmk-studio fork: the RPC client is vendored (see
+// src/vendor/zmk-studio-ts-client/README.md), so the package name resolves to it.
+// tsconfig.json has the same mapping for the type checker.
+const vendoredClient = fileURLToPath(
+  new URL("./src/vendor/zmk-studio-ts-client", import.meta.url),
+);
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: [
+      {
+        find: /^@zmkfirmware\/zmk-studio-ts-client$/,
+        replacement: `${vendoredClient}/index.ts`,
+      },
+      {
+        find: /^@zmkfirmware\/zmk-studio-ts-client\/(.*)$/,
+        replacement: `${vendoredClient}/$1`,
+      },
+    ],
+  },
+  // Added by the lenerdz/zmk-studio fork: "npm test". The tests are plain
+  // TypeScript with no DOM: the demo keyboard and the protocol code run in Node.
+  test: {
+    environment: "node",
+    include: ["src/**/*.test.ts"],
+  },
   // Modified by the lenerdz/zmk-studio fork: GitHub Pages serves the app from a
   // subdirectory, so the workflow sets VITE_BASE_PATH (e.g. "/zmk-studio/").
   base: process.env.VITE_BASE_PATH ?? "/",

@@ -32,6 +32,9 @@ jobs:
 
       - run: npm ci
 
+      # A version whose tests fail is not published.
+      - run: npm test
+
       # The site lives at https://<owner>.github.io/<repository>/, so the app
       # is built with that base path (see vite.config.ts).
       - run: npm run build

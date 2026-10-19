@@ -2,12 +2,26 @@
   "compilerOptions": {
     "target": "ES2020",
     "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",
+
+    /*
+     * Modified by the lenerdz/zmk-studio fork: the RPC client is vendored in
+     * src/vendor/zmk-studio-ts-client (see the README.md in that folder), so the
+     * package name resolves to it. vite.config.ts has the same alias.
+     */
+    "paths": {
+      "@zmkfirmware/zmk-studio-ts-client": [
+        "./src/vendor/zmk-studio-ts-client/index.ts"
+      ],
+      "@zmkfirmware/zmk-studio-ts-client/*": [
+        "./src/vendor/zmk-studio-ts-client/*"
+      ]
+    },
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
