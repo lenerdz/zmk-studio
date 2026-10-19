@@ -63,10 +63,10 @@ mudanças afetam apenas como as teclas são desenhadas e como o app é hospedado
 
 Verificado com as stories do Storybook, cujos dados de exemplo
 ([`src/keyboard/corne.mock.ts`](src/keyboard/corne.mock.ts)) seguem o código-fonte do ZMK
-e do [zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix). Ainda não verificado
-com um teclado real conectado por USB. Se uma tecla mostrar um rótulo errado ou vazio, o
-nome do comportamento exibido na dica (tooltip) dela é o que as regras de
-`src/keyboard/bindingDisplay.tsx` precisam tratar.
+e do [zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix), e usado com um Corne
+real conectado por USB: os ícones e os rótulos funcionaram (relato do dono do teclado).
+Se uma tecla mostrar um rótulo errado ou vazio, o nome do comportamento exibido na dica
+(tooltip) dela é o que as regras de `src/keyboard/bindingDisplay.tsx` precisam tratar.
 
 ## Como usar
 

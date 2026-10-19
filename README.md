@@ -61,10 +61,10 @@ the firmware. The changes only affect how keys are drawn and how the app is host
 
 Checked with the Storybook stories, whose sample data
 ([`src/keyboard/corne.mock.ts`](src/keyboard/corne.mock.ts)) follows the sources of ZMK
-and [zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix). Not yet checked against
-a real keyboard connected over USB. If a key shows a wrong or empty label, the behavior
-name shown in its tooltip is what the rules in `src/keyboard/bindingDisplay.tsx` have to
-handle.
+and [zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix), and used with a real
+Corne connected over USB: the icons and labels worked (reported by the keyboard's owner).
+If a key shows a wrong or empty label, the behavior name shown in its tooltip is what the
+rules in `src/keyboard/bindingDisplay.tsx` have to handle.
 
 ## Using it
 
