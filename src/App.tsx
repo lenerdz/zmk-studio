@@ -1,3 +1,6 @@
+// Modified by the lenerdz/zmk-studio fork: the Lights tab (and the switch between it and
+// the keymap editor), Save and Discard that also act on the light maps, and a demo
+// keyboard to try the app without hardware.
 import { AppHeader } from "./AppHeader";
 
 import { create_rpc_connection } from "@zmkfirmware/zmk-studio-ts-client";
@@ -29,6 +32,11 @@ import { valueAfter } from "./misc/async";
 import { AppFooter } from "./AppFooter";
 import { AboutModal } from "./AboutModal";
 import { LicenseNoticeModal } from "./misc/LicenseNoticeModal";
+import { LedMapsContext } from "./lights/LedMapsContext";
+import { LightsTab } from "./lights/LightsTab";
+import { useLedMaps } from "./lights/useLedMaps";
+import { AppView, ViewSwitch } from "./lights/ViewSwitch";
+import { createDemoTransport } from "./lights/demo/demoTransport";
 
 declare global {
   interface Window {
@@ -36,8 +44,24 @@ declare global {
   }
 }
 
+// Keyboards that live in the browser, to try the app without hardware. They are
+// always there in development and in the published app with "?demo" in the
+// address. The second one answers like a firmware without the light maps, to
+// see that the Lights tab is not offered then.
+const DEMO_ENABLED =
+  import.meta.env.DEV || new URLSearchParams(window.location.search).has("demo");
+
 const TRANSPORTS: TransportFactory[] = [
   navigator.serial && { label: "USB", connect: serial_connect },
+  ...(DEMO_ENABLED
+    ? [
+        { label: "Demo keyboard", connect: async () => createDemoTransport() },
+        {
+          label: "Demo keyboard (no light maps)",
+          connect: async () => createDemoTransport({ lights: false }),
+        },
+      ]
+    : []),
   ...(navigator.bluetooth && navigator.userAgent.indexOf("Linux") >= 0
     ? [{ label: "BLE", connect: gatt_connect }]
     : []),
@@ -202,20 +226,59 @@ function App() {
     updateLockState();
   }, [conn, setLockState]);
 
+  const [view, setView] = useState<AppView>("keys");
+  const ledMaps = useLedMaps(conn, lockState, doIt);
+
+  // The Lights tab exists only for a keyboard whose firmware has the light maps.
+  const lightsAvailable =
+    ledMaps.status === "ready" || ledMaps.status === "error";
+
+  useEffect(() => {
+    if (!lightsAvailable && view === "lights") {
+      setView("keys");
+    }
+  }, [lightsAvailable, view]);
+
+  // Whether the keymap has changes that are not saved. Unknown (the question
+  // failed) counts as yes, so that nothing is left behind.
+  const keymapMayHaveChanges = useCallback(async () => {
+    if (!conn.conn) {
+      return false;
+    }
+
+    const resp = await call_rpc(conn.conn, {
+      keymap: { checkUnsavedChanges: true },
+    });
+    return resp.keymap?.checkUnsavedChanges !== false;
+  }, [conn]);
+
   const save = useCallback(() => {
     async function doSave() {
       if (!conn.conn) {
         return;
       }
 
-      let resp = await call_rpc(conn.conn, { keymap: { saveChanges: true } });
-      if (!resp.keymap?.saveChanges || resp.keymap?.saveChanges.err) {
-        console.error("Failed to save changes", resp.keymap?.saveChanges);
+      // The keymap is written only when it changed: a light edit must not
+      // rewrite it.
+      if (await keymapMayHaveChanges()) {
+        let resp = await call_rpc(conn.conn, { keymap: { saveChanges: true } });
+        if (!resp.keymap?.saveChanges || resp.keymap?.saveChanges.err) {
+          console.error("Failed to save changes", resp.keymap?.saveChanges);
+        }
+      }
+
+      try {
+        await ledMaps.save();
+      } catch (e) {
+        console.error("Failed to save the light changes", e);
+        window.alert(
+          `Failed to save the light changes: ${e instanceof Error ? e.message : e}`
+        );
       }
     }
 
     doSave();
-  }, [conn]);
+  }, [conn, ledMaps, keymapMayHaveChanges]);
 
   const discard = useCallback(() => {
     async function doDiscard() {
@@ -223,11 +286,19 @@ function App() {
         return;
       }
 
-      let resp = await call_rpc(conn.conn, {
-        keymap: { discardChanges: true },
-      });
-      if (!resp.keymap?.discardChanges) {
-        console.error("Failed to discard changes", resp);
+      if (await keymapMayHaveChanges()) {
+        let resp = await call_rpc(conn.conn, {
+          keymap: { discardChanges: true },
+        });
+        if (!resp.keymap?.discardChanges) {
+          console.error("Failed to discard changes", resp);
+        }
+      }
+
+      try {
+        await ledMaps.discard();
+      } catch (e) {
+        console.error("Failed to discard the light changes", e);
       }
 
       reset();
@@ -235,7 +306,7 @@ function App() {
     }
 
     doDiscard();
-  }, [conn]);
+  }, [conn, ledMaps, keymapMayHaveChanges]);
 
   const resetSettings = useCallback(() => {
     async function doReset() {
@@ -284,35 +355,49 @@ function App() {
     <ConnectionContext.Provider value={conn}>
       <LockStateContext.Provider value={lockState}>
         <UndoRedoContext.Provider value={doIt}>
-          <UnlockModal />
-          <ConnectModal
-            open={!conn.conn}
-            transports={TRANSPORTS}
-            onTransportCreated={onConnect}
-          />
-          <AboutModal open={showAbout} onClose={() => setShowAbout(false)} />
-          <LicenseNoticeModal
-            open={showLicenseNotice}
-            onClose={() => setShowLicenseNotice(false)}
-          />
-          <div className="bg-base-100 text-base-content h-full max-h-[100vh] w-full max-w-[100vw] inline-grid grid-cols-[auto] grid-rows-[auto_1fr_auto] overflow-hidden">
-            <AppHeader
-              connectedDeviceLabel={connectedDeviceName}
-              canUndo={canUndo}
-              canRedo={canRedo}
-              onUndo={undo}
-              onRedo={redo}
-              onSave={save}
-              onDiscard={discard}
-              onDisconnect={disconnect}
-              onResetSettings={resetSettings}
+          <LedMapsContext.Provider value={ledMaps}>
+            <UnlockModal />
+            <ConnectModal
+              open={!conn.conn}
+              transports={TRANSPORTS}
+              onTransportCreated={onConnect}
             />
-            <Keyboard />
-            <AppFooter
-              onShowAbout={() => setShowAbout(true)}
-              onShowLicenseNotice={() => setShowLicenseNotice(true)}
+            <AboutModal open={showAbout} onClose={() => setShowAbout(false)} />
+            <LicenseNoticeModal
+              open={showLicenseNotice}
+              onClose={() => setShowLicenseNotice(false)}
             />
-          </div>
+            <div className="bg-base-100 text-base-content h-full max-h-[100vh] w-full max-w-[100vw] inline-grid grid-cols-[auto] grid-rows-[auto_1fr_auto] overflow-hidden">
+              <AppHeader
+                connectedDeviceLabel={connectedDeviceName}
+                viewSwitch={
+                  <ViewSwitch
+                    view={view}
+                    onChange={setView}
+                    lightsAvailable={lightsAvailable}
+                  />
+                }
+                canUndo={canUndo}
+                canRedo={canRedo}
+                onUndo={undo}
+                onRedo={redo}
+                onSave={save}
+                onDiscard={discard}
+                onDisconnect={disconnect}
+                onResetSettings={resetSettings}
+              />
+              {/* The keymap editor stays mounted while the Lights tab is open,
+                  so it keeps its selection and does not ask the keyboard again. */}
+              <div className={view === "keys" ? "contents" : "hidden"}>
+                <Keyboard />
+              </div>
+              {view === "lights" && <LightsTab />}
+              <AppFooter
+                onShowAbout={() => setShowAbout(true)}
+                onShowLicenseNotice={() => setShowLicenseNotice(true)}
+              />
+            </div>
+          </LedMapsContext.Provider>
         </UndoRedoContext.Provider>
       </LockStateContext.Provider>
     </ConnectionContext.Provider>

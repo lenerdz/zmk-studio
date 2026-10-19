@@ -1,9 +1,11 @@
 /*
- * Sample data for the stories: the physical layout, behaviors and keymap of a Corne
- * running https://github.com/lenerdz/corne-zmk (taken from its
- * config/corne.keymap at commit 672e9f1). The behavior names and parameter
- * descriptions follow the sources of ZMK and zmk-rgb-matrix; they were not
- * captured from a real keyboard. Not used by the app.
+ * Sample data for the stories and for the demo keyboard (src/lights/demo): the
+ * physical layout, behaviors and keymap of a Corne running
+ * https://github.com/lenerdz/corne-zmk (taken from its config/corne.keymap at
+ * commit 672e9f1). The behavior names and parameter descriptions follow the
+ * sources of ZMK and zmk-rgb-matrix; they were not captured from a real keyboard.
+ * The app only uses it for the demo keyboard (in development, or with "?demo" in
+ * the address).
  */
 import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
 import type {

@@ -29,9 +29,21 @@ export function useUndoRedo(): [
 
   const doIt = async (doCb: DoCallback, preserveRedo?: boolean) => {
     setLocked(true);
-    let undo = await doCb();
 
-    setUndoStack([[doCb, undo], ...undoStack]);
+    // Modified by the lenerdz/zmk-studio fork: a failed operation (the keyboard
+    // refused a color change, for example) must not leave undo and redo locked.
+    let undo: UndoCallback;
+    try {
+      undo = await doCb();
+    } catch (e) {
+      setLocked(false);
+      throw e;
+    }
+
+    // Modified by the lenerdz/zmk-studio fork: build the new stack from the latest
+    // one, not from the stack this function saw when it was created. Two
+    // operations that finish close together would otherwise lose one entry.
+    setUndoStack((stack) => [[doCb, undo], ...stack]);
     if (!preserveRedo) {
       setRedoStack([]);
     }
