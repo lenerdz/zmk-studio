@@ -54,17 +54,53 @@ Other changes:
   [`.github/workflows/pages.yml`](.github/workflows/pages.yml) publishes it on GitHub Pages.
 - Storybook stories with the keymap of a Corne, one per layer (`Keyboard/Keymap (Corne)`).
 
-What does not change: the protocol, what is read from or written to the keyboard, and
-the firmware. The changes only affect how keys are drawn and how the app is hosted.
+What does not change: the editing of the keymap, and what the app reads from or writes to
+the keyboard for it. The icons only affect how keys are drawn and how the app is hosted;
+the Lights tab (below) adds requests of its own and is used only when the firmware has
+them.
 
-### Status
+## Light colors (the Lights tab)
 
-Checked with the Storybook stories, whose sample data
+With a firmware that has editable light maps, the header has a second view, **Lights**,
+next to **Keyboard**. It draws the keyboard and lets you paint the color of every LED
+(the one under each key and the underglow) of every layer:
+
+- Choose a layer, choose a color (one of the 14 colors of the palette of
+  `led_colors.dtsi`, the system color picker or a hex value) and drag across the LEDs.
+  The keyboard shows the colors when you let go.
+- Fill all the LEDs, only the keys or only the underglow, and put a layer back to the
+  colors the firmware was built with.
+- **Save** and **Discard** in the header act on the keys and on the lights together, and
+  **Undo** and **Redo** cover both. **Restore Stock Settings** also puts the stock colors
+  back.
+- **Export led_colors.dtsi** downloads the colors as the `config/led_colors.dtsi` of
+  [corne-zmk](https://github.com/lenerdz/corne-zmk), to build them into the firmware as
+  the new defaults.
+
+It needs the [zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix) module of lenerdz
+(branch `corne-fixes`) and the protocol of
+[zmk-studio-messages](https://github.com/lenerdz/zmk-studio-messages), which add six
+requests and one notification to the keymap subsystem of ZMK Studio. With any other
+firmware the Lights view is not offered (the keyboard answers "RPC not found" to the first
+request) and the app works as before. The app talks to the keyboard with a vendored copy of
+the TypeScript client that includes those messages
+([`src/vendor/zmk-studio-ts-client`](src/vendor/zmk-studio-ts-client/README.md)).
+
+To try it without a keyboard, use the **Demo keyboard** (see [Development](#development)).
+How it works, the protocol and the files: [`src/lights/README.md`](src/lights/README.md).
+
+## Status
+
+The icons were checked with the Storybook stories, whose sample data
 ([`src/keyboard/corne.mock.ts`](src/keyboard/corne.mock.ts)) follows the sources of ZMK
 and [zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix), and used with a real
 Corne connected over USB: the icons and labels worked (reported by the keyboard's owner).
 If a key shows a wrong or empty label, the behavior name shown in its tooltip is what the
 rules in `src/keyboard/bindingDisplay.tsx` have to handle.
+
+The Lights tab was tried in a browser against the demo keyboard, through the same framing
+and message encoding as with a real keyboard, and is covered by `npm test`. It has **not
+been tried on a real keyboard** yet.
 
 ## Using it
 
@@ -74,6 +110,8 @@ rules in `src/keyboard/bindingDisplay.tsx` have to handle.
    [ZMK Studio documentation](https://zmk.dev/docs/features/studio).
 3. Connect the keyboard over USB (on a split keyboard, the half that runs Studio, the
    central one), choose **USB**, and unlock it with the key bound to `&studio_unlock`.
+4. If the firmware has editable light maps, choose **Lights** in the header to edit the
+   colors.
 
 ## Development
 
@@ -90,11 +128,29 @@ limits). To see the key labels without a keyboard:
 npm run storybook
 ```
 
+To try the app, including the Lights tab, without a keyboard, choose **Demo keyboard** in
+the connection list. It is always there with `npm run dev`; on the published app, add
+`?demo` to the address (<https://lenerdz.github.io/zmk-studio/?demo>). **Demo keyboard (no
+light maps)** answers like a firmware without them. See
+[`src/lights/demo/README.md`](src/lights/demo/README.md).
+
+To run the tests:
+
+```
+npm test
+```
+
 To build as the workflow does (the site lives under `/<repository>/`):
 
 ```
 VITE_BASE_PATH=/zmk-studio/ npm run build
 ```
+
+The workflow runs `npm test` before building, so a version whose tests fail is not
+published.
+
+Two files of the Lights tab are generated from `config/led_colors.dtsi` of corne-zmk; see
+[`src/lights/README.md`](src/lights/README.md) for how to generate them again.
 
 ### Keeping up with upstream
 
@@ -108,15 +164,23 @@ The upstream workflows `release-please` and `tauri-build` need secrets and a bui
 matrix that this fork does not have, so they are disabled in the repository settings
 (Actions tab). The files themselves are identical to upstream.
 
+The RPC client is vendored, so `package.json` no longer lists
+`@zmkfirmware/zmk-studio-ts-client`: a new version of it, or new upstream messages, have to
+be ported by hand (see [`src/vendor/zmk-studio-ts-client`](src/vendor/zmk-studio-ts-client/README.md)).
+
 ## Files changed from upstream
 
 Added: `src/keyboard/bindingDisplay.tsx`, `src/keyboard/BindingLabel.tsx`,
 `src/keyboard/Keymap.stories.tsx`, `src/keyboard/corne.mock.ts`,
-`.github/workflows/pages.yml`, `README.pt-BR.md`.
+`src/lights/` (the Lights tab, the demo keyboard and their tests),
+`src/vendor/zmk-studio-ts-client/` (the RPC client with the messages of the fork),
+`scripts/generate-led-data.mjs`, `.github/workflows/pages.yml`, `README.pt-BR.md`.
 
 Modified: `README.md` (replaced), `NOTICE`, `.gitignore`, `index.html`, `download.html`,
-`vite.config.ts`, `src/keyboard/Keymap.tsx`, `src/hid-usage-name-overrides.json`,
-`src/AppFooter.tsx`, `src/AppHeader.tsx`, `src/ConnectModal.tsx`, `src/DownloadPage.tsx`.
+`package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.ts`,
+`src/keyboard/Keymap.tsx`, `src/hid-usage-name-overrides.json`, `src/App.tsx`,
+`src/AppFooter.tsx`, `src/AppHeader.tsx`, `src/ConnectModal.tsx`, `src/DownloadPage.tsx`,
+`src/rpc/logging.ts`, `src/undoRedo.ts`.
 
 The modified source files carry a comment saying so; for the JSON, HTML and text files,
 this list is the notice.
