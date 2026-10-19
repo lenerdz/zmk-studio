@@ -50,6 +50,10 @@ export const Media: Story = {
   args: { selectedLayerIndex: 5 },
 };
 
+export const Steno: Story = {
+  args: { selectedLayerIndex: 6 },
+};
+
 export const SelectedKey: Story = {
   args: { selectedLayerIndex: 4, selectedKeyPosition: 14 },
 };

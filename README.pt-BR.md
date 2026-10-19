@@ -35,6 +35,7 @@ tecla mostra a descrição completa (por exemplo, `Bluetooth: Select Profile 2`)
 | `Output Selection` | USB, Bluetooth, alternar ou nenhuma saída |
 | `Underglow`, `Backlight` e comportamentos de iluminação que informam os mesmos comandos | Um ícone e uma palavra curta por comando: `on/off`, `hue`, `sat`, `bri`, `speed`, `time`, `effect`, `reset`, `color`, com um sinal de mais ou de menos para subir e descer |
 | Comportamentos chamados `fx_*` (um por efeito de iluminação) | O cabeçalho `Effect`, um ícone escolhido pelo nome do efeito e o próprio nome |
+| `Steno On`, `Steno Off` (os macros do corne-zmk que vão para a camada de estenotipia e voltam) | Um ícone de teclado (riscado no desligar) e o texto `steno on` ou `steno off` |
 | `Studio Unlock`, `Caps Word`, `Reset`, `Bootloader`, `External Power`, `Mouse Key Press`, `Grave/Escape` | Um ícone ou um texto curto |
 | `Transparent`, `None` | Um ícone esmaecido |
 | Qualquer outro | Um rótulo montado a partir das descrições de parâmetros que o firmware informa: uso HID, nome da camada, número ou nome da constante |
@@ -146,7 +147,13 @@ Se uma tecla mostrar um rótulo errado ou vazio, o nome do comportamento exibido
 
 A aba Lights foi testada em um navegador com o teclado de demonstração, pela mesma
 moldura (framing) e codificação de mensagens usadas com um teclado real, e é coberta por
-`npm test`. Ela **ainda não foi testada em um teclado real**.
+`npm test`. Em um Corne real conectado por USB ela funcionou (relato do dono do teclado,
+sem detalhar cada operação: pintar, Save, Discard, restaurar, a cópia para a metade
+direita), então nenhuma dessas operações tem confirmação individual.
+
+As teclas `Steno On` e `Steno Off` e a camada STENO foram conferidas em um navegador com o
+teclado de demonstração e na story `Keyboard/Keymap (Corne)` do Storybook, não em um
+teclado real.
 
 O arraste de teclas foi testado em um navegador com o teclado de demonstração: troca,
 cópia com Ctrl e com Alt, alternância entre elas durante o arraste, Esc, soltar fora das

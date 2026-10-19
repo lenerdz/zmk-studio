@@ -34,7 +34,7 @@ describe("fetchLedInfo", () => {
 
     expect(await fetchLedInfo(conn)).toEqual({
       slotCount: 54,
-      layerIds: [0, 1, 2, 3, 4, 5],
+      layerIds: [0, 1, 2, 3, 4, 5, 6],
       unsavedChanges: false,
     });
   });
@@ -50,7 +50,7 @@ describe("fetchLedMap", () => {
   it("gives the colors of each layer: the defaults at first", async () => {
     const { conn } = connectDemo();
 
-    for (const id of [0, 1, 2, 3, 4, 5]) {
+    for (const id of [0, 1, 2, 3, 4, 5, 6]) {
       const colors = await fetchLedMap(conn, id);
       expect(colors).toHaveLength(LED_PROTOCOL_SLOTS);
       expect(colors).toEqual([...DEMO_DEFAULT_COLORS[id]]);

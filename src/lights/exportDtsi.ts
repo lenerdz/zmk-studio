@@ -26,6 +26,7 @@ const MAP_LABELS: Readonly<Record<number, string>> = {
   3: "map_nav",
   4: "map_sys",
   5: "map_media",
+  6: "map_steno",
 };
 
 interface HalfSlots {

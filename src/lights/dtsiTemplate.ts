@@ -13,7 +13,7 @@ export const DTSI_HEADER = String.raw`/*
  *
  * Este arquivo e incluido no final de corne.keymap. Cada bloco "&map_<camada>"
  * preenche o slot-colors do efeito static de uma camada: o de um overlay de
- * camada (FN1 a MEDIA, cobrem os 27 LEDs de cada metade enquanto a camada esta
+ * camada (FN1 a STENO, cobrem os 27 LEDs de cada metade enquanto a camada esta
  * ativa) ou o do efeito fx_static (mapa da camada base, QWERTY). A estrutura
  * (overlays, condicoes, efeitos e o layer-id de cada mapa) fica em
  * corne.keymap; aqui ficam so as cores.

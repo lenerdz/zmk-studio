@@ -27,7 +27,7 @@ offered and the app works like the original ZMK Studio.
   with.
 - **Export led_colors.dtsi**: downloads the colors of all the layers as the
   `config/led_colors.dtsi` of corne-zmk, to build them into the firmware as the new
-  defaults. The button is only enabled for that keyboard (54 LEDs per layer, layers 0 to 5).
+  defaults. The button is only enabled for that keyboard (54 LEDs per layer, layers 0 to 6).
 - A zoom selector for the drawing (remembered by the browser).
 
 The edits live in the keyboard's memory until you press **Save** (top right), which saves
@@ -41,7 +41,7 @@ the colors back to the defaults the firmware was built with.
 The firmware keeps, for each layer, one color per slot. There are 54 slots per layer on the
 Corne: slot 0 to 41 are the LEDs under the keys (the slot is the position of the key), 42
 to 47 are the underglow of the left half and 48 to 53 the underglow of the right half. The
-layers have the ids of the keymap layers (0 to 5).
+layers have the ids of the keymap layers (0 to 6).
 
 The requests are in the keymap subsystem of ZMK Studio, with tags from 100 so that a
 future upstream request cannot collide with them:
@@ -94,7 +94,7 @@ support. Two things are specific to the Corne of corne-zmk:
 - `ledLayout.ts` has the coordinates of the Corne underglow (taken from its overlays); any
   other keyboard gets its extra LEDs in a plain row.
 - The export (`exportDtsi.ts`) writes the layout of `config/led_colors.dtsi` of corne-zmk,
-  and `canExportDtsi` only allows it for 54 slots and the layer ids 0 to 5.
+  and `canExportDtsi` only allows it for 54 slots and the layer ids 0 to 6.
 
 ## Generated files
 
@@ -119,9 +119,10 @@ the color helpers, the text of the export (it is read back and compared with the
 it came from), the names of the keys, the requests against the demo keyboard (through the
 real framing and message encoding) and the logic of the demo keyboard.
 
-## What was not tested
+## Status on a real keyboard
 
 All of this was tried in a browser against the demo keyboard and covered by the tests
-above. It was **not tested on a real keyboard**: the firmware side compiles in the CI of
-corne-zmk, but the live edits, the saving to flash, the discard, the settings reset and
-the copy of the colors to the right half have not been tried on the keyboard.
+above. On a real Corne the owner reported that it worked, without detail about each
+operation, so the live edits, the saving to flash, the discard, the settings reset and the
+copy of the colors to the right half have no individual confirmation. The firmware side
+compiles in the CI of corne-zmk.

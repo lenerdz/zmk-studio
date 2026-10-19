@@ -67,6 +67,18 @@ describe("bindingName", () => {
     expect(media.slice(18, 22)).toEqual(["PREV", "PLAY/PAUSE", "NEXT", "STOP"]);
   });
 
+  it("names the steno layer, its macros and the keys that lead to it", () => {
+    const steno = names(6);
+
+    // the macro that leaves, then the first letters of the left hand
+    expect(steno.slice(0, 6)).toEqual(["STENO_OFF", "Q", "W", "E", "R", "T"]);
+    // the layer key of the home row, and the bottom row that swallows the keys
+    expect(steno[12]).toBe("QWERTY");
+    expect(steno.slice(24, 36)).toEqual(Array(12).fill("--"));
+    // the SYS layer: the effect, the macro that enters and the layer key
+    expect(names(4).slice(32, 35)).toEqual(["STATIC", "STENO_ON", "STENO"]);
+  });
+
   it("writes arrows and the space bar with letters", () => {
     expect(names(3).slice(18, 22)).toEqual(["LEFT", "DOWN", "UP", "RIGHT"]);
     expect(names(0)[38]).toBe("SPACE");

@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import type { Request } from "@zmkfirmware/zmk-studio-ts-client";
 import { ErrorConditions } from "@zmkfirmware/zmk-studio-ts-client/meta";
 import { SetLedColorsResponse } from "@zmkfirmware/zmk-studio-ts-client/keymap";
+import { corneKeymap } from "../../keyboard/corne.mock";
 import { DEMO_DEFAULT_COLORS } from "./demoColors";
 import { DemoDevice } from "./demoDevice";
 
@@ -24,6 +25,16 @@ describe("DemoDevice", () => {
     const request = keymap({ getLedInfo: true });
 
     expect(device.handle(request).response.requestId).toBe(request.requestId);
+  });
+
+  it("has a color map for each layer of the keymap", () => {
+    const device = new DemoDevice();
+
+    const { response } = device.handle(keymap({ getLedInfo: true }));
+
+    expect(response.keymap?.getLedInfo?.layerIds).toEqual(
+      corneKeymap.layers.map((layer) => layer.id),
+    );
   });
 
   it("reports the unsaved light state once for each change", () => {
@@ -127,7 +138,9 @@ describe("DemoDevice", () => {
 
     const { response } = device.handle(keymap({ getKeymap: true }));
 
-    expect(response.keymap?.getKeymap?.layers).toHaveLength(6);
+    expect(response.keymap?.getKeymap?.layers).toHaveLength(
+      corneKeymap.layers.length,
+    );
   });
 
   it("goes back to the stock keymap and colors on a settings reset", () => {

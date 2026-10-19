@@ -30,6 +30,8 @@ import {
   Eraser,
   Flame,
   Gauge,
+  Keyboard,
+  KeyboardOff,
   Layers,
   Lightbulb,
   LightbulbOff,
@@ -339,6 +341,17 @@ function specialDisplay(ctx: Context): Part | undefined {
   if (effect) {
     const name = effect[1].replace(/[_-]+/g, " ");
     return { header: "Effect", icon: effectIcon(name), text: name };
+  }
+
+  // The two macros of corne-zmk that switch to the steno layer (Plover) and back
+  // to QWERTY, named "Steno On" and "Steno Off".
+  const steno = /^steno[\s_-]+(on|off)$/.exec(ctx.name);
+  if (steno) {
+    return {
+      header: "",
+      icon: steno[1] === "on" ? Keyboard : KeyboardOff,
+      text: `steno ${steno[1]}`,
+    };
   }
 
   return lightingDisplay(ctx);

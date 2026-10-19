@@ -37,6 +37,7 @@ const LAYER_IDS = {
   map_nav: 3,
   map_sys: 4,
   map_media: 5,
+  map_steno: 6,
 };
 const SLOTS = 54;
 

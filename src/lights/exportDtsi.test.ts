@@ -13,7 +13,7 @@ import {
 } from "./exportDtsi";
 import { PALETTE } from "./ledColors";
 
-const LAYER_IDS = [0, 1, 2, 3, 4, 5];
+const LAYER_IDS = [0, 1, 2, 3, 4, 5, 6];
 const LABELS = [
   "fx_static",
   "map_fn1",
@@ -21,6 +21,7 @@ const LABELS = [
   "map_nav",
   "map_sys",
   "map_media",
+  "map_steno",
 ];
 
 const layer = (
@@ -96,8 +97,9 @@ describe("canExportDtsi", () => {
 
   it("refuses other layers", () => {
     expect(canExportDtsi(54, [0, 1, 2, 3, 4])).toBe(false);
-    expect(canExportDtsi(54, [0, 1, 2, 3, 4, 5, 6])).toBe(false);
-    expect(canExportDtsi(54, [0, 1, 2, 3, 4, 7])).toBe(false);
+    expect(canExportDtsi(54, [0, 1, 2, 3, 4, 5])).toBe(false);
+    expect(canExportDtsi(54, [0, 1, 2, 3, 4, 5, 6, 7])).toBe(false);
+    expect(canExportDtsi(54, [0, 1, 2, 3, 4, 5, 7])).toBe(false);
   });
 });
 
@@ -155,8 +157,8 @@ describe("buildDtsi", () => {
 
     expect(hasNonAscii(text)).toBe(false);
     expect(text).toContain("/* Camada 2: Midia * / &x { }; */");
-    // still six blocks and the same colors
-    expect(parse(text).size).toBe(6);
+    // still seven blocks and the same colors
+    expect(parse(text).size).toBe(7);
   });
 
   it("is plain ASCII with Unix line endings", () => {
