@@ -4,6 +4,9 @@ import react from "@vitejs/plugin-react-swc";
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // Modified by the lenerdz/zmk-studio fork: GitHub Pages serves the app from a
+  // subdirectory, so the workflow sets VITE_BASE_PATH (e.g. "/zmk-studio/").
+  base: process.env.VITE_BASE_PATH ?? "/",
   // prevent vite from obscuring rust errors
   clearScreen: false,
   // Tauri expects a fixed port, fail if that port is not available

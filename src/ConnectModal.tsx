@@ -1,3 +1,4 @@
+// Modified by the lenerdz/zmk-studio fork: the download link follows the Vite base path.
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
@@ -247,7 +248,7 @@ function noTransportsOptionsPrompt() {
           </li>
           <li>
             Download our{" "}
-            <ExternalLink href="/download">
+            <ExternalLink href={`${import.meta.env.BASE_URL}download`}>
               cross platform application
             </ExternalLink>
             .

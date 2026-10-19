@@ -1,3 +1,4 @@
+// Modified by the lenerdz/zmk-studio fork: adds the "Unofficial fork" link.
 export interface AppFooterProps {
   onShowAbout: () => void;
   onShowLicenseNotice: () => void;
@@ -17,6 +18,15 @@ export const AppFooter = ({
         -{" "}
         <a className="hover:text-primary hover:cursor-pointer" onClick={onShowLicenseNotice}>
           License NOTICE
+        </a>{" "}
+        -{" "}
+        <a
+          className="hover:text-primary hover:cursor-pointer"
+          href="https://github.com/lenerdz/zmk-studio"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Unofficial fork
         </a>
       </div>
     </div>
