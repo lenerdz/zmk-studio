@@ -1,5 +1,6 @@
 // Modified by the lenerdz/zmk-studio fork: keys are drawn with BindingLabel, which
-// adds icons and readable labels for behaviors that are not plain key presses.
+// adds icons and readable labels for behaviors that are not plain key presses, and a key
+// can be dragged onto another one.
 import {
   PhysicalLayout,
   Keymap as KeymapMsg,
@@ -12,6 +13,7 @@ import {
 } from "./PhysicalLayout";
 import { BindingLabel } from "./BindingLabel";
 import { getBindingDisplay } from "./bindingDisplay";
+import type { DropMode } from "./keyDrag";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -23,6 +25,8 @@ export interface KeymapProps {
   selectedLayerIndex: number;
   selectedKeyPosition: number | undefined;
   onKeyPositionClicked: (keyPosition: number) => void;
+  /** A key was dragged onto another one of the same layer. */
+  onKeyPositionDropped?: (from: number, to: number, mode: DropMode) => void;
 }
 
 export const Keymap = ({
@@ -33,6 +37,7 @@ export const Keymap = ({
   selectedLayerIndex,
   selectedKeyPosition,
   onKeyPositionClicked,
+  onKeyPositionDropped,
 }: KeymapProps) => {
   if (!keymap.layers[selectedLayerIndex]) {
     return <></>;
@@ -77,6 +82,7 @@ export const Keymap = ({
       zoom={scale}
       selectedPosition={selectedKeyPosition}
       onPositionClicked={onKeyPositionClicked}
+      onPositionDropped={onKeyPositionDropped}
     />
   );
 };

@@ -1,3 +1,5 @@
+// Modified by the lenerdz/zmk-studio fork: a key can be dragged onto another key (see
+// keyDrag.ts and useKeyDrag.ts).
 import {
   CSSProperties,
   PropsWithChildren,
@@ -6,6 +8,9 @@ import {
   useState,
 } from "react";
 import { Key } from "./Key";
+import { KeyDragGhost } from "./KeyDragGhost";
+import type { Drop, DropMode } from "./keyDrag";
+import { useKeyDrag } from "./useKeyDrag";
 
 export type KeyPosition = PropsWithChildren<{
   id: string;
@@ -35,6 +40,8 @@ interface PhysicalLayoutProps {
   hoverZoom?: boolean;
   zoom?: LayoutZoom;
   onPositionClicked?: (position: number) => void;
+  /** A key was dragged onto another one. Dragging is off when this is not given. */
+  onPositionDropped?: (from: number, to: number, mode: DropMode) => void;
 }
 
 interface PhysicalLayoutPositionLocation {
@@ -79,10 +86,15 @@ export const PhysicalLayout = ({
   selectedPosition,
   oneU = 48,
   onPositionClicked,
+  onPositionDropped,
   ...props
 }: PhysicalLayoutProps) => {
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const drag = useKeyDrag(
+    onPositionDropped &&
+      ((drop: Drop) => onPositionDropped(drop.from, drop.to, drop.mode)),
+  );
 
   useLayoutEffect(() => {
     const element = ref.current;
@@ -126,15 +138,30 @@ export const PhysicalLayout = ({
     .map((k) => k.y + k.height)
     .reduce((a, b) => Math.max(a, b), 0);
 
+  const dragged = drag.state.phase === "dragging" ? drag.state : undefined;
+  const draggedKey = dragged ? positions[dragged.from] : undefined;
+
   const positionItems = positions.map((p, idx) => (
-    <div className="absolute hover:z-10" style={scalePosition(p, oneU)}>
+    <div
+      key={p.id}
+      className="absolute hover:z-10"
+      style={scalePosition(p, oneU)}
+    >
       <div
-        key={p.id}
-        onClick={() => onPositionClicked?.(idx)}
+        data-key-position={idx}
+        onPointerDown={(e) => drag.press(idx, e)}
+        onClick={() => {
+          // The click that ends a drag is not a click on the key.
+          if (!drag.consumeClick()) {
+            onPositionClicked?.(idx);
+          }
+        }}
       >
         <Key
           oneU={oneU}
           selected={idx === selectedPosition}
+          dragging={dragged?.from === idx}
+          dropMode={dragged?.over === idx ? dragged.mode : undefined}
           {...p}
         />
       </div>
@@ -154,6 +181,18 @@ export const PhysicalLayout = ({
       {...props}
     >
       {positionItems}
+      {dragged && draggedKey && (
+        <KeyDragGhost
+          x={dragged.x}
+          y={dragged.y}
+          width={(draggedKey.width * oneU - 2) * scale}
+          height={(draggedKey.height * oneU - 2) * scale}
+          mode={dragged.mode}
+          droppable={dragged.over !== undefined}
+        >
+          {draggedKey.children}
+        </KeyDragGhost>
+      )}
     </div>
   );
 };

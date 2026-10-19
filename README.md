@@ -56,8 +56,48 @@ Other changes:
 
 What does not change: the editing of the keymap, and what the app reads from or writes to
 the keyboard for it. The icons only affect how keys are drawn and how the app is hosted;
-the Lights tab (below) adds requests of its own and is used only when the firmware has
-them.
+dragging keys (below) writes with the same request as the binding picker; the Lights tab
+(further below) adds requests of its own and is used only when the firmware has them.
+
+## Moving keys by dragging (the Keys view)
+
+In the **Keys** view, press a key and drag it onto another key of the same layer:
+
+- **Drop** it on another key and the two keys **swap** their bindings (behavior and
+  parameters). Hold **Ctrl** or **Alt**, before or during the drag, and the drop
+  **copies** instead: the key you dropped on gets the binding of the dragged key, and the
+  dragged key stays as it was.
+- While you drag, the key you pressed is dimmed with a dashed outline, a smaller copy of
+  it follows the pointer with a tag (`Swap` or `Copy`), and the key under the pointer is
+  highlighted. The tag reads `drop on a key` while the pointer is over no key.
+- **Esc** cancels the drag. Releasing the pointer anywhere that is not a key does nothing.
+- The drag starts after the pointer moves 6 pixels, so a plain click still selects a key.
+  After a drop, the key you dropped on is selected, which shows its binding in the picker
+  below.
+- A drop is **one step** of Undo and Redo, even for a swap, which changes two keys. It is
+  written to the keyboard with the `setLayerBinding` request, the same one the binding
+  picker uses, so **Save** and **Discard** work as before. If the keyboard refuses a
+  write, the keys already written are put back and the app shows an alert.
+- Keys that are rotated (the thumb keys of the Corne) and the keys of the right half work
+  like any other. Mouse, pen and touch use the same pointer events.
+
+The rules (what a drop does, how a drag starts, ends and is cancelled) are plain functions
+in [`src/keyboard/keyDrag.ts`](src/keyboard/keyDrag.ts), covered by
+[`src/keyboard/keyDrag.test.ts`](src/keyboard/keyDrag.test.ts).
+[`src/keyboard/useKeyDrag.ts`](src/keyboard/useKeyDrag.ts) listens to the pointer,
+[`src/keyboard/KeyDragGhost.tsx`](src/keyboard/KeyDragGhost.tsx) draws what follows it and
+the edit itself (`doDropKey`, `writeEdits`) is in
+[`src/keyboard/Keyboard.tsx`](src/keyboard/Keyboard.tsx).
+
+**A change to the binding picker.** Upstream's
+[`src/behaviors/BehaviorBindingPicker.tsx`](src/behaviors/BehaviorBindingPicker.tsx) told
+the keyboard about a change from an effect that compared its own copy of the binding with
+the one it was given. When a binding changed from outside the picker, as a drop on the
+selected key does (undo and redo do too), that comparison could run with the old value and
+write it back, and the old and the new value could then replace each other without
+stopping. This was seen on the demo keyboard after copying a key onto another with Ctrl
+held, and it is gone with this change. In this fork the picker tells the keyboard only when
+the user changes something in its own controls.
 
 ## Light colors (the Lights tab)
 
@@ -102,6 +142,12 @@ The Lights tab was tried in a browser against the demo keyboard, through the sam
 and message encoding as with a real keyboard, and is covered by `npm test`. It has **not
 been tried on a real keyboard** yet.
 
+Dragging keys was tried in a browser against the demo keyboard: swap, copy with Ctrl and
+with Alt, switching between them during the drag, Esc, dropping outside the keys, the
+rotated thumb keys, a layer other than the first, Undo and Redo, and editing a key with the
+picker afterwards. The rules are covered by `npm test`. It has **not been tried on a real
+keyboard**, and touch input has not been tried on any device.
+
 ## Using it
 
 1. Open the page in a browser that supports WebSerial (Chrome, Edge or another
@@ -110,7 +156,9 @@ been tried on a real keyboard** yet.
    [ZMK Studio documentation](https://zmk.dev/docs/features/studio).
 3. Connect the keyboard over USB (on a split keyboard, the half that runs Studio, the
    central one), choose **USB**, and unlock it with the key bound to `&studio_unlock`.
-4. If the firmware has editable light maps, choose **Lights** in the header to edit the
+4. In **Keys**, click a key to edit it, or drag it onto another key to swap the two
+   (hold Ctrl or Alt to copy).
+5. If the firmware has editable light maps, choose **Lights** in the header to edit the
    colors.
 
 ## Development
@@ -172,13 +220,17 @@ be ported by hand (see [`src/vendor/zmk-studio-ts-client`](src/vendor/zmk-studio
 
 Added: `src/keyboard/bindingDisplay.tsx`, `src/keyboard/BindingLabel.tsx`,
 `src/keyboard/Keymap.stories.tsx`, `src/keyboard/corne.mock.ts`,
+`src/keyboard/keyDrag.ts`, `src/keyboard/keyDrag.test.ts`, `src/keyboard/useKeyDrag.ts`,
+`src/keyboard/KeyDragGhost.tsx` (dragging keys),
 `src/lights/` (the Lights tab, the demo keyboard and their tests),
 `src/vendor/zmk-studio-ts-client/` (the RPC client with the messages of the fork),
 `scripts/generate-led-data.mjs`, `.github/workflows/pages.yml`, `README.pt-BR.md`.
 
 Modified: `README.md` (replaced), `NOTICE`, `.gitignore`, `index.html`, `download.html`,
 `package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.ts`,
-`src/keyboard/Keymap.tsx`, `src/hid-usage-name-overrides.json`, `src/App.tsx`,
+`src/keyboard/Keymap.tsx`, `src/keyboard/Key.tsx`, `src/keyboard/Keyboard.tsx`,
+`src/keyboard/PhysicalLayout.tsx`, `src/behaviors/BehaviorBindingPicker.tsx`,
+`src/hid-usage-name-overrides.json`, `src/App.tsx`,
 `src/AppFooter.tsx`, `src/AppHeader.tsx`, `src/ConnectModal.tsx`, `src/DownloadPage.tsx`,
 `src/rpc/logging.ts`, `src/undoRedo.ts`.
 

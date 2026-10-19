@@ -1,8 +1,16 @@
+// Modified by the lenerdz/zmk-studio fork: a key can be the one being dragged onto
+// another key, or the one a dragged key is over (see keyDrag.ts).
 import { PropsWithChildren } from "react";
+import { ArrowLeftRight, Copy } from "lucide-react";
 import BehaviorShortNames from "./behavior-short-names.json";
+import type { DropMode } from "./keyDrag";
 
 interface KeyProps {
   selected?: boolean;
+  /** This key is the one being dragged. */
+  dragging?: boolean;
+  /** A dragged key is over this one; dropping it would swap or copy. */
+  dropMode?: DropMode;
   width: number;
   height: number;
   oneU: number;
@@ -36,6 +44,8 @@ const shortenHeader = (header: string | undefined) => {
 
 export const Key = ({
   selected = false,
+  dragging = false,
+  dropMode,
   width,
   height,
   oneU,
@@ -45,11 +55,13 @@ export const Key = ({
 }: PropsWithChildren<KeyProps>) => {
   const pixelWidth = width * oneU - 2;
   const pixelHeight = height * oneU - 2;
+  const DropIcon = dropMode === "copy" ? Copy : ArrowLeftRight;
 
   return (
     <button
-      className={`group rounded relative flex justify-center items-center cursor-pointer transition-all hover:shadow-xl hover:ring-1 hover:ring-gray-300 hover:scale-125 ${selected ? "bg-primary text-primary-content" : "bg-base-100 text-base-content"
-        }`}
+      // touch-none: a finger dragging from a key moves the key, not the page.
+      className={`group rounded relative flex justify-center items-center cursor-pointer select-none touch-none transition-all hover:shadow-xl hover:ring-1 hover:ring-gray-300 hover:scale-125 ${selected ? "bg-primary text-primary-content" : "bg-base-100 text-base-content"
+        } ${dragging ? "opacity-40 outline outline-2 outline-dashed outline-primary" : ""} ${dropMode ? "ring-2 ring-accent shadow-xl scale-125" : ""}`}
       style={{
         width: `${pixelWidth}px`,
         height: `${pixelHeight}px`,
@@ -58,6 +70,11 @@ export const Key = ({
     >
       <div className={`absolute text-xs ${selected ? "text-primary-content" : "z1text-base-content"} opacity-80 top-1 text-nowrap left-1/2 font-light -translate-x-1/2 text-center`}>{shortenHeader(header)}</div>
       {children}
+      {dropMode && (
+        <span className="absolute -top-2 -right-2 z-20 rounded-full bg-accent p-0.5 text-black shadow">
+          <DropIcon size={12} strokeWidth={2.5} aria-hidden="true" />
+        </span>
+      )}
     </button>
   );
 };

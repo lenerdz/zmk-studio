@@ -57,8 +57,52 @@ Outras mudanças:
 - Stories do Storybook com o keymap de um Corne, uma por camada (`Keyboard/Keymap (Corne)`).
 
 O que não muda: a edição do keymap e o que o app lê do teclado ou grava nele para isso.
-Os ícones afetam apenas como as teclas são desenhadas e como o app é hospedado; a aba
-Lights (abaixo) acrescenta requisições próprias e só é usada quando o firmware as tem.
+Os ícones afetam apenas como as teclas são desenhadas e como o app é hospedado; arrastar
+teclas (abaixo) grava com a mesma requisição do seletor de binding; a aba Lights (mais
+abaixo) acrescenta requisições próprias e só é usada quando o firmware as tem.
+
+## Mover teclas arrastando (a visão Keys)
+
+Na visão **Keys**, pressione uma tecla e arraste-a sobre outra tecla da mesma camada:
+
+- **Solte** sobre outra tecla e as duas teclas **trocam** de binding (comportamento e
+  parâmetros). Segure **Ctrl** ou **Alt**, antes ou durante o arraste, e o drop
+  **copia**: a tecla sobre a qual você soltou recebe o binding da tecla arrastada, e a
+  tecla arrastada continua como estava.
+- Durante o arraste, a tecla pressionada fica esmaecida com um contorno tracejado, uma
+  cópia menor dela segue o ponteiro com uma etiqueta (`Swap` ou `Copy`) e a tecla sob o
+  ponteiro é destacada. A etiqueta mostra `drop on a key` enquanto o ponteiro não está
+  sobre nenhuma tecla.
+- **Esc** cancela o arraste. Soltar o ponteiro em qualquer lugar que não seja uma tecla
+  não faz nada.
+- O arraste começa depois que o ponteiro se move 6 pixels; por isso um clique simples
+  continua selecionando a tecla. Depois de um drop, a tecla sobre a qual você soltou fica
+  selecionada, o que mostra o binding dela no seletor logo abaixo.
+- Um drop é **um passo** de Undo e de Redo, mesmo numa troca, que altera duas teclas. Ele
+  é gravado no teclado com a requisição `setLayerBinding`, a mesma que o seletor de binding
+  usa; por isso **Save** e **Discard** funcionam como antes. Se o teclado recusar uma
+  gravação, as teclas já gravadas voltam ao que eram e o app mostra um alerta.
+- Teclas giradas (as teclas do polegar do Corne) e as teclas da metade direita funcionam
+  como qualquer outra. Mouse, caneta e toque usam os mesmos eventos de ponteiro.
+
+As regras (o que um drop faz, como um arraste começa, termina e é cancelado) são funções
+puras em [`src/keyboard/keyDrag.ts`](src/keyboard/keyDrag.ts), cobertas por
+[`src/keyboard/keyDrag.test.ts`](src/keyboard/keyDrag.test.ts).
+[`src/keyboard/useKeyDrag.ts`](src/keyboard/useKeyDrag.ts) escuta o ponteiro,
+[`src/keyboard/KeyDragGhost.tsx`](src/keyboard/KeyDragGhost.tsx) desenha o que o segue e a
+edição em si (`doDropKey`, `writeEdits`) está em
+[`src/keyboard/Keyboard.tsx`](src/keyboard/Keyboard.tsx).
+
+**Uma mudança no seletor de binding.** O
+[`src/behaviors/BehaviorBindingPicker.tsx`](src/behaviors/BehaviorBindingPicker.tsx) do
+upstream avisava o teclado de uma mudança a partir de um efeito que comparava a sua própria
+cópia do binding com o binding que recebia. Quando um binding mudava por fora do seletor,
+como acontece num drop sobre a tecla selecionada (e também no undo e no redo), essa
+comparação podia rodar com o valor antigo e gravá-lo de volta, e o valor antigo e o novo
+podiam então se substituir sem parar. Isso foi visto no teclado de demonstração depois de
+copiar uma tecla sobre outra com Ctrl pressionado, e deixou de acontecer com esta mudança.
+Neste fork o seletor só avisa o teclado quando o usuário muda algo nos seus próprios
+controles.
 
 ## Cores das luzes (a aba Lights)
 
@@ -104,6 +148,12 @@ A aba Lights foi testada em um navegador com o teclado de demonstração, pela m
 moldura (framing) e codificação de mensagens usadas com um teclado real, e é coberta por
 `npm test`. Ela **ainda não foi testada em um teclado real**.
 
+O arraste de teclas foi testado em um navegador com o teclado de demonstração: troca,
+cópia com Ctrl e com Alt, alternância entre elas durante o arraste, Esc, soltar fora das
+teclas, as teclas giradas do polegar, uma camada que não a primeira, Undo e Redo, e a
+edição de uma tecla pelo seletor depois. As regras são cobertas por `npm test`. Ele
+**não foi testado em um teclado real**, e o toque não foi testado em nenhum dispositivo.
+
 ## Como usar
 
 1. Abra a página em um navegador com suporte a WebSerial (Chrome, Edge ou outro
@@ -112,7 +162,9 @@ moldura (framing) e codificação de mensagens usadas com um teclado real, e é 
    [documentação do ZMK Studio](https://zmk.dev/docs/features/studio).
 3. Conecte o teclado por USB (em um teclado dividido, a metade que executa o Studio, a
    central), escolha **USB** e desbloqueie com a tecla associada a `&studio_unlock`.
-4. Se o firmware tiver mapas de luzes editáveis, escolha **Lights** no cabeçalho para
+4. Em **Keys**, clique em uma tecla para editá-la, ou arraste-a sobre outra tecla para
+   trocar as duas (segure Ctrl ou Alt para copiar).
+5. Se o firmware tiver mapas de luzes editáveis, escolha **Lights** no cabeçalho para
    editar as cores.
 
 ## Desenvolvimento
@@ -175,13 +227,17 @@ upstream, precisam ser portadas à mão (veja
 
 Adicionados: `src/keyboard/bindingDisplay.tsx`, `src/keyboard/BindingLabel.tsx`,
 `src/keyboard/Keymap.stories.tsx`, `src/keyboard/corne.mock.ts`,
+`src/keyboard/keyDrag.ts`, `src/keyboard/keyDrag.test.ts`, `src/keyboard/useKeyDrag.ts`,
+`src/keyboard/KeyDragGhost.tsx` (arrastar teclas),
 `src/lights/` (a aba Lights, o teclado de demonstração e seus testes),
 `src/vendor/zmk-studio-ts-client/` (o cliente RPC com as mensagens do fork),
 `scripts/generate-led-data.mjs`, `.github/workflows/pages.yml`, `README.pt-BR.md`.
 
 Modificados: `README.md` (substituído), `NOTICE`, `.gitignore`, `index.html`, `download.html`,
 `package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.ts`,
-`src/keyboard/Keymap.tsx`, `src/hid-usage-name-overrides.json`, `src/App.tsx`,
+`src/keyboard/Keymap.tsx`, `src/keyboard/Key.tsx`, `src/keyboard/Keyboard.tsx`,
+`src/keyboard/PhysicalLayout.tsx`, `src/behaviors/BehaviorBindingPicker.tsx`,
+`src/hid-usage-name-overrides.json`, `src/App.tsx`,
 `src/AppFooter.tsx`, `src/AppHeader.tsx`, `src/ConnectModal.tsx`, `src/DownloadPage.tsx`,
 `src/rpc/logging.ts`, `src/undoRedo.ts`.
 

@@ -1,3 +1,5 @@
+// Modified by the lenerdz/zmk-studio fork: a key of the layer can be dragged onto another
+// one to swap their bindings, or to copy one onto the other (see keyDrag.ts).
 import React, {
   SetStateAction,
   useCallback,
@@ -27,10 +29,12 @@ import { ConnectionContext } from "../rpc/ConnectionContext";
 import { UndoRedoContext } from "../undoRedo";
 import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
 import { produce } from "immer";
+import { Move } from "lucide-react";
 import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { deserializeLayoutZoom, LayoutZoom } from "./PhysicalLayout";
 import { useLocalStorageState } from "../misc/useLocalStorageState";
+import { BindingEdit, DropMode, planDrop } from "./keyDrag";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -292,6 +296,99 @@ export default function Keyboard() {
     [conn, keymap, undoRedo, selectedLayerIndex, selectedKeyPosition]
   );
 
+  // Writes the bindings of a drop (or of undoing it) to the keyboard, one key
+  // after the other. If the keyboard refuses one, the ones already written are put
+  // back, so the keyboard and the screen never disagree.
+  const writeEdits = useCallback(
+    async (layerId: number, edits: BindingEdit[], undoing: boolean) => {
+      const connection = conn.conn;
+      if (!connection) {
+        throw new Error("Not connected");
+      }
+
+      const wanted = (edit: BindingEdit) =>
+        undoing ? edit.previous : edit.binding;
+      const before = (edit: BindingEdit) =>
+        undoing ? edit.binding : edit.previous;
+      const write = async (keyPosition: number, binding: BehaviorBinding) => {
+        const resp = await call_rpc(connection, {
+          keymap: { setLayerBinding: { layerId, keyPosition, binding } },
+        });
+        return (
+          resp.keymap?.setLayerBinding ===
+          SetLayerBindingResponse.SET_LAYER_BINDING_RESP_OK
+        );
+      };
+
+      const written: BindingEdit[] = [];
+      for (const edit of edits) {
+        if (!(await write(edit.keyPosition, wanted(edit)))) {
+          for (const done of written.reverse()) {
+            await write(done.keyPosition, before(done));
+          }
+          throw new Error(
+            `The keyboard did not accept the change of the key ${edit.keyPosition}`
+          );
+        }
+        written.push(edit);
+      }
+
+      setKeymap(
+        produce((draft: any) => {
+          const layer = draft.layers.find((l: Layer) => l.id === layerId);
+          if (!layer) {
+            return;
+          }
+
+          for (const edit of edits) {
+            layer.bindings[edit.keyPosition] = wanted(edit);
+          }
+        })
+      );
+    },
+    [conn, setKeymap]
+  );
+
+  // A key was dragged onto another one: swap the two bindings, or copy the first
+  // onto the second. One step of undo and redo, whichever it was.
+  const doDropKey = useCallback(
+    (from: number, to: number, mode: DropMode) => {
+      const layer = keymap?.layers[selectedLayerIndex];
+      if (!layer) {
+        return;
+      }
+
+      // Whatever the drop does, the key that received it is the one to look at.
+      setSelectedKeyPosition(to);
+
+      const edits = planDrop(layer.bindings, from, to, mode);
+      if (edits.length === 0) {
+        return;
+      }
+
+      const layerId = layer.id;
+      undoRedo?.(async () => {
+        await writeEdits(layerId, edits, false);
+
+        return async () => {
+          try {
+            await writeEdits(layerId, edits, true);
+          } catch (e) {
+            console.error("Failed to undo the change of the keys", e);
+          }
+        };
+      })?.catch((e) => {
+        console.error("Failed to change the keys", e);
+        window.alert(
+          `Failed to ${mode === "copy" ? "copy" : "swap"} the keys: ${
+            e instanceof Error ? e.message : e
+          }`
+        );
+      });
+    },
+    [keymap, selectedLayerIndex, undoRedo, writeEdits]
+  );
+
   let selectedBinding = useMemo(() => {
     if (keymap == null || selectedKeyPosition == null || !keymap.layers[selectedLayerIndex]) {
       return null;
@@ -539,7 +636,12 @@ export default function Keyboard() {
             selectedLayerIndex={selectedLayerIndex}
             selectedKeyPosition={selectedKeyPosition}
             onKeyPositionClicked={setSelectedKeyPosition}
+            onKeyPositionDropped={doDropKey}
           />
+          <p className="absolute bottom-2 left-2 flex select-none items-center gap-1 text-[0.7rem] opacity-70">
+            <Move size={12} aria-hidden="true" />
+            Drag a key onto another to swap them. Hold Ctrl or Alt to copy. Esc cancels.
+          </p>
           <select
             className="absolute top-2 right-2 h-8 rounded px-2"
             value={keymapScale}

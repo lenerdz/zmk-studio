@@ -59,38 +59,55 @@ export const BehaviorBindingPicker = ({
     [behaviors]
   );
 
-  useEffect(() => {
+  // Modified by the lenerdz/zmk-studio fork: the keyboard is told about a change
+  // when the user makes it here (the handlers below call this function), not by
+  // an effect. Upstream compared the picker's own copy of the binding with the
+  // `binding` prop in an effect. A binding that changed from outside the picker
+  // (dropping a key on the selected key, undo, redo) could then be written back
+  // with its old value, and the old and the new value could keep replacing each
+  // other for as long as the page stayed open.
+  const changeBinding = (
+    nextBehaviorId: number,
+    nextParam1?: number,
+    nextParam2?: number
+  ) => {
+    setBehaviorId(nextBehaviorId);
+    setParam1(nextParam1);
+    setParam2(nextParam2);
+
     if (
-      binding.behaviorId === behaviorId &&
-      binding.param1 === param1 &&
-      binding.param2 === param2
+      binding.behaviorId === nextBehaviorId &&
+      binding.param1 === nextParam1 &&
+      binding.param2 === nextParam2
     ) {
       return;
     }
 
-    if (!metadata) {
+    const nextMetadata = behaviors.find((b) => b.id == nextBehaviorId)?.metadata;
+
+    if (!nextMetadata) {
       console.error(
         "Can't find metadata for the selected behaviorId",
-        behaviorId
+        nextBehaviorId
       );
       return;
     }
 
     if (
       validateBinding(
-        metadata,
+        nextMetadata,
         layers.map(({ id }) => id),
-        param1,
-        param2
+        nextParam1,
+        nextParam2
       )
     ) {
       onBindingChanged({
-        behaviorId,
-        param1: param1 || 0,
-        param2: param2 || 0,
+        behaviorId: nextBehaviorId,
+        param1: nextParam1 || 0,
+        param2: nextParam2 || 0,
       });
     }
-  }, [behaviorId, param1, param2]);
+  };
 
   useEffect(() => {
     setBehaviorId(binding.behaviorId);
@@ -106,9 +123,7 @@ export const BehaviorBindingPicker = ({
           value={behaviorId}
           className="h-8 rounded"
           onChange={(e) => {
-            setBehaviorId(parseInt(e.target.value));
-            setParam1(0);
-            setParam2(0);
+            changeBinding(parseInt(e.target.value), 0, 0);
           }}
         >
           {sortedBehaviors.map((b) => (
@@ -124,8 +139,8 @@ export const BehaviorBindingPicker = ({
           param1={param1}
           param2={param2}
           layers={layers}
-          onParam1Changed={setParam1}
-          onParam2Changed={setParam2}
+          onParam1Changed={(value) => changeBinding(behaviorId, value, param2)}
+          onParam2Changed={(value) => changeBinding(behaviorId, param1, value)}
         />
       )}
     </div>
