@@ -390,6 +390,45 @@ export function setLedColorsResponseToJSON(object: SetLedColorsResponse): string
   }
 }
 
+export enum SetDisplaySettingResponse {
+  SET_DISPLAY_SETTING_RESP_OK = 0,
+  SET_DISPLAY_SETTING_RESP_INVALID_ID = 1,
+  SET_DISPLAY_SETTING_RESP_INVALID_VALUE = 2,
+  UNRECOGNIZED = -1,
+}
+
+export function setDisplaySettingResponseFromJSON(object: any): SetDisplaySettingResponse {
+  switch (object) {
+    case 0:
+    case "SET_DISPLAY_SETTING_RESP_OK":
+      return SetDisplaySettingResponse.SET_DISPLAY_SETTING_RESP_OK;
+    case 1:
+    case "SET_DISPLAY_SETTING_RESP_INVALID_ID":
+      return SetDisplaySettingResponse.SET_DISPLAY_SETTING_RESP_INVALID_ID;
+    case 2:
+    case "SET_DISPLAY_SETTING_RESP_INVALID_VALUE":
+      return SetDisplaySettingResponse.SET_DISPLAY_SETTING_RESP_INVALID_VALUE;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return SetDisplaySettingResponse.UNRECOGNIZED;
+  }
+}
+
+export function setDisplaySettingResponseToJSON(object: SetDisplaySettingResponse): string {
+  switch (object) {
+    case SetDisplaySettingResponse.SET_DISPLAY_SETTING_RESP_OK:
+      return "SET_DISPLAY_SETTING_RESP_OK";
+    case SetDisplaySettingResponse.SET_DISPLAY_SETTING_RESP_INVALID_ID:
+      return "SET_DISPLAY_SETTING_RESP_INVALID_ID";
+    case SetDisplaySettingResponse.SET_DISPLAY_SETTING_RESP_INVALID_VALUE:
+      return "SET_DISPLAY_SETTING_RESP_INVALID_VALUE";
+    case SetDisplaySettingResponse.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
 export interface Request {
   getKeymap?: boolean | undefined;
   setLayerBinding?: SetLayerBindingRequest | undefined;
@@ -420,7 +459,13 @@ export interface Request {
     | boolean
     | undefined;
   /** layer_id */
-  restoreLedDefaults?: number | undefined;
+  restoreLedDefaults?:
+    | number
+    | undefined;
+  /** Fork (lenerdz): display (OLED) settings, tags 106 to 108. */
+  getDisplayInfo?: boolean | undefined;
+  setDisplaySetting?: SetDisplaySettingRequest | undefined;
+  restoreDisplayDefaults?: boolean | undefined;
 }
 
 export interface Response {
@@ -450,7 +495,16 @@ export interface Response {
     | boolean
     | undefined;
   /** the map after the restore */
-  restoreLedDefaults?: LedMap | undefined;
+  restoreLedDefaults?:
+    | LedMap
+    | undefined;
+  /** Fork (lenerdz): display (OLED) settings. */
+  getDisplayInfo?: DisplayInfo | undefined;
+  setDisplaySetting?:
+    | SetDisplaySettingResponse
+    | undefined;
+  /** the settings after the restore */
+  restoreDisplayDefaults?: DisplayInfo | undefined;
 }
 
 export interface Notification {
@@ -590,6 +644,24 @@ export interface SetLedColorsRequest {
   entries: LedColorEntry[];
 }
 
+export interface DisplayInfo {
+  /** one entry per setting of the firmware */
+  settings: DisplaySetting[];
+}
+
+export interface DisplaySetting {
+  id: number;
+  value: number;
+  min: number;
+  max: number;
+  defaultValue: number;
+}
+
+export interface SetDisplaySettingRequest {
+  id: number;
+  value: number;
+}
+
 function createBaseRequest(): Request {
   return {
     getKeymap: undefined,
@@ -610,6 +682,9 @@ function createBaseRequest(): Request {
     saveLedChanges: undefined,
     discardLedChanges: undefined,
     restoreLedDefaults: undefined,
+    getDisplayInfo: undefined,
+    setDisplaySetting: undefined,
+    restoreDisplayDefaults: undefined,
   };
 }
 
@@ -668,6 +743,15 @@ export const Request = {
     }
     if (message.restoreLedDefaults !== undefined) {
       writer.uint32(840).uint32(message.restoreLedDefaults);
+    }
+    if (message.getDisplayInfo !== undefined) {
+      writer.uint32(848).bool(message.getDisplayInfo);
+    }
+    if (message.setDisplaySetting !== undefined) {
+      SetDisplaySettingRequest.encode(message.setDisplaySetting, writer.uint32(858).fork()).ldelim();
+    }
+    if (message.restoreDisplayDefaults !== undefined) {
+      writer.uint32(864).bool(message.restoreDisplayDefaults);
     }
     return writer;
   },
@@ -805,6 +889,27 @@ export const Request = {
 
           message.restoreLedDefaults = reader.uint32();
           continue;
+        case 106:
+          if (tag !== 848) {
+            break;
+          }
+
+          message.getDisplayInfo = reader.bool();
+          continue;
+        case 107:
+          if (tag !== 858) {
+            break;
+          }
+
+          message.setDisplaySetting = SetDisplaySettingRequest.decode(reader, reader.uint32());
+          continue;
+        case 108:
+          if (tag !== 864) {
+            break;
+          }
+
+          message.restoreDisplayDefaults = reader.bool();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -840,6 +945,13 @@ export const Request = {
       saveLedChanges: isSet(object.saveLedChanges) ? globalThis.Boolean(object.saveLedChanges) : undefined,
       discardLedChanges: isSet(object.discardLedChanges) ? globalThis.Boolean(object.discardLedChanges) : undefined,
       restoreLedDefaults: isSet(object.restoreLedDefaults) ? globalThis.Number(object.restoreLedDefaults) : undefined,
+      getDisplayInfo: isSet(object.getDisplayInfo) ? globalThis.Boolean(object.getDisplayInfo) : undefined,
+      setDisplaySetting: isSet(object.setDisplaySetting)
+        ? SetDisplaySettingRequest.fromJSON(object.setDisplaySetting)
+        : undefined,
+      restoreDisplayDefaults: isSet(object.restoreDisplayDefaults)
+        ? globalThis.Boolean(object.restoreDisplayDefaults)
+        : undefined,
     };
   },
 
@@ -899,6 +1011,15 @@ export const Request = {
     if (message.restoreLedDefaults !== undefined) {
       obj.restoreLedDefaults = Math.round(message.restoreLedDefaults);
     }
+    if (message.getDisplayInfo !== undefined) {
+      obj.getDisplayInfo = message.getDisplayInfo;
+    }
+    if (message.setDisplaySetting !== undefined) {
+      obj.setDisplaySetting = SetDisplaySettingRequest.toJSON(message.setDisplaySetting);
+    }
+    if (message.restoreDisplayDefaults !== undefined) {
+      obj.restoreDisplayDefaults = message.restoreDisplayDefaults;
+    }
     return obj;
   },
 
@@ -939,6 +1060,11 @@ export const Request = {
     message.saveLedChanges = object.saveLedChanges ?? undefined;
     message.discardLedChanges = object.discardLedChanges ?? undefined;
     message.restoreLedDefaults = object.restoreLedDefaults ?? undefined;
+    message.getDisplayInfo = object.getDisplayInfo ?? undefined;
+    message.setDisplaySetting = (object.setDisplaySetting !== undefined && object.setDisplaySetting !== null)
+      ? SetDisplaySettingRequest.fromPartial(object.setDisplaySetting)
+      : undefined;
+    message.restoreDisplayDefaults = object.restoreDisplayDefaults ?? undefined;
     return message;
   },
 };
@@ -963,6 +1089,9 @@ function createBaseResponse(): Response {
     saveLedChanges: undefined,
     discardLedChanges: undefined,
     restoreLedDefaults: undefined,
+    getDisplayInfo: undefined,
+    setDisplaySetting: undefined,
+    restoreDisplayDefaults: undefined,
   };
 }
 
@@ -1021,6 +1150,15 @@ export const Response = {
     }
     if (message.restoreLedDefaults !== undefined) {
       LedMap.encode(message.restoreLedDefaults, writer.uint32(842).fork()).ldelim();
+    }
+    if (message.getDisplayInfo !== undefined) {
+      DisplayInfo.encode(message.getDisplayInfo, writer.uint32(850).fork()).ldelim();
+    }
+    if (message.setDisplaySetting !== undefined) {
+      writer.uint32(856).int32(message.setDisplaySetting);
+    }
+    if (message.restoreDisplayDefaults !== undefined) {
+      DisplayInfo.encode(message.restoreDisplayDefaults, writer.uint32(866).fork()).ldelim();
     }
     return writer;
   },
@@ -1158,6 +1296,27 @@ export const Response = {
 
           message.restoreLedDefaults = LedMap.decode(reader, reader.uint32());
           continue;
+        case 106:
+          if (tag !== 850) {
+            break;
+          }
+
+          message.getDisplayInfo = DisplayInfo.decode(reader, reader.uint32());
+          continue;
+        case 107:
+          if (tag !== 856) {
+            break;
+          }
+
+          message.setDisplaySetting = reader.int32() as any;
+          continue;
+        case 108:
+          if (tag !== 866) {
+            break;
+          }
+
+          message.restoreDisplayDefaults = DisplayInfo.decode(reader, reader.uint32());
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1195,6 +1354,13 @@ export const Response = {
       saveLedChanges: isSet(object.saveLedChanges) ? SaveChangesResponse.fromJSON(object.saveLedChanges) : undefined,
       discardLedChanges: isSet(object.discardLedChanges) ? globalThis.Boolean(object.discardLedChanges) : undefined,
       restoreLedDefaults: isSet(object.restoreLedDefaults) ? LedMap.fromJSON(object.restoreLedDefaults) : undefined,
+      getDisplayInfo: isSet(object.getDisplayInfo) ? DisplayInfo.fromJSON(object.getDisplayInfo) : undefined,
+      setDisplaySetting: isSet(object.setDisplaySetting)
+        ? setDisplaySettingResponseFromJSON(object.setDisplaySetting)
+        : undefined,
+      restoreDisplayDefaults: isSet(object.restoreDisplayDefaults)
+        ? DisplayInfo.fromJSON(object.restoreDisplayDefaults)
+        : undefined,
     };
   },
 
@@ -1254,6 +1420,15 @@ export const Response = {
     if (message.restoreLedDefaults !== undefined) {
       obj.restoreLedDefaults = LedMap.toJSON(message.restoreLedDefaults);
     }
+    if (message.getDisplayInfo !== undefined) {
+      obj.getDisplayInfo = DisplayInfo.toJSON(message.getDisplayInfo);
+    }
+    if (message.setDisplaySetting !== undefined) {
+      obj.setDisplaySetting = setDisplaySettingResponseToJSON(message.setDisplaySetting);
+    }
+    if (message.restoreDisplayDefaults !== undefined) {
+      obj.restoreDisplayDefaults = DisplayInfo.toJSON(message.restoreDisplayDefaults);
+    }
     return obj;
   },
 
@@ -1305,6 +1480,14 @@ export const Response = {
     message.restoreLedDefaults = (object.restoreLedDefaults !== undefined && object.restoreLedDefaults !== null)
       ? LedMap.fromPartial(object.restoreLedDefaults)
       : undefined;
+    message.getDisplayInfo = (object.getDisplayInfo !== undefined && object.getDisplayInfo !== null)
+      ? DisplayInfo.fromPartial(object.getDisplayInfo)
+      : undefined;
+    message.setDisplaySetting = object.setDisplaySetting ?? undefined;
+    message.restoreDisplayDefaults =
+      (object.restoreDisplayDefaults !== undefined && object.restoreDisplayDefaults !== null)
+        ? DisplayInfo.fromPartial(object.restoreDisplayDefaults)
+        : undefined;
     return message;
   },
 };
@@ -3266,6 +3449,260 @@ export const SetLedColorsRequest = {
     const message = createBaseSetLedColorsRequest();
     message.layerId = object.layerId ?? 0;
     message.entries = object.entries?.map((e) => LedColorEntry.fromPartial(e)) || [];
+    return message;
+  },
+};
+
+function createBaseDisplayInfo(): DisplayInfo {
+  return { settings: [] };
+}
+
+export const DisplayInfo = {
+  encode(message: DisplayInfo, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    for (const v of message.settings) {
+      DisplaySetting.encode(v!, writer.uint32(10).fork()).ldelim();
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): DisplayInfo {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDisplayInfo();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.settings.push(DisplaySetting.decode(reader, reader.uint32()));
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): DisplayInfo {
+    return {
+      settings: globalThis.Array.isArray(object?.settings)
+        ? object.settings.map((e: any) => DisplaySetting.fromJSON(e))
+        : [],
+    };
+  },
+
+  toJSON(message: DisplayInfo): unknown {
+    const obj: any = {};
+    if (message.settings?.length) {
+      obj.settings = message.settings.map((e) => DisplaySetting.toJSON(e));
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<DisplayInfo>, I>>(base?: I): DisplayInfo {
+    return DisplayInfo.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<DisplayInfo>, I>>(object: I): DisplayInfo {
+    const message = createBaseDisplayInfo();
+    message.settings = object.settings?.map((e) => DisplaySetting.fromPartial(e)) || [];
+    return message;
+  },
+};
+
+function createBaseDisplaySetting(): DisplaySetting {
+  return { id: 0, value: 0, min: 0, max: 0, defaultValue: 0 };
+}
+
+export const DisplaySetting = {
+  encode(message: DisplaySetting, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.id !== 0) {
+      writer.uint32(8).uint32(message.id);
+    }
+    if (message.value !== 0) {
+      writer.uint32(16).int32(message.value);
+    }
+    if (message.min !== 0) {
+      writer.uint32(24).int32(message.min);
+    }
+    if (message.max !== 0) {
+      writer.uint32(32).int32(message.max);
+    }
+    if (message.defaultValue !== 0) {
+      writer.uint32(40).int32(message.defaultValue);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): DisplaySetting {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDisplaySetting();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 8) {
+            break;
+          }
+
+          message.id = reader.uint32();
+          continue;
+        case 2:
+          if (tag !== 16) {
+            break;
+          }
+
+          message.value = reader.int32();
+          continue;
+        case 3:
+          if (tag !== 24) {
+            break;
+          }
+
+          message.min = reader.int32();
+          continue;
+        case 4:
+          if (tag !== 32) {
+            break;
+          }
+
+          message.max = reader.int32();
+          continue;
+        case 5:
+          if (tag !== 40) {
+            break;
+          }
+
+          message.defaultValue = reader.int32();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): DisplaySetting {
+    return {
+      id: isSet(object.id) ? globalThis.Number(object.id) : 0,
+      value: isSet(object.value) ? globalThis.Number(object.value) : 0,
+      min: isSet(object.min) ? globalThis.Number(object.min) : 0,
+      max: isSet(object.max) ? globalThis.Number(object.max) : 0,
+      defaultValue: isSet(object.defaultValue) ? globalThis.Number(object.defaultValue) : 0,
+    };
+  },
+
+  toJSON(message: DisplaySetting): unknown {
+    const obj: any = {};
+    if (message.id !== 0) {
+      obj.id = Math.round(message.id);
+    }
+    if (message.value !== 0) {
+      obj.value = Math.round(message.value);
+    }
+    if (message.min !== 0) {
+      obj.min = Math.round(message.min);
+    }
+    if (message.max !== 0) {
+      obj.max = Math.round(message.max);
+    }
+    if (message.defaultValue !== 0) {
+      obj.defaultValue = Math.round(message.defaultValue);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<DisplaySetting>, I>>(base?: I): DisplaySetting {
+    return DisplaySetting.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<DisplaySetting>, I>>(object: I): DisplaySetting {
+    const message = createBaseDisplaySetting();
+    message.id = object.id ?? 0;
+    message.value = object.value ?? 0;
+    message.min = object.min ?? 0;
+    message.max = object.max ?? 0;
+    message.defaultValue = object.defaultValue ?? 0;
+    return message;
+  },
+};
+
+function createBaseSetDisplaySettingRequest(): SetDisplaySettingRequest {
+  return { id: 0, value: 0 };
+}
+
+export const SetDisplaySettingRequest = {
+  encode(message: SetDisplaySettingRequest, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.id !== 0) {
+      writer.uint32(8).uint32(message.id);
+    }
+    if (message.value !== 0) {
+      writer.uint32(16).int32(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): SetDisplaySettingRequest {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSetDisplaySettingRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 8) {
+            break;
+          }
+
+          message.id = reader.uint32();
+          continue;
+        case 2:
+          if (tag !== 16) {
+            break;
+          }
+
+          message.value = reader.int32();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): SetDisplaySettingRequest {
+    return {
+      id: isSet(object.id) ? globalThis.Number(object.id) : 0,
+      value: isSet(object.value) ? globalThis.Number(object.value) : 0,
+    };
+  },
+
+  toJSON(message: SetDisplaySettingRequest): unknown {
+    const obj: any = {};
+    if (message.id !== 0) {
+      obj.id = Math.round(message.id);
+    }
+    if (message.value !== 0) {
+      obj.value = Math.round(message.value);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<SetDisplaySettingRequest>, I>>(base?: I): SetDisplaySettingRequest {
+    return SetDisplaySettingRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<SetDisplaySettingRequest>, I>>(object: I): SetDisplaySettingRequest {
+    const message = createBaseSetDisplaySettingRequest();
+    message.id = object.id ?? 0;
+    message.value = object.value ?? 0;
     return message;
   },
 };

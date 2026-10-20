@@ -8,7 +8,9 @@ installed from npm.
 ## Why it is here
 
 The Lights tab needs six more requests in the keymap subsystem (read and set the color
-maps, save, discard, restore the defaults) and one more notification. They are defined
+maps, save, discard, restore the defaults) and one more notification. The fork also adds
+three requests for the display (OLED) settings of the firmware (list them, change one,
+restore the defaults). They are defined
 in [lenerdz/zmk-studio-messages](https://github.com/lenerdz/zmk-studio-messages), a fork
 of the protocol definitions, and the published package only has the upstream messages.
 Because the fork is not published to npm, the generated code is committed here, and the
@@ -25,7 +27,7 @@ app finds it under the same package name through an alias (`vite.config.ts` and 
 | `LICENSE` | The license of the package |
 
 The only difference in behavior from the published package is that the generated
-messages include the requests of the fork (tags 100 to 105 of the keymap `Request`, and
+messages include the requests of the fork (tags 100 to 108 of the keymap `Request`, and
 tag 100 of the keymap `Notification`). A firmware that does not know them answers
 "RPC not found", which the app uses to detect firmware without the light maps.
 
@@ -34,7 +36,7 @@ The firmware is built with the same protocol files: the messages fork is pinned 
 revision used here and the one the firmware is built with must be the same**; if one
 changes, regenerate this code (or update the pin) in the same step.
 
-Messages fork revision used here: `cfcce43b2156151fcd09902de1f4887be387b905`.
+Messages fork revision used here: `caee958c434f40143eda7195c1ca0939bf905e8b`.
 
 ## Generating the messages again
 
