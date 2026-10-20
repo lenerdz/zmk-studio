@@ -41,7 +41,8 @@ the colors back to the defaults the firmware was built with.
 The firmware keeps, for each layer, one color per slot. There are 54 slots per layer on the
 Corne: slot 0 to 41 are the LEDs under the keys (the slot is the position of the key), 42
 to 47 are the underglow of the left half and 48 to 53 the underglow of the right half. The
-layers have the ids of the keymap layers (0 to 7).
+layers have the ids of the keymap layers (0 to 7 on the Corne of corne-zmk; the protocol
+lists up to 15 maps).
 
 The requests are in the keymap subsystem of ZMK Studio, with tags from 100 so that a
 future upstream request cannot collide with them:
@@ -78,7 +79,9 @@ ZMK Studio holds 30 and drops the bytes that do not fit.
 | `useKeyboardView.ts` | Loads the physical layout, the keymap and the behaviors to draw the keys |
 | `exportDtsi.ts`, `dtsiTemplate.ts` | The text of `led_colors.dtsi` (the template is generated) |
 | `keyNames.ts`, `text.ts` | The names of the keys for the comments of the exported file, in plain ASCII |
-| `ViewSwitch.tsx` | The Keys and Lights buttons of the header |
+| `ViewSwitch.tsx` | The Keys, Lights and Display buttons of the header |
+| `appViews.ts` | Which tabs a keyboard offers (Lights and Display only when the firmware has what they edit) and which one to show |
+| `stockSettingsText.ts` | The text of the confirmation of Restore Stock Settings (what it puts back) |
 | `demo/` | A keyboard that lives in the browser (see [`demo/README.md`](demo/README.md)) |
 | `testUtils.ts` | A helper of the tests; the app does not use it |
 

@@ -3,7 +3,7 @@
 A keyboard that lives in the browser, to try the app (and to test it) without hardware. It
 answers the requests of ZMK Studio the way a Corne running
 [corne-zmk](https://github.com/lenerdz/corne-zmk) does, including the light maps of the
-Lights tab.
+Lights tab and the display settings of the Display tab.
 
 ## Using it
 
@@ -11,9 +11,10 @@ Lights tab.
 - On the published app, add `?demo` to the address
   (<https://lenerdz.github.io/zmk-studio/?demo>).
 
-There is a second entry, **Demo keyboard (no light maps)**, that answers like a firmware
-without the editable light maps: the Lights tab is not offered, as it happens with any
-other keyboard.
+There are two more entries: **Demo keyboard (no light maps)** answers like a firmware
+without the editable light maps, and **Demo keyboard (no display settings)** like one
+without the display settings. The Lights tab, or the Display tab, is not offered then, as
+it happens with any other keyboard.
 
 Nothing is saved: reloading the page starts again from the stock keymap and colors.
 
@@ -24,6 +25,7 @@ Nothing is saved: reloading the page starts again from the stock keymap and colo
 | `demoDevice.ts` | The logic: the answers and the notifications for each request, on plain objects |
 | `demoTransport.ts` | Connects it to the app as a transport. The bytes go through the real framing and the real message encoding, in both directions |
 | `demoColors.ts` | The colors the maps start with (generated) |
+| `../../display/demo/demoDisplay.ts` | The display settings: ids 1 to 6 with the ranges and defaults of `display_settings.c` |
 
 - The physical layout, the behaviors and the keymap come from
   [`src/keyboard/corne.mock.ts`](../../keyboard/corne.mock.ts). Like the data of the
@@ -35,7 +37,13 @@ Nothing is saved: reloading the page starts again from the stock keymap and colo
   `set_led_colors`, and `INVALID_LAYER`, `INVALID_SLOT` and `BUSY` answers. The limits are
   written in `demoDevice.ts` on purpose, and not taken from the app, so a mistake in the
   app shows up as an error here.
-- Saving, discarding and the settings reset work for the keymap and for the lights.
+- The display settings follow `display_settings.c` of the same module: the six settings
+  with their ranges and defaults, `INVALID_ID` and `INVALID_VALUE` answers, and the
+  restore of the defaults. They are kept as they change (there is no saved copy and no
+  unsaved flag, as in the firmware). The ranges are written in `demoDisplay.ts` on purpose,
+  like the limits of the light maps.
+- Saving, discarding and the settings reset work for the keymap and for the lights; the
+  settings reset also puts the display settings back.
 - What it does not have: moving, adding and removing layers (the layer count is fixed),
   a lock (it starts unlocked) and everything that depends on the hardware.
 
@@ -44,10 +52,13 @@ Nothing is saved: reloading the page starts again from the stock keymap and colo
 `createDemoTransport(options)` takes:
 
 - `lights: false` to behave like a firmware without the light maps.
+- `display: false` to behave like a firmware without the display settings.
 - `busyResponses: n` to answer `BUSY` to the first `n` requests that set colors.
+- `refuseDisplayWrites: n` to answer `INVALID_VALUE` to the first `n` requests that change
+  a display setting.
 
 `src/lights/testUtils.ts` has `connectDemo`, which gives a connection like the one the app
-makes (see `src/lights/ledProtocol.test.ts`).
+makes (see `src/lights/ledProtocol.test.ts` and `src/display/displayProtocol.test.ts`).
 
 ## The generated colors
 

@@ -1,6 +1,7 @@
 // Modified by the lenerdz/zmk-studio fork: the logo path follows the Vite base path,
-// the header has a slot for the Keys/Lights switch, and the Save and Discard buttons
-// also act on the light changes.
+// the header has a slot for the Keys/Lights/Display switch, the Save and Discard buttons
+// also act on the light changes, and the confirmation of Restore Stock Settings says
+// what it restores.
 import {
   Button,
   Menu,
@@ -19,11 +20,14 @@ import { ChevronDown, Undo2, Redo2, Save, Trash2 } from "lucide-react";
 import { Tooltip } from "./misc/Tooltip";
 import { GenericModal } from "./GenericModal";
 import { LedMapsContext } from "./lights/LedMapsContext";
+import { stockSettingsText } from "./lights/stockSettingsText";
 
 export interface AppHeaderProps {
   connectedDeviceLabel?: string;
-  /** Drawn next to the title: the switch between the Keys and Lights tabs. */
+  /** Drawn next to the title: the switch between the Keys, Lights and Display tabs. */
   viewSwitch?: ReactNode;
+  /** The firmware has display settings, which Restore Stock Settings puts back too. */
+  restoresDisplay?: boolean;
   onSave?: () => void | Promise<void>;
   onDiscard?: () => void | Promise<void>;
   onUndo?: () => Promise<void>;
@@ -37,6 +41,7 @@ export interface AppHeaderProps {
 export const AppHeader = ({
   connectedDeviceLabel,
   viewSwitch,
+  restoresDisplay,
   canRedo,
   canUndo,
   onRedo,
@@ -91,8 +96,11 @@ export const AppHeader = ({
         <div>
           <p>
             Settings reset will remove any customizations previously made in ZMK
-            Studio and restore the stock keymap
-            {lights.status === "ready" ? " and the stock light colors" : ""}
+            Studio and restore{" "}
+            {stockSettingsText(
+              lights.status === "ready",
+              Boolean(restoresDisplay)
+            )}
           </p>
           <p>Continue?</p>
           <div className="flex justify-end my-2 gap-3">

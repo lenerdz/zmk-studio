@@ -1,6 +1,6 @@
-// Modified by the lenerdz/zmk-studio fork: the Lights tab (and the switch between it and
-// the keymap editor), Save and Discard that also act on the light maps, and a demo
-// keyboard to try the app without hardware.
+// Modified by the lenerdz/zmk-studio fork: the Lights and Display tabs (and the switch
+// between them and the keymap editor), Save and Discard that also act on the light maps,
+// and a demo keyboard to try the app without hardware.
 import { AppHeader } from "./AppHeader";
 
 import { create_rpc_connection } from "@zmkfirmware/zmk-studio-ts-client";
@@ -35,8 +35,12 @@ import { LicenseNoticeModal } from "./misc/LicenseNoticeModal";
 import { LedMapsContext } from "./lights/LedMapsContext";
 import { LightsTab } from "./lights/LightsTab";
 import { useLedMaps } from "./lights/useLedMaps";
-import { AppView, ViewSwitch } from "./lights/ViewSwitch";
+import { ViewSwitch } from "./lights/ViewSwitch";
+import { AppView, viewToShow } from "./lights/appViews";
 import { createDemoTransport } from "./lights/demo/demoTransport";
+import { DisplayContext } from "./display/DisplayContext";
+import { DisplayTab } from "./display/DisplayTab";
+import { useDisplaySettings } from "./display/useDisplaySettings";
 
 declare global {
   interface Window {
@@ -46,8 +50,9 @@ declare global {
 
 // Keyboards that live in the browser, to try the app without hardware. They are
 // always there in development and in the published app with "?demo" in the
-// address. The second one answers like a firmware without the light maps, to
-// see that the Lights tab is not offered then.
+// address. The second one answers like a firmware without the light maps and the
+// third like one without the display settings, to see that the Lights and the
+// Display tabs are not offered then.
 const DEMO_ENABLED =
   import.meta.env.DEV || new URLSearchParams(window.location.search).has("demo");
 
@@ -59,6 +64,10 @@ const TRANSPORTS: TransportFactory[] = [
         {
           label: "Demo keyboard (no light maps)",
           connect: async () => createDemoTransport({ lights: false }),
+        },
+        {
+          label: "Demo keyboard (no display settings)",
+          connect: async () => createDemoTransport({ display: false }),
         },
       ]
     : []),
@@ -233,11 +242,18 @@ function App() {
   const lightsAvailable =
     ledMaps.status === "ready" || ledMaps.status === "error";
 
+  // Likewise the Display tab exists only for a keyboard that has the display
+  // settings. They need no Save and no Undo: the keyboard keeps every change.
+  const display = useDisplaySettings(conn, lockState);
+  const displayAvailable =
+    display.status === "ready" || display.status === "error";
+
   useEffect(() => {
-    if (!lightsAvailable && view === "lights") {
-      setView("keys");
+    const shown = viewToShow(view, lightsAvailable, displayAvailable);
+    if (shown !== view) {
+      setView(shown);
     }
-  }, [lightsAvailable, view]);
+  }, [lightsAvailable, displayAvailable, view]);
 
   // Whether the keymap has changes that are not saved. Unknown (the question
   // failed) counts as yes, so that nothing is left behind.
@@ -370,11 +386,13 @@ function App() {
             <div className="bg-base-100 text-base-content h-full max-h-[100vh] w-full max-w-[100vw] inline-grid grid-cols-[auto] grid-rows-[auto_1fr_auto] overflow-hidden">
               <AppHeader
                 connectedDeviceLabel={connectedDeviceName}
+                restoresDisplay={display.status === "ready"}
                 viewSwitch={
                   <ViewSwitch
                     view={view}
                     onChange={setView}
                     lightsAvailable={lightsAvailable}
+                    displayAvailable={displayAvailable}
                   />
                 }
                 canUndo={canUndo}
@@ -386,12 +404,18 @@ function App() {
                 onDisconnect={disconnect}
                 onResetSettings={resetSettings}
               />
-              {/* The keymap editor stays mounted while the Lights tab is open,
-                  so it keeps its selection and does not ask the keyboard again. */}
+              {/* The keymap editor stays mounted while the Lights or the Display
+                  tab is open, so it keeps its selection and does not ask the
+                  keyboard again. */}
               <div className={view === "keys" ? "contents" : "hidden"}>
                 <Keyboard />
               </div>
               {view === "lights" && <LightsTab />}
+              {view === "display" && (
+                <DisplayContext.Provider value={display}>
+                  <DisplayTab />
+                </DisplayContext.Provider>
+              )}
               <AppFooter
                 onShowAbout={() => setShowAbout(true)}
                 onShowLicenseNotice={() => setShowLicenseNotice(true)}

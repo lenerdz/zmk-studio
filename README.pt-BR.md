@@ -58,11 +58,14 @@ Outras mudanças:
 - O app pode ser servido a partir de um subdiretório (`VITE_BASE_PATH`), e o workflow
   [`.github/workflows/pages.yml`](.github/workflows/pages.yml) o publica no GitHub Pages.
 - Stories do Storybook com o keymap de um Corne, uma por camada (`Keyboard/Keymap (Corne)`).
+- A confirmação de **Restore Stock Settings** lista o que ela devolve: o keymap e, quando o
+  firmware os tem, as cores das luzes e as configurações das telas.
 
 O que não muda: a edição do keymap e o que o app lê do teclado ou grava nele para isso.
 Os ícones afetam apenas como as teclas são desenhadas e como o app é hospedado; arrastar
-teclas (abaixo) grava com a mesma requisição do seletor de binding; a aba Lights (mais
-abaixo) acrescenta requisições próprias e só é usada quando o firmware as tem.
+teclas (abaixo) grava com a mesma requisição do seletor de binding; as abas Lights e
+Display (mais abaixo) acrescentam requisições próprias e só são usadas quando o firmware
+as tem.
 
 ## Mover teclas arrastando (a visão Keys)
 
@@ -138,6 +141,40 @@ Para experimentar sem um teclado, use o **Demo keyboard** (veja
 [Desenvolvimento](#desenvolvimento)). Como funciona, o protocolo e os arquivos:
 [`src/lights/README.md`](src/lights/README.md).
 
+## Configurações das telas (a aba Display)
+
+Com um firmware que tem configurações de tela, o cabeçalho ganha uma terceira visão,
+**Display**, ao lado de **Keys** e **Lights** (cada uma só quando o firmware tem o que ela
+edita). Ela define o que as telas OLED do teclado fazem:
+
+- O **contraste** da tela esquerda e da tela direita, com um controle deslizante (slider)
+  para cada uma.
+- **Quando as telas apagam**: nunca, só na bateria (enquanto o USB não está conectado
+  àquela metade) ou sempre, e depois de quanto tempo sem atividade.
+- O **toast das luzes**: se a tela direita mostra um aviso quando as luzes mudam (efeito,
+  brilho, ligar e desligar) e por quanto tempo.
+- **Restore defaults** devolve todas as configurações ao que o firmware tinha ao ser
+  compilado.
+
+Tudo é aplicado pelo teclado na hora e guardado por ele alguns segundos depois da última
+mudança; por isso não há nada para salvar: **Save**, **Discard**, **Undo** e **Redo** não
+agem sobre essas configurações. **Restore Stock Settings** também as devolve aos padrões.
+O que cada tela mostra (os widgets, a animação, o idioma do toast) continua sendo
+escolhido quando o firmware é compilado.
+
+Ela precisa do módulo [zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix) de
+lenerdz (branch `corne-fixes`, compilado com `CONFIG_KEYPAW_DISPLAY_SETTINGS=y`), do fork
+[zmk-nice-oled](https://github.com/lenerdz/zmk-nice-oled) (que lê as configurações do
+toast) e do protocolo do
+[zmk-studio-messages](https://github.com/lenerdz/zmk-studio-messages), que acrescenta
+três requisições (`get_display_info`, `set_display_setting` e
+`restore_display_defaults`) ao subsistema keymap do ZMK Studio. Com qualquer outro
+firmware a visão Display não é oferecida (o teclado responde "RPC not found" à primeira
+requisição) e o app funciona como antes.
+
+As configurações, as faixas de valores, como as mudanças trafegam e os arquivos:
+[`src/display/README.md`](src/display/README.md).
+
 ## Situação
 
 Os ícones foram verificados com as stories do Storybook, cujos dados de exemplo
@@ -152,6 +189,15 @@ moldura (framing) e codificação de mensagens usadas com um teclado real, e é 
 `npm test`. Em um Corne real conectado por USB ela funcionou (relato do dono do teclado,
 sem detalhar cada operação: pintar, Save, Discard, restaurar, a cópia para a metade
 direita), então nenhuma dessas operações tem confirmação individual.
+
+A aba Display foi testada em um navegador com o teclado de demonstração, pela mesma
+moldura (framing) e codificação de mensagens usadas com um teclado real: leitura das
+configurações, arrastar um controle deslizante (72 mudanças viraram 13 requisições, a
+última com o valor final), os controles que esperam por outro (o tempo para apagar, a
+duração do toast), as três formas de apagar a tela, **Restore defaults** e **Restore
+Stock Settings** com a aba aberta; o teclado de demonstração sem configurações de tela
+não tem a aba Display. Ela é coberta por `npm test`. **Não foi testada em um teclado
+real**.
 
 As teclas `Steno On` e `Steno Off` e a camada STENO foram conferidas em um navegador com o
 teclado de demonstração e na story `Keyboard/Keymap (Corne)` do Storybook, não em um
@@ -182,6 +228,7 @@ edição de uma tecla pelo seletor depois. As regras são cobertas por `npm test
    trocar as duas (segure Ctrl ou Alt para copiar).
 5. Se o firmware tiver mapas de luzes editáveis, escolha **Lights** no cabeçalho para
    editar as cores.
+6. Se o firmware tiver configurações de tela, escolha **Display** para ajustar as telas.
 
 ## Desenvolvimento
 
@@ -198,10 +245,11 @@ requisição). Para ver os rótulos das teclas sem um teclado:
 npm run storybook
 ```
 
-Para experimentar o app, incluindo a aba Lights, sem um teclado, escolha **Demo keyboard**
-na lista de conexões. Ele está sempre presente com `npm run dev`; no app publicado,
-acrescente `?demo` ao endereço (<https://lenerdz.github.io/zmk-studio/?demo>). **Demo
-keyboard (no light maps)** responde como um firmware sem os mapas. Veja
+Para experimentar o app, incluindo as abas Lights e Display, sem um teclado, escolha
+**Demo keyboard** na lista de conexões. Ele está sempre presente com `npm run dev`; no app
+publicado, acrescente `?demo` ao endereço (<https://lenerdz.github.io/zmk-studio/?demo>).
+**Demo keyboard (no light maps)** e **Demo keyboard (no display settings)** respondem como
+um firmware sem os mapas e sem as configurações de tela. Veja
 [`src/lights/demo/README.md`](src/lights/demo/README.md).
 
 Para executar os testes:
@@ -246,6 +294,7 @@ Adicionados: `src/keyboard/bindingDisplay.tsx`, `src/keyboard/BindingLabel.tsx`,
 `src/keyboard/keyDrag.ts`, `src/keyboard/keyDrag.test.ts`, `src/keyboard/useKeyDrag.ts`,
 `src/keyboard/KeyDragGhost.tsx` (arrastar teclas),
 `src/lights/` (a aba Lights, o teclado de demonstração e seus testes),
+`src/display/` (a aba Display e seus testes; o teclado de demonstração responde às requisições dela),
 `src/vendor/zmk-studio-ts-client/` (o cliente RPC com as mensagens do fork),
 `scripts/generate-led-data.mjs`, `.github/workflows/pages.yml`, `README.pt-BR.md`.
 

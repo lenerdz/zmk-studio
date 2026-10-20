@@ -56,11 +56,14 @@ Other changes:
 - The app can be served from a subdirectory (`VITE_BASE_PATH`), and the workflow
   [`.github/workflows/pages.yml`](.github/workflows/pages.yml) publishes it on GitHub Pages.
 - Storybook stories with the keymap of a Corne, one per layer (`Keyboard/Keymap (Corne)`).
+- The confirmation of **Restore Stock Settings** lists what it puts back: the keymap, and
+  the light colors and the screen settings when the firmware has them.
 
 What does not change: the editing of the keymap, and what the app reads from or writes to
 the keyboard for it. The icons only affect how keys are drawn and how the app is hosted;
-dragging keys (below) writes with the same request as the binding picker; the Lights tab
-(further below) adds requests of its own and is used only when the firmware has them.
+dragging keys (below) writes with the same request as the binding picker; the Lights and
+Display tabs (further below) add requests of their own and are used only when the firmware
+has them.
 
 ## Moving keys by dragging (the Keys view)
 
@@ -132,6 +135,37 @@ the TypeScript client that includes those messages
 To try it without a keyboard, use the **Demo keyboard** (see [Development](#development)).
 How it works, the protocol and the files: [`src/lights/README.md`](src/lights/README.md).
 
+## Screen settings (the Display tab)
+
+With a firmware that has display settings, the header has a third view, **Display**, next
+to **Keys** and **Lights** (each one only when the firmware has what it edits). It sets
+what the OLED screens of the keyboard do:
+
+- The **contrast** of the left and of the right screen, with a slider each.
+- **When the screens turn off**: never, only on battery (while USB is not connected to
+  that half) or always, and after how long without activity.
+- The **light toast**: whether the right screen shows a notice when the lights change
+  (effect, brightness, on and off), and for how long.
+- **Restore defaults** puts every setting back to what the firmware was built with.
+
+Everything is applied by the keyboard at once and kept by it a few seconds after the last
+change, so there is nothing to save: **Save**, **Discard**, **Undo** and **Redo** do not
+act on these settings. **Restore Stock Settings** puts them back to the defaults too. What
+each screen shows (the widgets, the animation, the language of the toast) is still chosen
+when the firmware is built.
+
+It needs the [zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix) module of
+lenerdz (branch `corne-fixes`, built with `CONFIG_KEYPAW_DISPLAY_SETTINGS=y`), the
+[zmk-nice-oled](https://github.com/lenerdz/zmk-nice-oled) fork (it reads the toast
+settings) and the protocol of
+[zmk-studio-messages](https://github.com/lenerdz/zmk-studio-messages), which adds three
+requests (`get_display_info`, `set_display_setting` and `restore_display_defaults`) to the
+keymap subsystem of ZMK Studio. With any other firmware the Display view is not offered
+(the keyboard answers "RPC not found" to the first request) and the app works as before.
+
+The settings, their ranges, how the changes travel and the files:
+[`src/display/README.md`](src/display/README.md).
+
 ## Status
 
 The icons were checked with the Storybook stories, whose sample data
@@ -146,6 +180,14 @@ and message encoding as with a real keyboard, and is covered by `npm test`. On a
 Corne connected over USB it worked, reported by the keyboard's owner without detail about
 each operation (painting, Save, Discard, restoring, the copy to the right half), so none of
 those has an individual confirmation.
+
+The Display tab was tried in a browser against the demo keyboard, through the same framing
+and message encoding as with a real keyboard: reading the settings, dragging a slider (72
+changes became 13 requests, the last one with the final value), the controls that wait for
+another (the time to turn off, the duration of the toast), the three ways of turning the
+screen off, **Restore defaults** and **Restore Stock Settings** with the tab open; the
+demo keyboard without display settings has no Display tab. It is covered by `npm test`.
+It has **not been tried on a real keyboard**.
 
 The keys `Steno On` and `Steno Off`, and the STENO layer, were checked in a browser against
 the demo keyboard and in the Storybook story `Keyboard/Keymap (Corne)`, not on a real
@@ -176,6 +218,7 @@ keyboard**, and touch input has not been tried on any device.
    (hold Ctrl or Alt to copy).
 5. If the firmware has editable light maps, choose **Lights** in the header to edit the
    colors.
+6. If the firmware has display settings, choose **Display** to set the screens.
 
 ## Development
 
@@ -192,11 +235,11 @@ limits). To see the key labels without a keyboard:
 npm run storybook
 ```
 
-To try the app, including the Lights tab, without a keyboard, choose **Demo keyboard** in
-the connection list. It is always there with `npm run dev`; on the published app, add
-`?demo` to the address (<https://lenerdz.github.io/zmk-studio/?demo>). **Demo keyboard (no
-light maps)** answers like a firmware without them. See
-[`src/lights/demo/README.md`](src/lights/demo/README.md).
+To try the app, including the Lights and Display tabs, without a keyboard, choose **Demo
+keyboard** in the connection list. It is always there with `npm run dev`; on the published
+app, add `?demo` to the address (<https://lenerdz.github.io/zmk-studio/?demo>). **Demo
+keyboard (no light maps)** and **Demo keyboard (no display settings)** answer like a
+firmware without them. See [`src/lights/demo/README.md`](src/lights/demo/README.md).
 
 To run the tests:
 
@@ -239,6 +282,7 @@ Added: `src/keyboard/bindingDisplay.tsx`, `src/keyboard/BindingLabel.tsx`,
 `src/keyboard/keyDrag.ts`, `src/keyboard/keyDrag.test.ts`, `src/keyboard/useKeyDrag.ts`,
 `src/keyboard/KeyDragGhost.tsx` (dragging keys),
 `src/lights/` (the Lights tab, the demo keyboard and their tests),
+`src/display/` (the Display tab and its tests; the demo keyboard answers its requests),
 `src/vendor/zmk-studio-ts-client/` (the RPC client with the messages of the fork),
 `scripts/generate-led-data.mjs`, `.github/workflows/pages.yml`, `README.pt-BR.md`.
 

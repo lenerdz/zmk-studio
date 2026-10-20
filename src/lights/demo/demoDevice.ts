@@ -8,7 +8,8 @@
  * src/keyboard/corne.mock.ts, the light maps start with the colors of
  * config/led_colors.dtsi and follow the rules of studio_rpc.c in the
  * lenerdz/zmk-rgb-matrix module (live, saved and default copies of each map,
- * the unsaved flag and its notification).
+ * the unsaved flag and its notification). The display (OLED) settings follow
+ * display_settings.c of the same module (src/display/demo/demoDisplay.ts).
  *
  * This is the logic only; demoTransport.ts connects it to the app.
  */
@@ -20,6 +21,7 @@ import type {
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { ErrorConditions } from "@zmkfirmware/zmk-studio-ts-client/meta";
 import {
+  SetDisplaySettingResponse,
   SetLayerBindingResponse,
   SetLayerPropsResponse,
   SetLedColorsResponse,
@@ -32,6 +34,7 @@ import {
   corneKeymap,
   corneLayout,
 } from "../../keyboard/corne.mock";
+import { DemoDisplay } from "../../display/demo/demoDisplay";
 import { DEMO_DEFAULT_COLORS } from "./demoColors";
 
 export interface DemoDeviceOptions {
@@ -40,8 +43,16 @@ export interface DemoDeviceOptions {
    * requests for them get the "RPC not found" answer. Default true.
    */
   lights?: boolean;
+  /**
+   * With false the keyboard behaves like a firmware without the display
+   * settings: the requests for them get the "RPC not found" answer. Default
+   * true.
+   */
+  display?: boolean;
   /** For tests: answer BUSY to the first n requests that set colors. */
   busyResponses?: number;
+  /** For tests: refuse the first n requests that change a display setting. */
+  refuseDisplayWrites?: number;
 }
 
 export interface DemoDeviceReply {
@@ -72,12 +83,18 @@ function error(condition: ErrorConditions): RequestResponse {
 
 export class DemoDevice {
   private readonly lights: boolean;
+  private readonly display: boolean;
   private busyLeft: number;
+  private refuseDisplayLeft: number;
 
   private keymap = copyKeymap(corneKeymap);
   private savedKeymap = copyKeymap(corneKeymap);
   private live = copyMaps(DEMO_DEFAULT_COLORS);
   private saved = copyMaps(DEMO_DEFAULT_COLORS);
+
+  // The display settings are kept by the keyboard as they change: there is no
+  // saved copy and no unsaved flag.
+  private displaySettings = new DemoDisplay();
 
   // What the app was told last, so a notification is sent only on a change.
   private notifiedLedUnsaved = false;
@@ -85,7 +102,14 @@ export class DemoDevice {
 
   constructor(options: DemoDeviceOptions = {}) {
     this.lights = options.lights ?? true;
+    this.display = options.display ?? true;
     this.busyLeft = options.busyResponses ?? 0;
+    this.refuseDisplayLeft = options.refuseDisplayWrites ?? 0;
+  }
+
+  /** The value a display setting has now (for tests); undefined if unknown. */
+  displayValue(id: number): number | undefined {
+    return this.displaySettings.get(id);
   }
 
   private ledUnsaved(): boolean {
@@ -162,6 +186,7 @@ export class DemoDevice {
       this.savedKeymap = copyKeymap(corneKeymap);
       this.live = copyMaps(DEMO_DEFAULT_COLORS);
       this.saved = copyMaps(DEMO_DEFAULT_COLORS);
+      this.displaySettings.restore();
       return { requestId: 0, core: { resetSettings: true } };
     }
 
@@ -257,9 +282,49 @@ export class DemoDevice {
       }
     }
 
+    if (this.display) {
+      const display = this.displayRequest(request);
+      if (display) {
+        return display;
+      }
+    }
+
     // What the firmware answers for a request it does not have: the demo has no
     // layer moves, additions or removals (the layer count is fixed).
     return error(ErrorConditions.RPC_NOT_FOUND);
+  }
+
+  /** The requests of the display settings; undefined when `request` is not one. */
+  private displayRequest(request: KeymapRequest): RequestResponse | undefined {
+    if (request.getDisplayInfo !== undefined) {
+      return this.keymapReply({
+        getDisplayInfo: { settings: this.displaySettings.list() },
+      });
+    }
+
+    if (request.setDisplaySetting !== undefined) {
+      const { id, value } = request.setDisplaySetting;
+
+      if (this.refuseDisplayLeft > 0) {
+        this.refuseDisplayLeft--;
+        return this.keymapReply({
+          setDisplaySetting:
+            SetDisplaySettingResponse.SET_DISPLAY_SETTING_RESP_INVALID_VALUE,
+        });
+      }
+
+      return this.keymapReply({
+        setDisplaySetting: this.displaySettings.set(id, value),
+      });
+    }
+
+    if (request.restoreDisplayDefaults !== undefined) {
+      return this.keymapReply({
+        restoreDisplayDefaults: { settings: this.displaySettings.restore() },
+      });
+    }
+
+    return undefined;
   }
 
   /** The requests of the light maps; undefined when `request` is not one. */
