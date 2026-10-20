@@ -34,7 +34,9 @@ shows the full description (for example `Bluetooth: Select Profile 2`).
 | `Output Selection` | USB, Bluetooth, toggle or no output |
 | `Underglow`, `Backlight` and lighting behaviors that report the same commands | An icon and a short word per command: `on/off`, `hue`, `sat`, `bri`, `speed`, `time`, `effect`, `reset`, `color`, with a plus or minus for up and down |
 | Behaviors named `fx_*` (one per lighting effect) | The header `Effect`, an icon chosen by the effect name and the name itself |
+| Behaviors named `ug_*` (one per underglow animation, for example `ug_rain`) | The header `Underglow`, an icon chosen by the animation and its name (`rainbow`, `breathe`, `spectrum`, `starlight`, `off`) |
 | `Steno On`, `Steno Off` (the macros of corne-zmk that switch to the steno layer and back) | A keyboard icon (crossed out for off) and the text `steno on` or `steno off` |
+| `Steno` (the GeminiPR key behavior of the corne-zmk module; its parameter is the steno key) | The steno key name alone (`S1-`, `T-`, `*1`, `A-`, `-E`, `#`, ...), taken from the parameter names the firmware reports |
 | `Studio Unlock`, `Caps Word`, `Reset`, `Bootloader`, `External Power`, `Mouse Key Press`, `Grave/Escape` | An icon or a short text |
 | `Transparent`, `None` | A dimmed icon |
 | Anything else | A label built from the parameter descriptions the firmware reports: HID usage, layer name, number or constant name |
@@ -148,6 +150,13 @@ those has an individual confirmation.
 The keys `Steno On` and `Steno Off`, and the STENO layer, were checked in a browser against
 the demo keyboard and in the Storybook story `Keyboard/Keymap (Corne)`, not on a real
 keyboard.
+
+The GEMINI layer, its `Steno` keys and the underglow animation keys (`ug_*`) were checked
+in a browser against the demo keyboard: the Keys tab draws the 42 keys of the GEMINI layer
+and, on the SYS layer, the five underglow keys and the key that goes to GEMINI; the Lights
+tab lists the eight layers and shows the colors of GEMINI. The export code, run with the
+demo data, gives the same symbols in the same order as `config/led_colors.dtsi` of
+corne-zmk. None of this was tried on a real keyboard.
 
 Dragging keys was tried in a browser against the demo keyboard: swap, copy with Ctrl and
 with Alt, switching between them during the drag, Esc, dropping outside the keys, the

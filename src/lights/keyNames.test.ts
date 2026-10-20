@@ -79,6 +79,33 @@ describe("bindingName", () => {
     expect(names(4).slice(32, 35)).toEqual(["STATIC", "STENO_ON", "STENO"]);
   });
 
+  it("names the underglow animation keys and the key that enters GEMINI", () => {
+    const sys = names(4);
+
+    // the four animations on the third row of the left half, and the key that
+    // turns the underglow off after the effects of the right half
+    expect(sys.slice(26, 30)).toEqual(["RAINBOW", "BREATHE", "SPECTRUM", "STARLIGHT"]);
+    expect(sys[35]).toBe("OFF");
+    // the right thumb in the middle goes to the GEMINI layer
+    expect(sys[40]).toBe("GEMINI");
+  });
+
+  it("names the GeminiPR keys after the steno keys", () => {
+    const gemini = names(7);
+
+    // exit key, then S T P H and the first star of the left hand
+    expect(gemini.slice(0, 6)).toEqual(["QWERTY", "S1-", "T-", "P-", "H-", "*1"]);
+    // the right hand: second star, then F P L T D
+    expect(gemini.slice(6, 12)).toEqual(["*3", "-F", "-P", "-L", "-T", "-D"]);
+    expect(gemini.slice(12, 24)).toEqual([
+      "--", "S2-", "K-", "W-", "R-", "*2", "*4", "-R", "-B", "-G", "-S", "-Z",
+    ]);
+    // the third row is not used
+    expect(gemini.slice(24, 36)).toEqual(Array(12).fill("--"));
+    // number key, A and O, then E, U and the number key of the right hand
+    expect(gemini.slice(36)).toEqual(["#", "A-", "O-", "-E", "-U", "#"]);
+  });
+
   it("writes arrows and the space bar with letters", () => {
     expect(names(3).slice(18, 22)).toEqual(["LEFT", "DOWN", "UP", "RIGHT"]);
     expect(names(0)[38]).toBe("SPACE");

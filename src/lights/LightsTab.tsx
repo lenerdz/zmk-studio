@@ -483,7 +483,7 @@ export const LightsTab = () => {
             title={
               exportable
                 ? "Download these colors as config/led_colors.dtsi, to build them into the firmware"
-                : "Only for the keyboard of lenerdz/corne-zmk: 54 LEDs per layer and layers 0 to 6"
+                : "Only for the keyboard of lenerdz/corne-zmk: 54 LEDs per layer and layers 0 to 7"
             }
             onClick={exportDtsi}
           >

@@ -289,6 +289,17 @@ function outputDisplay(ctx: Context): Part {
   return { icon: ArrowLeftRight, text: ctx.p1?.name };
 }
 
+// The underglow animations of corne-zmk, by the end of the node name (ug_rain
+// is the rainbow, ug_brth the breathing one, ...). Drawn with the same icons the
+// main effects use.
+const UNDERGLOW_ANIMATIONS: Record<string, { icon: Icon; text: string }> = {
+  rain: { icon: Rainbow, text: "rainbow" },
+  brth: { icon: Wind, text: "breathe" },
+  spec: { icon: Blend, text: "spectrum" },
+  star: { icon: Star, text: "starlight" },
+  off: { icon: LightbulbOff, text: "off" },
+};
+
 function specialDisplay(ctx: Context): Part | undefined {
   const layer = layerLabel(ctx.layers, ctx.param1);
 
@@ -333,6 +344,10 @@ function specialDisplay(ctx: Context): Part | undefined {
       return { icon: PlugZap, text: ctx.p1?.name };
     case "mouse key press":
       return { icon: MousePointerClick, text: ctx.p1?.name };
+    case "steno":
+      // The GeminiPR keys of corne-zmk (&stn S1-, &stn *1, ...): the name of the
+      // steno key alone, without the behavior name above it (28 keys carry it).
+      return { header: "", text: ctx.p1?.name ?? String(ctx.param1) };
   }
 
   // Lighting effects are exposed as one behavior per effect, named after the
@@ -351,6 +366,18 @@ function specialDisplay(ctx: Context): Part | undefined {
       header: "",
       icon: steno[1] === "on" ? Keyboard : KeyboardOff,
       text: `steno ${steno[1]}`,
+    };
+  }
+
+  // The underglow animation switches of corne-zmk, named after the devicetree
+  // node (ug_rain, ug_brth, ug_spec, ug_star and ug_off).
+  const underglow = /^ug[_-](.+)$/.exec(ctx.name);
+  if (underglow) {
+    const animation = UNDERGLOW_ANIMATIONS[underglow[1]];
+    return {
+      header: "Underglow",
+      icon: animation?.icon ?? Sparkles,
+      text: animation?.text ?? underglow[1].replace(/[_-]+/g, " "),
     };
   }
 

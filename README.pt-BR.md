@@ -35,7 +35,9 @@ tecla mostra a descrição completa (por exemplo, `Bluetooth: Select Profile 2`)
 | `Output Selection` | USB, Bluetooth, alternar ou nenhuma saída |
 | `Underglow`, `Backlight` e comportamentos de iluminação que informam os mesmos comandos | Um ícone e uma palavra curta por comando: `on/off`, `hue`, `sat`, `bri`, `speed`, `time`, `effect`, `reset`, `color`, com um sinal de mais ou de menos para subir e descer |
 | Comportamentos chamados `fx_*` (um por efeito de iluminação) | O cabeçalho `Effect`, um ícone escolhido pelo nome do efeito e o próprio nome |
+| Comportamentos chamados `ug_*` (um por animação do underglow, por exemplo `ug_rain`) | O cabeçalho `Underglow`, um ícone escolhido pela animação e o nome dela (`rainbow`, `breathe`, `spectrum`, `starlight`, `off`) |
 | `Steno On`, `Steno Off` (os macros do corne-zmk que vão para a camada de estenotipia e voltam) | Um ícone de teclado (riscado no desligar) e o texto `steno on` ou `steno off` |
+| `Steno` (o comportamento das teclas GeminiPR do módulo do corne-zmk; o parâmetro é a tecla de estenotipia) | Só o nome da tecla de estenotipia (`S1-`, `T-`, `*1`, `A-`, `-E`, `#`, ...), tirado dos nomes de parâmetro que o firmware informa |
 | `Studio Unlock`, `Caps Word`, `Reset`, `Bootloader`, `External Power`, `Mouse Key Press`, `Grave/Escape` | Um ícone ou um texto curto |
 | `Transparent`, `None` | Um ícone esmaecido |
 | Qualquer outro | Um rótulo montado a partir das descrições de parâmetros que o firmware informa: uso HID, nome da camada, número ou nome da constante |
@@ -154,6 +156,13 @@ direita), então nenhuma dessas operações tem confirmação individual.
 As teclas `Steno On` e `Steno Off` e a camada STENO foram conferidas em um navegador com o
 teclado de demonstração e na story `Keyboard/Keymap (Corne)` do Storybook, não em um
 teclado real.
+
+A camada GEMINI, as teclas `Steno` dela e as teclas de animação do underglow (`ug_*`) foram
+conferidas em um navegador com o teclado de demonstração: a aba Keys desenha as 42 teclas da
+camada GEMINI e, na camada SYS, as cinco teclas de underglow e a tecla que vai para a
+GEMINI; a aba Lights lista as oito camadas e mostra as cores da GEMINI. O código de
+exportação, executado com os dados de demonstração, gera os mesmos símbolos na mesma ordem
+que o `config/led_colors.dtsi` do corne-zmk. Nada disso foi testado em um teclado real.
 
 O arraste de teclas foi testado em um navegador com o teclado de demonstração: troca,
 cópia com Ctrl e com Alt, alternância entre elas durante o arraste, Esc, soltar fora das

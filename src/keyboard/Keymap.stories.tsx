@@ -54,6 +54,10 @@ export const Steno: Story = {
   args: { selectedLayerIndex: 6 },
 };
 
+export const Gemini: Story = {
+  args: { selectedLayerIndex: 7 },
+};
+
 export const SelectedKey: Story = {
   args: { selectedLayerIndex: 4, selectedKeyPosition: 14 },
 };

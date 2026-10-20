@@ -1,11 +1,12 @@
 /*
  * Sample data for the stories and for the demo keyboard (src/lights/demo): the
  * physical layout, behaviors and keymap of a Corne running
- * https://github.com/lenerdz/corne-zmk (taken from its config/corne.keymap, seven
- * layers: QWERTY, FN1, RAISE, NAV, SYS, MEDIA and STENO). The behavior names and
- * parameter descriptions follow the sources of ZMK and zmk-rgb-matrix, and the
- * display names of the two steno macros; they were not captured from a real
- * keyboard.
+ * https://github.com/lenerdz/corne-zmk (taken from its config/corne.keymap, eight
+ * layers: QWERTY, FN1, RAISE, NAV, SYS, MEDIA, STENO and GEMINI). The behavior
+ * names and parameter descriptions follow the sources of ZMK and zmk-rgb-matrix,
+ * the display names of the two steno macros and the Steno behavior of the local
+ * module of corne-zmk (src/behavior_steno_gemini.c); they were not captured from
+ * a real keyboard.
  * The app only uses it for the demo keyboard (in development, or with "?demo" in
  * the address).
  */
@@ -89,6 +90,12 @@ export const corneBehaviors: Record<number, GetBehaviorDetailsResponse> = {
   18: { id: 18, displayName: "None", metadata: [] },
   19: { id: 19, displayName: "Steno On", metadata: [] },
   20: { id: 20, displayName: "Steno Off", metadata: [] },
+  21: { id: 21, displayName: "ug_rain", metadata: [] },
+  22: { id: 22, displayName: "ug_brth", metadata: [] },
+  23: { id: 23, displayName: "ug_spec", metadata: [] },
+  24: { id: 24, displayName: "ug_star", metadata: [] },
+  25: { id: 25, displayName: "ug_off", metadata: [] },
+  26: { id: 26, displayName: "Steno", metadata: [{"param1":[{"name":"S1-","constant":7},{"name":"S2-","constant":8},{"name":"T-","constant":9},{"name":"K-","constant":10},{"name":"P-","constant":11},{"name":"W-","constant":12},{"name":"H-","constant":13},{"name":"R-","constant":14},{"name":"A-","constant":15},{"name":"O-","constant":16},{"name":"*1","constant":17},{"name":"*2","constant":18},{"name":"*3","constant":22},{"name":"*4","constant":23},{"name":"-E","constant":24},{"name":"-U","constant":25},{"name":"-F","constant":26},{"name":"-R","constant":27},{"name":"-P","constant":28},{"name":"-B","constant":29},{"name":"-L","constant":30},{"name":"-G","constant":31},{"name":"-T","constant":32},{"name":"-S","constant":33},{"name":"-D","constant":34},{"name":"-Z","constant":41},{"name":"#","constant":1}],"param2":[]}] },
 };
 
 export const corneKeymap: Keymap = {
@@ -317,21 +324,21 @@ export const corneKeymap: Keymap = {
       { behaviorId: 12, param1: 258, param2: 0 }, // &kprgb RGB_RESET
       { behaviorId: 4, param1: 0, param2: 0 }, // &studio_unlock
       { behaviorId: 3, param1: 0, param2: 0 }, // &trans
-      { behaviorId: 3, param1: 0, param2: 0 }, // &trans
-      { behaviorId: 3, param1: 0, param2: 0 }, // &trans
-      { behaviorId: 3, param1: 0, param2: 0 }, // &trans
-      { behaviorId: 3, param1: 0, param2: 0 }, // &trans
+      { behaviorId: 21, param1: 0, param2: 0 }, // &ug_rain
+      { behaviorId: 22, param1: 0, param2: 0 }, // &ug_brth
+      { behaviorId: 23, param1: 0, param2: 0 }, // &ug_spec
+      { behaviorId: 24, param1: 0, param2: 0 }, // &ug_star
       { behaviorId: 13, param1: 0, param2: 0 }, // &fx_heatmap
       { behaviorId: 14, param1: 0, param2: 0 }, // &fx_starlight
       { behaviorId: 16, param1: 0, param2: 0 }, // &fx_static
       { behaviorId: 19, param1: 0, param2: 0 }, // &steno_on
       { behaviorId: 17, param1: 6, param2: 0 }, // &to 6
-      { behaviorId: 3, param1: 0, param2: 0 }, // &trans
+      { behaviorId: 25, param1: 0, param2: 0 }, // &ug_off
       { behaviorId: 1, param1: kp(7, 227), param2: 0 }, // &kp LGUI
       { behaviorId: 3, param1: 0, param2: 0 }, // &trans
       { behaviorId: 1, param1: kp(7, 44), param2: 0 }, // &kp SPACE
       { behaviorId: 1, param1: kp(7, 40), param2: 0 }, // &kp RET
-      { behaviorId: 3, param1: 0, param2: 0 }, // &trans
+      { behaviorId: 17, param1: 7, param2: 0 }, // &to 7
       { behaviorId: 1, param1: kp(7, 230), param2: 0 }, // &kp RALT
       ],
     },
@@ -429,6 +436,54 @@ export const corneKeymap: Keymap = {
       { behaviorId: 1, param1: kp(7, 17), param2: 0 }, // &kp N
       { behaviorId: 1, param1: kp(7, 16), param2: 0 }, // &kp M
       { behaviorId: 1, param1: kp(7, 39), param2: 0 }, // &kp N0
+      ],
+    },
+    {
+      id: 7,
+      name: "GEMINI",
+      bindings: [
+      { behaviorId: 17, param1: 0, param2: 0 }, // &to 0
+      { behaviorId: 26, param1: 7, param2: 0 }, // &stn STN_S1
+      { behaviorId: 26, param1: 9, param2: 0 }, // &stn STN_TL
+      { behaviorId: 26, param1: 11, param2: 0 }, // &stn STN_PL
+      { behaviorId: 26, param1: 13, param2: 0 }, // &stn STN_HL
+      { behaviorId: 26, param1: 17, param2: 0 }, // &stn STN_ST1
+      { behaviorId: 26, param1: 22, param2: 0 }, // &stn STN_ST3
+      { behaviorId: 26, param1: 26, param2: 0 }, // &stn STN_FR
+      { behaviorId: 26, param1: 28, param2: 0 }, // &stn STN_PR
+      { behaviorId: 26, param1: 30, param2: 0 }, // &stn STN_LR
+      { behaviorId: 26, param1: 32, param2: 0 }, // &stn STN_TR
+      { behaviorId: 26, param1: 34, param2: 0 }, // &stn STN_DR
+      { behaviorId: 18, param1: 0, param2: 0 }, // &none
+      { behaviorId: 26, param1: 8, param2: 0 }, // &stn STN_S2
+      { behaviorId: 26, param1: 10, param2: 0 }, // &stn STN_KL
+      { behaviorId: 26, param1: 12, param2: 0 }, // &stn STN_WL
+      { behaviorId: 26, param1: 14, param2: 0 }, // &stn STN_RL
+      { behaviorId: 26, param1: 18, param2: 0 }, // &stn STN_ST2
+      { behaviorId: 26, param1: 23, param2: 0 }, // &stn STN_ST4
+      { behaviorId: 26, param1: 27, param2: 0 }, // &stn STN_RR
+      { behaviorId: 26, param1: 29, param2: 0 }, // &stn STN_BR
+      { behaviorId: 26, param1: 31, param2: 0 }, // &stn STN_GR
+      { behaviorId: 26, param1: 33, param2: 0 }, // &stn STN_SR
+      { behaviorId: 26, param1: 41, param2: 0 }, // &stn STN_ZR
+      { behaviorId: 18, param1: 0, param2: 0 }, // &none
+      { behaviorId: 18, param1: 0, param2: 0 }, // &none
+      { behaviorId: 18, param1: 0, param2: 0 }, // &none
+      { behaviorId: 18, param1: 0, param2: 0 }, // &none
+      { behaviorId: 18, param1: 0, param2: 0 }, // &none
+      { behaviorId: 18, param1: 0, param2: 0 }, // &none
+      { behaviorId: 18, param1: 0, param2: 0 }, // &none
+      { behaviorId: 18, param1: 0, param2: 0 }, // &none
+      { behaviorId: 18, param1: 0, param2: 0 }, // &none
+      { behaviorId: 18, param1: 0, param2: 0 }, // &none
+      { behaviorId: 18, param1: 0, param2: 0 }, // &none
+      { behaviorId: 18, param1: 0, param2: 0 }, // &none
+      { behaviorId: 26, param1: 1, param2: 0 }, // &stn STN_N1
+      { behaviorId: 26, param1: 15, param2: 0 }, // &stn STN_A
+      { behaviorId: 26, param1: 16, param2: 0 }, // &stn STN_O
+      { behaviorId: 26, param1: 24, param2: 0 }, // &stn STN_E
+      { behaviorId: 26, param1: 25, param2: 0 }, // &stn STN_U
+      { behaviorId: 26, param1: 1, param2: 0 }, // &stn STN_N1
       ],
     },
   ],
