@@ -74,9 +74,11 @@ central half, the one on USB) and the right one (the peripheral half), each in a
   picture and lit on the dark parts) or **Added to the picture** (the lit pixels of the
   picture are lit and nothing else changes, so a widget disappears where the picture is
   bright). The picture is drawn on the canvas after the widgets, so every widget can be
-  moved over it, the battery of the right half included. The editor and the preview draw
-  the reverse with a `difference` blend, which flips a pixel between two colors, in a group
-  of their own so that the blend sees only the layers of that screen.
+  moved over it, the battery of the right half included, and so can the light toast (the
+  firmware writes it on the canvas like the other widgets, so the picture goes over it
+  too). The editor and the preview draw the reverse with a `difference` blend, which flips
+  a pixel between two colors, in a group of their own so that the blend sees only the
+  layers of that screen.
 - **Show only a piece of the picture.** A frame over the picture, in pixels of the picture
   as it is turned: drag inside it to move it, drag an edge or a corner to resize it, drag
   outside it to draw a new one, or type **X**, **Y**, **Width** and **Height**. The picture

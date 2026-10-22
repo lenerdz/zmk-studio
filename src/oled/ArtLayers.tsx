@@ -16,14 +16,15 @@ import { MIX_INVERT } from "./pictureView";
 import { WidgetArt } from "./PixelArt";
 
 /**
- * The order the layers are painted in: the widgets, then the picture (which can
- * reverse what is under it, so it has to come after what it reverses), then the
- * toast, which the screen draws over everything. The widgets keep the order of
- * the catalog.
+ * The order the layers are painted in: the widgets (the toast too: the firmware
+ * writes it on the canvas like the others), then the picture, which the firmware
+ * puts on the canvas last and which can reverse what is under it, so it has to
+ * come after what it reverses. The widgets keep the order of the catalog (the
+ * sort is stable).
  */
 function paintOrder(widgets: WidgetState[]): WidgetState[] {
   const rank = (state: WidgetState) =>
-    state.def.placement === "picture" ? 1 : state.def.key === "r_toast" ? 2 : 0;
+    state.def.placement === "picture" ? 1 : 0;
 
   return [...widgets].sort((a, b) => rank(a) - rank(b));
 }

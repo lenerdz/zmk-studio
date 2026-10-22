@@ -206,11 +206,13 @@ export function widgetStates(settings: DisplaySettingData[]): WidgetState[] {
 }
 
 /**
- * The order the widgets of a screen are drawn in, from the one under the
- * others: the picture, then the widgets, then the toast, which is drawn over
- * all of them (it shows for a moment, on top of whatever is there).
+ * The order of the areas that pick a widget with the pointer, from the one under
+ * the others: the picture, then the widgets, then the toast. It is not the order
+ * the widgets are painted in (the firmware puts the picture on the canvas last,
+ * over the widgets and over the toast: see ArtLayers); it is the order that lets
+ * a small widget be picked where the picture is over it.
  */
-export function drawOrder(state: Pick<WidgetState, "def">): number {
+export function pickOrder(state: Pick<WidgetState, "def">): number {
   if (state.def.placement === "picture") {
     return 1;
   }

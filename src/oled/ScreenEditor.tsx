@@ -20,7 +20,7 @@ import {
 import { DRAG_KIND_MIME, DRAG_WIDGET_MIME } from "./dragTypes";
 import { CANVAS, WINDOW } from "./oledGeometry";
 import {
-  drawOrder,
+  pickOrder,
   valuesAfterMove,
   valuesForCorner,
   type WidgetState,
@@ -116,7 +116,7 @@ export const ScreenEditor = ({
 
   const shown = widgets
     .filter((w) => w.shown)
-    .sort((a, b) => drawOrder(a) - drawOrder(b));
+    .sort((a, b) => pickOrder(a) - pickOrder(b));
 
   const startDrag = (e: PointerEvent<HTMLDivElement>, state: WidgetState) => {
     if (e.button !== 0 || disabled) {
@@ -369,7 +369,7 @@ export const ScreenEditor = ({
               top: px(state.rect.y) - padY,
               width: w + 2 * padX,
               height: h + 2 * padY,
-              zIndex: HIT_Z + drawOrder(state),
+              zIndex: HIT_Z + pickOrder(state),
               cursor: disabled ? "default" : dragging ? "grabbing" : "grab",
               touchAction: "none",
               background: selected ? "rgba(143,160,255,0.2)" : undefined,
