@@ -65,8 +65,9 @@ of every setting come from the keyboard.
 | 5 | Light toast on the right screen | Switch | 0 or 1 | 1 (On) | Needs the widget of zmk-nice-oled, which corne-zmk builds |
 | 6 | Toast duration | Slider, step 0.1 s | 0.5 s to 5 s | 1.5 s | Used only while setting 5 is on |
 
-The ids from 16 up are the layout of the OLED screens (37 settings on the Corne of
-corne-zmk, from the animation of the right screen to the graph of the left one). The
+The ids from 16 up are the layout of the OLED screens (41 settings on the Corne of
+corne-zmk, from the animation of the right screen to the graph of the left one; the
+turn, the mix and the cut of the picture are the ids 112 to 115). The
 [OLED tab](../oled/README.md) edits them, and this tab does not list them.
 
 ## How the changes travel

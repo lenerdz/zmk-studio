@@ -53,6 +53,26 @@ describe("the ids", () => {
       }
     }
   });
+
+  it("add four to the picture, in a block of their own: turn, mix and the two of the crop", () => {
+    const picture = WIDGETS.find((w) => w.key === "r_anim")!;
+
+    expect([
+      picture.ids.rot,
+      picture.ids.mix,
+      picture.ids.cropXY,
+      picture.ids.cropWH,
+    ]).toEqual([112, 113, 114, 115]);
+    expect(112 % 8).toBe(0);
+
+    // No other widget has them
+    for (const widget of WIDGETS.filter((w) => w.key !== "r_anim")) {
+      expect(widget.ids.rot).toBeUndefined();
+      expect(widget.ids.mix).toBeUndefined();
+      expect(widget.ids.cropXY).toBeUndefined();
+      expect(widget.ids.cropWH).toBeUndefined();
+    }
+  });
 });
 
 describe("the widgets", () => {
@@ -80,9 +100,17 @@ describe("the widgets", () => {
     expect(new Set(WIDGETS.map((w) => w.key)).size).toBe(WIDGETS.length);
 
     const ids = WIDGETS.flatMap((w) =>
-      [w.ids.show, w.ids.x, w.ids.y, w.ids.kind, w.ids.ms].filter(
-        (id): id is number => id !== undefined,
-      ),
+      [
+        w.ids.show,
+        w.ids.x,
+        w.ids.y,
+        w.ids.kind,
+        w.ids.ms,
+        w.ids.rot,
+        w.ids.mix,
+        w.ids.cropXY,
+        w.ids.cropWH,
+      ].filter((id): id is number => id !== undefined),
     );
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -95,7 +123,7 @@ describe("the widgets", () => {
 
   it("have a drawing with at least one part of a known size", () => {
     for (const widget of WIDGETS) {
-      for (const kind of [0, 1, 5]) {
+      for (const kind of [0, 1, 5, 7, 25]) {
         const box = partsBox(widget.art(context({ kind })));
 
         expect(box.w).toBeGreaterThan(0);
@@ -130,6 +158,15 @@ describe("the size of a part", () => {
       w: 20,
       h: 11,
     });
+  });
+
+  it("is the sprite turned: a quarter of a turn swaps the sides", () => {
+    const usb = { type: "sprite", sprite: "usb", x: 3, y: 4 } as const;
+
+    expect(partBox({ ...usb, turn: 0 })).toEqual({ x: 3, y: 4, w: 20, h: 11 });
+    expect(partBox({ ...usb, turn: 1 })).toEqual({ x: 3, y: 4, w: 11, h: 20 });
+    expect(partBox({ ...usb, turn: 2 })).toEqual({ x: 3, y: 4, w: 20, h: 11 });
+    expect(partBox({ ...usb, turn: 3 })).toEqual({ x: 3, y: 4, w: 11, h: 20 });
   });
 
   it("is the advance of the font for each character, by the line of the font", () => {
@@ -204,6 +241,23 @@ describe("how the widgets are drawn", () => {
     expect(art("r_anim", { kind: 6 })).toEqual({ x: 0, y: 0, w: 68, h: 140 });
   });
 
+  it("draws the pictures of the fork 32 pixels wide, from 32 to 128 tall", () => {
+    expect(art("r_anim", { kind: 7 })).toEqual({ x: 0, y: 0, w: 32, h: 64 });
+    expect(art("r_anim", { kind: 8 })).toEqual({ x: 0, y: 0, w: 32, h: 32 });
+    expect(art("r_anim", { kind: 10 })).toEqual({ x: 0, y: 0, w: 32, h: 128 });
+  });
+
+  it("draws the picture turned, with the sides swapped by each quarter of a turn", () => {
+    expect(art("r_anim", { kind: 1, turn: 1 })).toEqual({ x: 0, y: 0, w: 69, h: 68 });
+    expect(art("r_anim", { kind: 1, turn: 2 })).toEqual({ x: 0, y: 0, w: 68, h: 69 });
+    expect(art("r_anim", { kind: 10, turn: 3 })).toEqual({ x: 0, y: 0, w: 128, h: 32 });
+  });
+
+  it("does not turn the other widgets", () => {
+    expect(art("r_battery", { turn: 1 })).toEqual(art("r_battery"));
+    expect(art("l_wpm_gauge", { turn: 3 })).toEqual(art("l_wpm_gauge"));
+  });
+
   it("draws the battery text of the left screen by the build's position", () => {
     // The central battery mode puts it at y = 19 and writes both halves
     expect(art("l_battery", { defaultY: 19 })).toEqual({
@@ -251,7 +305,7 @@ describe("how the widgets are drawn", () => {
 });
 
 describe("the pictures of the right screen", () => {
-  it("are seven, from 0, in the order of the firmware", () => {
+  it("are 26, from 0, in the order of the firmware: the seven of nice!oled and the 19 of the fork", () => {
     expect(ANIMATION_KINDS.map((k) => [k.value, k.sprite])).toEqual([
       [0, "crystal"],
       [1, "cat"],
@@ -260,13 +314,66 @@ describe("the pictures of the right screen", () => {
       [4, "pokemon"],
       [5, "vim"],
       [6, "vip_marcos"],
+      [7, "equalizer"],
+      [8, "radar"],
+      [9, "heartbeat"],
+      [10, "rain"],
+      [11, "cube"],
+      [12, "atom"],
+      [13, "helix"],
+      [14, "warp"],
+      [15, "sonar"],
+      [16, "bounce"],
+      [17, "flame"],
+      [18, "mountains"],
+      [19, "skyline"],
+      [20, "circuit"],
+      [21, "alien"],
+      [22, "heart"],
+      [23, "keyboard"],
+      [24, "pulsar"],
+      [25, "rocket"],
     ]);
+  });
+
+  it("have a label and a hint of their own", () => {
+    expect(new Set(ANIMATION_KINDS.map((k) => k.label)).size).toBe(
+      ANIMATION_KINDS.length,
+    );
+    expect(new Set(ANIMATION_KINDS.map((k) => k.sprite)).size).toBe(
+      ANIMATION_KINDS.length,
+    );
+    for (const kind of ANIMATION_KINDS) {
+      expect(kind.label.length).toBeGreaterThan(2);
+      expect(kind.hint.length).toBeGreaterThan(15);
+    }
+  });
+
+  it("are 32 pixels wide, from 7 on: the width of what the panel shows", () => {
+    for (const kind of ANIMATION_KINDS.filter((k) => k.value >= 7)) {
+      const info = SPRITES[kind.sprite];
+
+      expect(info.width).toBe(32);
+      expect([32, 64, 128]).toContain(info.height);
+    }
+  });
+
+  it("play only when the sprite has more than one frame", () => {
+    for (const kind of ANIMATION_KINDS) {
+      const info = SPRITES[kind.sprite];
+
+      expect(kind.cycleMs !== null).toBe(info.frames > 1);
+      expect(info.kind).toBe(kind.cycleMs === null ? "still" : "animation");
+    }
   });
 
   it("have a sprite with as many frames as the kind plays", () => {
     const frames = ANIMATION_KINDS.map((k) => SPRITES[k.sprite].frames);
 
-    expect(frames).toEqual([16, 8, 16, 20, 48, 1, 1]);
+    expect(frames).toEqual([
+      16, 8, 16, 20, 48, 1, 1, 16, 24, 16, 32, 16, 24, 16, 24, 16, 24, 16,
+      1, 1, 1, 1, 1, 1, 1, 1,
+    ]);
   });
 
   it("have a time of a cycle for the animations only, the ones of nice!oled", () => {
@@ -278,14 +385,40 @@ describe("the pictures of the right screen", () => {
       10000,
       null,
       null,
+      // The 19 of the fork: the 11 animations, then the 8 still images
+      1200,
+      2400,
+      1600,
+      3200,
+      1600,
+      2400,
+      1600,
+      2400,
+      1600,
+      1200,
+      1200,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
     ]);
   });
 
-  it("name the option of the build that picks each one", () => {
-    for (const kind of ANIMATION_KINDS) {
+  it("name the option of the build that picks each of the first seven", () => {
+    for (const kind of ANIMATION_KINDS.filter((k) => k.value < 7)) {
       expect(kind.option).toMatch(
         /^CONFIG_NICE_OLED_WIDGET_(ANIMATION|STATIC_IMAGE)_PERIPHERAL_/,
       );
+    }
+  });
+
+  it("have no option for the ones of the fork: they are picked at run time only", () => {
+    for (const kind of ANIMATION_KINDS.filter((k) => k.value >= 7)) {
+      expect(kind.option).toBeNull();
     }
   });
 

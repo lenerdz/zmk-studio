@@ -26,7 +26,7 @@ Nothing is saved: reloading the page starts again from the stock keymap and colo
 | `demoDevice.ts` | The logic: the answers and the notifications for each request, on plain objects |
 | `demoTransport.ts` | Connects it to the app as a transport. The bytes go through the real framing and the real message encoding, in both directions |
 | `demoColors.ts` | The colors the maps start with (generated) |
-| `../../display/demo/demoDisplay.ts` | The display settings: ids 1 to 6 of the Display tab and the 37 settings of the OLED layout (ids 16 to 106), 43 in all, with the ranges and defaults of `display_settings.c` |
+| `../../display/demo/demoDisplay.ts` | The display settings: ids 1 to 6 of the Display tab and the 41 settings of the OLED layout (ids 16 to 115), 47 in all, with the ranges and defaults of `display_settings.c` |
 
 - The physical layout, the behaviors and the keymap come from
   [`src/keyboard/corne.mock.ts`](../../keyboard/corne.mock.ts). Like the data of the
@@ -39,7 +39,7 @@ Nothing is saved: reloading the page starts again from the stock keymap and colo
   written in `demoDevice.ts` on purpose, and not taken from the app, so a mistake in the
   app shows up as an error here.
 - The display settings follow `display_settings.c` of the same module: the six settings
-  of the Display tab and the 37 of the OLED layout (the build of the Corne of corne-zmk,
+  of the Display tab and the 41 of the OLED layout (the build of the Corne of corne-zmk,
   with the cat as the animation) with their ranges and defaults, `INVALID_ID` and
   `INVALID_VALUE` answers, and the restore of the defaults. They are kept as they change (there is no saved copy and no
   unsaved flag, as in the firmware). The ranges are written in `demoDisplay.ts` on purpose,

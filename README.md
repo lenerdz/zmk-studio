@@ -172,7 +172,10 @@ The settings, their ranges, how the changes travel and the files:
 With a firmware that has the OLED layout, the header has a fourth view, **OLED**, next to
 **Keys**, **Lights** and **Display** (each one only when the firmware has what it edits).
 It draws the two OLED screens of the keyboard upright, with the strip that the panel really
-shows lit, and sets what each screen shows and where:
+shows lit, and sets what each screen shows and where. Each screen also has a preview of the
+strip standing up, the way it is read on the keyboard (the panel is mounted on its side, so
+it is never horizontal), with a button that turns the view a quarter of a turn: it turns the
+view only, nothing is sent to the keyboard.
 
 - **Drag a widget** (the battery, the Bluetooth link, the layer name, the typing speed, the
   animation, ...) to move it. The arrow keys move the selected one by a pixel, or by eight
@@ -180,10 +183,18 @@ shows lit, and sets what each screen shows and where:
   the panel shows.
 - **Hide a widget** with Delete or with its switch, and **show it again** by clicking it
   in the tray of hidden widgets or by dragging it onto the screen.
-- **Choose the picture of the right screen** in a gallery: five animations (Gem, Cat,
-  Head, Spaceman, Pokemon) and two still images, each one playing in its card, with its
-  size and the time of a cycle. Click one, or drag it onto the right screen, and set the
-  time of one cycle.
+- **Choose the picture of the right screen** in a gallery of 26 pictures, in two groups:
+  16 animations (Gem, Cat, Head, Spaceman, Pokemon, and 11 more: Equalizer, Radar,
+  Heartbeat, Digital rain, Wire cube, Atom, Helix, Warp, Sonar, Bouncing ball, Flame) and
+  10 still images (Vim, VIPs Marcos, and 8 more: Mountains, Skyline, Circuit, Alien, Heart,
+  Keyboard, Pulsar, Rocket), each one playing in its card, with its size and the time of a
+  cycle. Click one, or drag it onto the right screen, and set the time of one cycle.
+- **Turn the picture** a quarter of a turn to either side, **cut it** to a piece that is
+  selected with a frame (drag it, resize it or type its numbers), and choose **how the
+  widgets mix with it**: shown in reverse where they are over a lit part of the picture, so
+  that they stay readable (the default), or added to it. The firmware draws the picture on
+  top of the widgets, so any widget, the battery of the right half included, can be moved
+  over it.
 - **See what the screens can show**, with the size of each thing, and which choices only a
   new firmware build adds (the Luna dog, the Bongo cat, the modifier indicators, Raw HID,
   ...), each with the option to turn on.
@@ -232,12 +243,17 @@ The OLED tab was tried in a browser against the demo keyboard, through the same 
 message encoding as with a real keyboard: the two screens, dragging each widget with the
 pointer, the arrow keys, hiding with Delete, showing from the tray by click and by drag,
 choosing a picture in the gallery by click and by drag, the inspector, putting a screen
-back as built and the zoom levels; the demo keyboard without display settings has no OLED
-tab. It is covered by `npm test`. It has **not been tried on a real keyboard**: whether
-each widget moves where the app says (the conversion of the coordinates of the picture
-rests on reading the code of zmk-nice-oled), whether the pictures switch while the
-keyboard runs, and what the right half shows after it receives its settings are
-unconfirmed. Touch input has not been tried on any device.
+back as built and the zoom levels; also turning the picture, the frame of the cut (moving
+it, typing its numbers, going back to the whole picture), the battery of the right half
+dragged over the picture in reverse, and the button that turns the view of a screen; the
+demo keyboard without display settings has no OLED tab. It is covered by `npm test`. The
+first version of the tab (moving, showing and hiding the widgets, and the seven pictures of
+zmk-nice-oled) was used on the Corne of the keyboard's owner, who reported that it worked,
+without detail about each operation, so none of those has an individual confirmation. What
+was added after it (turning, cutting and mixing the picture, the reverse where a widget is
+over it, and the 19 new pictures) has **not been tried on a real keyboard**: the preview of
+it rests on the code of the firmware and on its tests on a computer, not on the screen.
+Touch input has not been tried on any device.
 
 The keys `Steno On` and `Steno Off`, and the STENO layer, were checked in a browser against
 the demo keyboard and in the Storybook story `Keyboard/Keymap (Corne)`, not on a real

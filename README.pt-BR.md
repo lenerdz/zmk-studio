@@ -181,7 +181,10 @@ As configurações, as faixas de valores, como as mudanças trafegam e os arquiv
 Com um firmware que tem o layout das telas OLED, o cabeçalho ganha uma quarta visão,
 **OLED**, ao lado de **Keys**, **Lights** e **Display** (cada uma só quando o firmware tem
 o que ela edita). Ela desenha as duas telas OLED do teclado na vertical, com a faixa que o
-painel realmente mostra acesa, e define o que cada tela mostra e onde:
+painel realmente mostra acesa, e define o que cada tela mostra e onde. Cada tela também tem
+uma prévia da faixa em pé, do jeito que ela é lida no teclado (o painel é montado de lado,
+então nunca fica na horizontal), com um botão que gira a visão um quarto de volta: ele gira
+só a visão, nada é enviado ao teclado.
 
 - **Arraste um widget** (a bateria, o link Bluetooth, o nome da camada, a velocidade de
   digitação, a animação, ...) para movê-lo. As setas movem o selecionado um pixel, ou oito
@@ -189,10 +192,18 @@ painel realmente mostra acesa, e define o que cada tela mostra e onde:
   painel mostra.
 - **Esconda um widget** com Delete ou com a chave dele, e **mostre-o de novo** clicando nele
   na bandeja dos widgets escondidos ou arrastando-o para a tela.
-- **Escolha a imagem da tela direita** em uma galeria: cinco animações (Gem, Cat, Head,
-  Spaceman, Pokemon) e duas imagens fixas, cada uma tocando no seu cartão, com o tamanho e
-  o tempo de um ciclo. Clique em uma, ou arraste-a para a tela direita, e ajuste o tempo de
-  um ciclo.
+- **Escolha a imagem da tela direita** em uma galeria de 26 imagens, em dois grupos: 16
+  animações (Gem, Cat, Head, Spaceman, Pokemon e mais 11: Equalizer, Radar, Heartbeat,
+  Digital rain, Wire cube, Atom, Helix, Warp, Sonar, Bouncing ball, Flame) e 10 imagens
+  fixas (Vim, VIPs Marcos e mais 8: Mountains, Skyline, Circuit, Alien, Heart, Keyboard,
+  Pulsar, Rocket), cada uma tocando no seu cartão, com o tamanho e o tempo de um ciclo.
+  Clique em uma, ou arraste-a para a tela direita, e ajuste o tempo de um ciclo.
+- **Gire a imagem** um quarto de volta para qualquer lado, **corte-a** em um pedaço que se
+  seleciona com uma moldura (arraste-a, redimensione-a ou digite os números dela) e escolha
+  **como os widgets se misturam com ela**: mostrados em reverso onde estão sobre uma parte
+  acesa da imagem, para continuarem legíveis (o padrão), ou somados a ela. O firmware
+  desenha a imagem por cima dos widgets, então qualquer widget, inclusive a bateria da
+  metade direita, pode ser movido para cima dela.
 - **Veja o que as telas podem mostrar**, com o tamanho de cada coisa, e quais escolhas só
   um novo build do firmware acrescenta (o cachorro Luna, o gato Bongo, os indicadores de
   modificadores, o Raw HID, ...), cada uma com a opção a ligar.
@@ -242,12 +253,17 @@ A aba OLED foi testada em um navegador com o teclado de demonstração, pela mes
 (framing) e codificação de mensagens usadas com um teclado real: as duas telas, arrastar
 cada widget com o ponteiro, as setas, esconder com Delete, mostrar pela bandeja com clique
 e com arraste, escolher uma imagem na galeria com clique e com arraste, o inspetor,
-devolver uma tela ao que o build tinha e os níveis de zoom; o teclado de demonstração sem
-configurações de tela não tem a aba OLED. Ela é coberta por `npm test`. **Não foi testada
-em um teclado real**: se cada widget vai para onde o app diz (a conversão das coordenadas
-da imagem se baseia na leitura do código do zmk-nice-oled), se as imagens trocam enquanto
-o teclado funciona e o que a metade direita mostra depois de receber as configurações dela
-continuam sem confirmação. O toque não foi testado em nenhum dispositivo.
+devolver uma tela ao que o build tinha e os níveis de zoom; também girar a imagem, a
+moldura do corte (movê-la, digitar os números dela, voltar à imagem inteira), a bateria da
+metade direita arrastada para cima da imagem em reverso e o botão que gira a visão de uma
+tela; o teclado de demonstração sem configurações de tela não tem a aba OLED. Ela é coberta
+por `npm test`. A primeira versão da aba (mover, mostrar e esconder os widgets, e as sete
+imagens do zmk-nice-oled) foi usada no Corne do dono do teclado, que relatou que
+funcionou, sem detalhar cada operação, então nenhuma delas tem confirmação individual. O
+que foi acrescentado depois dela (girar, cortar e misturar a imagem, o reverso onde um
+widget está sobre ela e as 19 imagens novas) **não foi testado em um teclado real**: a
+prévia disso se baseia no código do firmware e nos testes dele em um computador, não na
+tela. O toque não foi testado em nenhum dispositivo.
 
 As teclas `Steno On` e `Steno Off` e a camada STENO foram conferidas em um navegador com o
 teclado de demonstração e na story `Keyboard/Keymap (Corne)` do Storybook, não em um

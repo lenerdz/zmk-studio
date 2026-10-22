@@ -5,9 +5,10 @@
  * The panel of the widget that is selected on a screen: how big it is, where it
  * is, whether the panel shows it, and the controls that the drag does not give:
  * the switch, the position as numbers and arrows, and for the picture of the right
- * screen the choice of the picture and its speed.
+ * screen the choice of the picture, its speed, its turn, how the widgets mix with
+ * it and the piece of it that shows.
  */
-import { useId, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import {
   ArrowDown,
   ArrowLeft,
@@ -17,83 +18,24 @@ import {
   RotateCcw,
 } from "lucide-react";
 import type { DisplaySettingData } from "../display/displayProtocol";
-import { ANIMATION_KINDS, SCREEN_TITLES } from "./oledCatalog";
+import { WidgetPiece } from "./ArtLayers";
+import { SCREEN_TITLES } from "./oledCatalog";
 import {
   describeVisibility,
   idsOfWidget,
-  pictureOf,
-  selectableKinds,
   valuesAfterMove,
   valuesForCorner,
   widgetsAreDefault,
   type WidgetState,
 } from "./oledLayout";
 import { WINDOW_RECT } from "./oledGeometry";
-import { PANEL_COLOR, WidgetArt } from "./PixelArt";
+import { NumberField } from "./NumberField";
+import { PictureControls } from "./PictureControls";
+import type { Crop } from "./pictureView";
+import { PANEL_COLOR } from "./PixelArt";
 
 const BUTTON =
   "flex items-center gap-1 rounded px-2 py-1 bg-base-100 hover:bg-base-300 disabled:opacity-50 disabled:hover:bg-base-100";
-
-interface NumberFieldProps {
-  label: string;
-  hint: string;
-  value: number;
-  min: number;
-  max: number;
-  disabled: boolean;
-  onCommit: (value: number) => void;
-}
-
-/**
- * A whole number the keyboard accepts. What is typed goes to the keyboard as soon
- * as it is a number; the field shows what the keyboard has again when it loses
- * the focus (a value out of the range is held inside it). Without a draft the
- * field always shows the value it is given, so a drag, the arrows or another
- * widget never leave an old number in it.
- */
-const NumberField = ({
-  label,
-  hint,
-  value,
-  min,
-  max,
-  disabled,
-  onCommit,
-}: NumberFieldProps) => {
-  const id = useId();
-  const [draft, setDraft] = useState<string | null>(null);
-
-  return (
-    <div className="flex flex-col gap-0.5">
-      <label htmlFor={id} className="opacity-70" title={hint}>
-        {label}
-      </label>
-      <input
-        id={id}
-        type="number"
-        inputMode="numeric"
-        className="w-20 rounded bg-base-100 px-2 py-1 tabular-nums"
-        min={min}
-        max={max}
-        step={1}
-        value={draft ?? String(value)}
-        disabled={disabled}
-        aria-describedby={`${id}-range`}
-        onChange={(e) => {
-          setDraft(e.currentTarget.value);
-          const wanted = e.currentTarget.valueAsNumber;
-          if (Number.isFinite(wanted)) {
-            onCommit(Math.round(wanted));
-          }
-        }}
-        onBlur={() => setDraft(null)}
-      />
-      <span id={`${id}-range`} className="sr-only">
-        From {min} to {max}
-      </span>
-    </div>
-  );
-};
 
 interface NudgeProps {
   disabled: boolean;
@@ -142,103 +84,6 @@ const Nudge = ({ disabled, onNudge }: NudgeProps) => {
   );
 };
 
-interface PictureControlsProps {
-  state: WidgetState;
-  settings: DisplaySettingData[];
-  disabled: boolean;
-  onSetValue: (id: number, value: number) => void;
-}
-
-/** Which picture the right screen plays, and how fast. */
-const PictureControls = ({
-  state,
-  settings,
-  disabled,
-  onSetValue,
-}: PictureControlsProps) => {
-  const selectId = useId();
-  const sliderId = useId();
-  const kindId = state.def.ids.kind;
-  const msId = state.def.ids.ms;
-  const msSetting = settings.find((s) => s.id === msId);
-  const kinds = selectableKinds(settings, ANIMATION_KINDS);
-  const picture = pictureOf(settings);
-  const cycle = picture.cycleMs;
-  const own = (msSetting?.value ?? 0) === 0;
-
-  if (kindId === undefined || kinds.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-col gap-0.5">
-        <label htmlFor={selectId} className="opacity-70">
-          Picture
-        </label>
-        <select
-          id={selectId}
-          className="rounded bg-base-100 px-2 py-1"
-          value={picture.kind.value}
-          disabled={disabled}
-          onChange={(e) => onSetValue(kindId, Number(e.currentTarget.value))}
-        >
-          {kinds.map((kind) => (
-            <option key={kind.value} value={kind.value}>
-              {kind.label}
-              {kind.cycleMs === null ? " (still image)" : ""}
-            </option>
-          ))}
-        </select>
-        <span className="opacity-70">{picture.kind.hint}</span>
-      </div>
-
-      {msId !== undefined && msSetting && cycle !== null && (
-        <div className="flex flex-col gap-1">
-          <label className="flex items-center justify-between gap-3">
-            <span>Speed of the animation itself</span>
-            <input
-              type="checkbox"
-              role="switch"
-              className="size-5 accent-primary"
-              checked={own}
-              disabled={disabled}
-              onChange={(e) =>
-                // Leaving the speed of the animation starts from that speed
-                onSetValue(
-                  msId,
-                  e.currentTarget.checked ? 0 : picture.kind.cycleMs ?? 960,
-                )
-              }
-            />
-          </label>
-          <div className={`flex flex-col gap-1 ${own ? "opacity-50" : ""}`}>
-            <div className="flex items-baseline justify-between gap-2">
-              <label htmlFor={sliderId}>Time of one cycle</label>
-              <output htmlFor={sliderId} className="font-mono">
-                {Number((cycle / 1000).toFixed(2))} s
-              </output>
-            </div>
-            <input
-              id={sliderId}
-              type="range"
-              className="w-full accent-primary"
-              min={100}
-              max={Math.max(Math.min(msSetting.max, 30000), cycle)}
-              step={100}
-              value={cycle}
-              disabled={disabled || own}
-              onChange={(e) =>
-                onSetValue(msId, Math.round(e.currentTarget.valueAsNumber))
-              }
-            />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
 const Row = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="flex justify-between gap-3">
     <dt className="opacity-70">{label}</dt>
@@ -255,6 +100,15 @@ interface Props {
   onSetValue: (id: number, value: number) => void;
   onShown: (state: WidgetState, shown: boolean) => void;
   onReset: (state: WidgetState) => void;
+  /** Another picture for the right screen (with the position and the turn that go with it). */
+  onPickKind: (kind: number) => void;
+  /** The picture turned to a number of quarter turns clockwise. */
+  onTurn: (state: WidgetState, turn: number) => void;
+  onMix: (state: WidgetState, mix: number) => void;
+  /** A piece of the picture to show; null for all of it. */
+  onCrop: (state: WidgetState, crop: Crop | null) => void;
+  /** The piece that shows, in the middle of the strip the panel shows. */
+  onCenter: (state: WidgetState) => void;
 }
 
 export const OledInspector = ({
@@ -265,6 +119,11 @@ export const OledInspector = ({
   onSetValue,
   onShown,
   onReset,
+  onPickKind,
+  onTurn,
+  onMix,
+  onCrop,
+  onCenter,
 }: Props) => {
   if (!state) {
     return (
@@ -301,6 +160,8 @@ export const OledInspector = ({
         : ", hidden"
   }`;
 
+  const { picture } = state;
+
   return (
     <aside
       aria-label="Selected widget"
@@ -318,9 +179,8 @@ export const OledInspector = ({
         className="grid max-h-56 place-items-start overflow-hidden self-start rounded p-1"
         style={{ background: PANEL_COLOR }}
       >
-        <WidgetArt
-          parts={state.parts}
-          box={state.box}
+        <WidgetPiece
+          state={state}
           scale={isPicture && state.rect.h > 100 ? 1 : 3}
           frame={frame}
         />
@@ -353,7 +213,13 @@ export const OledInspector = ({
           state={state}
           settings={settings}
           disabled={busy}
+          frame={frame}
           onSetValue={onSetValue}
+          onPickKind={onPickKind}
+          onTurn={(turn) => onTurn(state, turn)}
+          onMix={(mix) => onMix(state, mix)}
+          onCrop={(crop) => onCrop(state, crop)}
+          onCenter={() => onCenter(state)}
         />
       )}
 
@@ -362,7 +228,7 @@ export const OledInspector = ({
           label={isPicture ? "X" : "x"}
           hint={
             isPicture
-              ? "X of the picture on the landscape canvas of the panel: a larger X moves it up on the screens of this editor."
+              ? "X of the whole picture on the landscape canvas of the panel: a larger X moves it up on the screens of this editor."
               : "x of the widget, in pixels, going right"
           }
           value={state.x}
@@ -375,7 +241,7 @@ export const OledInspector = ({
           label={isPicture ? "Y" : "y"}
           hint={
             isPicture
-              ? "Y of the picture on the landscape canvas of the panel: a larger Y moves it right on the screens of this editor."
+              ? "Y of the whole picture on the landscape canvas of the panel: a larger Y moves it right on the screens of this editor."
               : "y of the widget, in pixels, going down"
           }
           value={state.y}
@@ -394,7 +260,7 @@ export const OledInspector = ({
       </div>
       <p className="opacity-70">
         {isPicture
-          ? "X and Y are the numbers of the nice!oled options for the picture: they place it on the landscape canvas of the panel, so a larger X moves it up and a larger Y moves it right on the screens here."
+          ? "X and Y are the numbers of the nice!oled options for the picture: they place the whole picture on the landscape canvas of the panel (a piece that is cut away keeps them), so a larger X moves it up and a larger Y moves it right on the screens here."
           : "x goes right and y goes down, in pixels of the canvas. They are the numbers of the nice!oled options for the widget."}
       </p>
 
@@ -406,6 +272,13 @@ export const OledInspector = ({
           x {state.rect.x} to {state.rect.x + state.rect.w - 1}, y{" "}
           {state.rect.y} to {state.rect.y + state.rect.h - 1}
         </Row>
+        {picture && (
+          <Row label="Piece">
+            {picture.crop
+              ? `x ${picture.crop.x}, y ${picture.crop.y}, ${picture.crop.w} x ${picture.crop.h} of ${picture.shape.w} x ${picture.shape.h}`
+              : `the whole picture, ${picture.shape.w} x ${picture.shape.h}`}
+          </Row>
+        )}
         <Row label="Built with">{built}</Row>
       </dl>
 

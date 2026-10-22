@@ -2,11 +2,12 @@
  * Added by the lenerdz/zmk-studio fork; this file is not part of upstream ZMK
  * Studio.
  *
- * The pictures the right screen can play, each one playing in its card: the five
- * animations and the two still images of zmk-nice-oled. Click a card to put the
- * picture on the screen, or drag it onto the right screen to play it where it is
- * dropped. The firmware has them all (the build of this repository
- * with the OLED layout on), so choosing one is a setting, not a new build.
+ * The pictures the right screen can play, each one playing in its card: the
+ * animations first and then the still images (the seven of zmk-nice-oled and the
+ * 19 that the lenerdz fork adds). Click a card to put the picture on the screen,
+ * or drag it onto the right screen to play it where it is dropped. The firmware
+ * has them all (the build of this repository with the OLED layout on), so
+ * choosing one is a setting, not a new build.
  */
 import { SPRITES } from "./assets/sprites";
 import { DRAG_KIND_MIME } from "./dragTypes";
@@ -37,8 +38,11 @@ const KindCard = ({
   // The card that is on the screen plays at the speed of the setting
   const cycle = cycleMsOf(kind, selected ? ms : 0);
   const frame = useFrame(info.frames, cycle, playing);
-  // The still images are as tall as the canvas: show them at their size
-  const scale = info.height > 100 ? 1 : 2;
+  // As big as the card holds (164 pixels tall, about 170 wide), in whole pixels
+  const scale = Math.max(
+    1,
+    Math.min(Math.floor(164 / info.height), Math.floor(168 / info.width), 5),
+  );
 
   return (
     <li>
@@ -102,34 +106,56 @@ export const AnimationGallery = ({
   playing,
   busy,
   onPick,
-}: Props) => (
-  <section
-    aria-label="Pictures of the right screen"
-    className="flex flex-col gap-3 rounded bg-base-200 p-3"
-  >
-    <header className="flex flex-col gap-1">
-      <h3 className="font-semibold">Pictures of the right screen</h3>
-      <p className="max-w-4xl opacity-70">
-        Click one to play it on the right screen, or drag one onto the screen to
-        play it where you drop it. A click keeps the place of the Animation or
-        image widget, so a picture of another size may need a new place: drag it
-        on the screen. Every picture is in the firmware, so choosing one does
-        not need a new build. The still images are as tall as the whole canvas
-        (160 and 140 pixels), and the screen shows 32 columns of them.
-      </p>
-    </header>
-    <ul className="grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-2">
-      {ANIMATION_KINDS.map((entry) => (
-        <KindCard
-          key={entry.value}
-          kind={entry}
-          selected={entry.value === kind}
-          disabled={busy || !selectable.includes(entry.value)}
-          playing={playing}
-          ms={ms}
-          onPick={() => onPick(entry.value)}
-        />
-      ))}
-    </ul>
-  </section>
-);
+}: Props) => {
+  const group = (title: string, hint: string, kinds: AnimationKind[]) => (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-col">
+        <h4 className="font-semibold">{title}</h4>
+        <p className="max-w-4xl opacity-70">{hint}</p>
+      </div>
+      <ul className="grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-2">
+        {kinds.map((entry) => (
+          <KindCard
+            key={entry.value}
+            kind={entry}
+            selected={entry.value === kind}
+            disabled={busy || !selectable.includes(entry.value)}
+            playing={playing}
+            ms={ms}
+            onPick={() => onPick(entry.value)}
+          />
+        ))}
+      </ul>
+    </div>
+  );
+
+  return (
+    <section
+      aria-label="Pictures of the right screen"
+      className="flex flex-col gap-4 rounded bg-base-200 p-3"
+    >
+      <header className="flex flex-col gap-1">
+        <h3 className="font-semibold">Pictures of the right screen</h3>
+        <p className="max-w-4xl opacity-70">
+          Click one to play it on the right screen, or drag one onto the
+          screen to play it where you drop it. A new picture starts upright
+          and whole, with its center where the center of the old one was,
+          and inside the strip the panel shows when it fits there. Every
+          picture is in the firmware, so choosing one does not need a new
+          build. Turn it, cut it to a piece and choose how the widgets mix
+          with it in the panel of the selected widget.
+        </p>
+      </header>
+      {group(
+        "Animations",
+        "They play all the time. The ones 32 pixels wide fit the screen, and the ones that are 128 pixels tall fill it. The time of one cycle is a setting of the picture.",
+        ANIMATION_KINDS.filter((entry) => entry.cycleMs !== null),
+      )}
+      {group(
+        "Still images",
+        "They do not move. Vim and VIPs Marcos are 68 pixels wide, so the screen shows 32 columns of them; the others are 32 wide.",
+        ANIMATION_KINDS.filter((entry) => entry.cycleMs === null),
+      )}
+    </section>
+  );
+};

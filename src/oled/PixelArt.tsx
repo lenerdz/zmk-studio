@@ -13,6 +13,7 @@ import { FIRST_CHAR, FONTS, LAST_CHAR, SPRITES } from "./assets/sprites";
 import type { FontName, SpriteName } from "./assets/sprites";
 import { spriteFrame, type Part } from "./oledCatalog";
 import type { Rect } from "./oledGeometry";
+import { normalizeTurn, turnTransform, turnedSize } from "./pictureView";
 
 /** The color of a lit pixel: the same as the one convert.py gives the sprites. */
 export const LIT_COLOR = "#dff1ff";
@@ -30,29 +31,59 @@ interface PixelSpriteProps {
   scale: number;
   /** For an animation: which of its frames. */
   frame?: number;
+  /** Quarter turns clockwise: the box of the sprite then has its sides swapped. */
+  turn?: number;
 }
 
 /**
  * One frame of a sprite. A picture that is not an animation has only one, so
- * the frame of the clock of the right screen cannot go past it.
+ * the frame of the clock of the right screen cannot go past it. A turned
+ * sprite is drawn in a box of the turned size.
  */
-export const PixelSprite = ({ sprite, scale, frame = 0 }: PixelSpriteProps) => {
+export const PixelSprite = ({
+  sprite,
+  scale,
+  frame = 0,
+  turn = 0,
+}: PixelSpriteProps) => {
   const info = SPRITES[sprite];
   const shown = spriteFrame(info.frames, frame);
+  const width = info.width * scale;
+  const height = info.height * scale;
 
-  return (
+  const art = (
     <div
       aria-hidden="true"
       className="shrink-0"
       style={{
         ...PIXELATED,
-        width: info.width * scale,
-        height: info.height * scale,
+        width,
+        height,
         backgroundImage: `url(${info.url})`,
         backgroundSize: `${info.width * info.frames * scale}px ${info.height * scale}px`,
         backgroundPosition: `${-shown * info.width * scale}px 0`,
       }}
     />
+  );
+
+  if (normalizeTurn(turn) === 0) {
+    return art;
+  }
+
+  const box = turnedSize({ w: width, h: height }, turn);
+  return (
+    <div
+      aria-hidden="true"
+      className="relative shrink-0"
+      style={{ width: box.w, height: box.h }}
+    >
+      <div
+        className="absolute left-0 top-0 origin-top-left"
+        style={{ transform: turnTransform(turn, width, height) }}
+      >
+        {art}
+      </div>
+    </div>
   );
 };
 
@@ -125,7 +156,12 @@ export const WidgetArt = ({ parts, box, scale, frame = 0 }: WidgetArtProps) => (
         case "sprite":
           return (
             <div key={index} className="absolute" style={{ left, top }}>
-              <PixelSprite sprite={part.sprite} scale={scale} frame={frame} />
+              <PixelSprite
+                sprite={part.sprite}
+                scale={scale}
+                frame={frame}
+                turn={part.turn}
+              />
             </div>
           );
         case "text":

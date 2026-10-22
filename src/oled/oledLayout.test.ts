@@ -21,14 +21,25 @@ import {
   valuesAfterMove,
   valuesForCenter,
   valuesForCorner,
+  valuesForKindChange,
   valuesForPicture,
   valuesForShowing,
+  valuesForTurn,
+  valuesForWindowCenter,
   widgetStates,
   widgetsAreDefault,
   widgetsOfScreen,
   type WidgetState,
 } from "./oledLayout";
 import { OLED_ID } from "./oledIds";
+import { WINDOW_RECT } from "./oledGeometry";
+import {
+  MIX_ADD,
+  MIX_INVERT,
+  packPair,
+  rotateCrop,
+  type Crop,
+} from "./pictureView";
 
 const demo = (): DisplaySettingData[] =>
   DEMO_DISPLAY_SETTINGS.map((s) => ({ ...s }));
@@ -333,7 +344,7 @@ describe("the picture", () => {
   });
 
   it("offers the kinds inside the range of the keyboard", () => {
-    expect(selectableKinds(demo(), ANIMATION_KINDS)).toHaveLength(7);
+    expect(selectableKinds(demo(), ANIMATION_KINDS)).toHaveLength(26);
 
     const small = demo().map((s) =>
       s.id === OLED_ID.R_ANIM_KIND ? { ...s, max: 2 } : s,
@@ -420,8 +431,10 @@ describe("putting a widget back as the build had it", () => {
   const picture = WIDGETS.find((w) => w.key === "r_anim")!;
   const layer = WIDGETS.find((w) => w.key === "l_layer")!;
 
-  it("lists every setting of a widget, the picture having five", () => {
-    expect(idsOfWidget(picture)).toEqual([16, 17, 18, 19, 20]);
+  it("lists every setting of a widget, the picture having nine", () => {
+    expect(idsOfWidget(picture)).toEqual([
+      16, 17, 18, 19, 20, 112, 113, 114, 115,
+    ]);
     expect(idsOfWidget(layer)).toEqual([80, 81, 82]);
     expect(idsOfWidget(WIDGETS.find((w) => w.key === "r_toast")!)).toEqual([
       41, 42,
@@ -450,5 +463,446 @@ describe("putting a widget back as the build had it", () => {
     const settings = set(demo(), OLED_ID.L_LAYER_X, 7);
 
     expect(resetChanges(settings, [picture])).toEqual([]);
+  });
+});
+
+const PICTURE_IDS = {
+  kind: OLED_ID.R_ANIM_KIND,
+  x: OLED_ID.R_ANIM_X,
+  y: OLED_ID.R_ANIM_Y,
+  rot: OLED_ID.R_ANIM_ROT,
+  mix: OLED_ID.R_ANIM_MIX,
+  cropXY: OLED_ID.R_ANIM_CROP_XY,
+  cropWH: OLED_ID.R_ANIM_CROP_WH,
+} as const;
+
+/** The settings with the values of a picture applied, the way the keyboard takes them. */
+const apply = (
+  settings: DisplaySettingData[],
+  values: Partial<Record<keyof typeof PICTURE_IDS, number>>,
+): DisplaySettingData[] =>
+  (Object.keys(values) as Array<keyof typeof PICTURE_IDS>).reduce(
+    (next, key) => set(next, PICTURE_IDS[key], values[key]!),
+    settings,
+  );
+
+/** The settings with the picture cut to a piece. */
+const cutTo = (settings: DisplaySettingData[], crop: Crop) =>
+  apply(settings, {
+    cropXY: packPair(crop.x, crop.y),
+    cropWH: packPair(crop.w, crop.h),
+  });
+
+const pictureOn = (settings: DisplaySettingData[]) => stateOf(settings, "r_anim");
+
+const centerOfRect = (rect: { x: number; y: number; w: number; h: number }) => ({
+  x: rect.x + rect.w / 2,
+  y: rect.y + rect.h / 2,
+});
+
+describe("the picture, turned and mixed", () => {
+  it("is upright, whole and inverted under the widgets as the build has it", () => {
+    const state = pictureOn(demo());
+
+    expect(state.picture).toMatchObject({
+      turn: 0,
+      crop: null,
+      mix: MIX_INVERT,
+      canTurn: true,
+      canMix: true,
+      canCrop: true,
+    });
+    expect(state.picture!.shape).toEqual({ w: 68, h: 69 });
+    expect(state.picture!.piece).toEqual({ x: 0, y: 0, w: 68, h: 69 });
+    expect(state.picture!.whole).toEqual(state.rect);
+  });
+
+  it("is only for the picture: the other widgets have none of it", () => {
+    for (const state of widgetStates(demo()).filter(
+      (s) => s.def.key !== "r_anim",
+    )) {
+      expect(state.picture).toBeNull();
+    }
+  });
+
+  it("is turned a quarter of a turn clockwise by the setting, and the sides swap", () => {
+    const state = pictureOn(set(demo(), OLED_ID.R_ANIM_ROT, 1));
+
+    expect(state.picture!.turn).toBe(1);
+    expect(state.picture!.shape).toEqual({ w: 69, h: 68 });
+    // X = 18 and Y = -18 for a picture that is 69 wide and 68 tall as it is looked at
+    expect(state.rect).toEqual({ x: -18, y: 74, w: 69, h: 68 });
+  });
+
+  it("is turned as many times as the setting says, held in 0 to 3", () => {
+    const turns = [0, 1, 2, 3].map(
+      (rot) => pictureOn(set(demo(), OLED_ID.R_ANIM_ROT, rot)).picture!.turn,
+    );
+
+    expect(turns).toEqual([0, 1, 2, 3]);
+    expect(pictureOn(set(demo(), OLED_ID.R_ANIM_ROT, 3)).rect).toEqual({
+      x: -18,
+      y: 74,
+      w: 69,
+      h: 68,
+    });
+    expect(pictureOn(set(demo(), OLED_ID.R_ANIM_ROT, 2)).rect).toEqual(
+      pictureOn(demo()).rect,
+    );
+  });
+
+  it("mixes as the setting says", () => {
+    expect(
+      pictureOn(set(demo(), OLED_ID.R_ANIM_MIX, 0)).picture!.mix,
+    ).toBe(MIX_ADD);
+    expect(
+      pictureOn(set(demo(), OLED_ID.R_ANIM_MIX, 1)).picture!.mix,
+    ).toBe(MIX_INVERT);
+  });
+
+  it("has nothing of this on a firmware without the four settings (older than this one)", () => {
+    const older = demo().filter((s) => s.id < 112);
+    const state = pictureOn(older);
+
+    expect(state.present).toBe(true);
+    expect(state.picture).toMatchObject({
+      turn: 0,
+      crop: null,
+      mix: MIX_ADD,
+      canTurn: false,
+      canMix: false,
+      canCrop: false,
+    });
+    expect(idsOfWidget(state.def).filter((id) => older.some((s) => s.id === id)))
+      .toEqual([16, 17, 18, 19, 20]);
+  });
+});
+
+describe("the picture, cut", () => {
+  const piece: Crop = { x: 10, y: 20, w: 30, h: 40 };
+
+  it("shows the piece the two settings give, in the place the pixels have in the whole", () => {
+    const state = pictureOn(cutTo(demo(), piece));
+
+    expect(state.picture!.crop).toEqual(piece);
+    expect(state.picture!.piece).toEqual(piece);
+    // The whole picture is where it was: the cat at x = -18, y = 73
+    expect(state.picture!.whole).toEqual({ x: -18, y: 73, w: 68, h: 69 });
+    expect(state.rect).toEqual({ x: -8, y: 93, w: 30, h: 40 });
+    expect(state.box).toEqual({ x: 0, y: 0, w: 68, h: 69 });
+  });
+
+  it("is the whole picture while the width or the height is 0", () => {
+    const state = pictureOn(
+      apply(demo(), { cropXY: packPair(10, 20), cropWH: packPair(0, 40) }),
+    );
+
+    expect(state.picture!.crop).toBeNull();
+    expect(state.rect).toEqual(pictureOn(demo()).rect);
+  });
+
+  it("is cut off at the edge of the picture, the way the firmware does", () => {
+    const state = pictureOn(cutTo(demo(), { x: 60, y: 60, w: 30, h: 40 }));
+
+    expect(state.picture!.crop).toEqual({ x: 60, y: 60, w: 8, h: 9 });
+    expect(state.rect).toMatchObject({ w: 8, h: 9 });
+  });
+
+  it("is cut in the picture as it is turned", () => {
+    const state = pictureOn(
+      cutTo(set(demo(), OLED_ID.R_ANIM_ROT, 1), { x: 60, y: 60, w: 30, h: 40 }),
+    );
+
+    // 69 wide and 68 tall once turned
+    expect(state.picture!.crop).toEqual({ x: 60, y: 60, w: 9, h: 8 });
+  });
+
+  it("counts only the piece for what the panel shows", () => {
+    // The cut piece of the cat is inside the strip the panel shows: all of it shows
+    const inside = pictureOn(cutTo(demo(), { x: 20, y: 20, w: 12, h: 30 }));
+
+    expect(inside.visibility).toBe("full");
+    // The whole cat is wider than the strip: it is a partial view
+    expect(pictureOn(demo()).visibility).toBe("partial");
+  });
+
+  it("is moved by its piece: the position stays the one of the whole picture", () => {
+    const state = pictureOn(cutTo(demo(), piece));
+
+    // Put the corner of the piece at x = 0, y = 40: the whole picture starts 10 and 20 before it
+    const values = valuesForCorner(state, { x: 0, y: 40 });
+    const moved = pictureOn(apply(cutTo(demo(), piece), values));
+
+    expect(moved.rect).toEqual({ x: 0, y: 40, w: 30, h: 40 });
+    expect(moved.picture!.whole).toEqual({ x: -10, y: 20, w: 68, h: 69 });
+  });
+
+  it("moves by a distance like the picture that is not cut", () => {
+    const whole = pictureOn(demo());
+    const state = pictureOn(cutTo(demo(), piece));
+
+    expect(valuesAfterMove(state, 7, -3)).toEqual(valuesAfterMove(whole, 7, -3));
+  });
+
+  it("puts the center of the piece on a point", () => {
+    const state = pictureOn(cutTo(demo(), piece));
+    const values = valuesForCenter(state, { x: 16, y: 96 });
+    const moved = pictureOn(apply(cutTo(demo(), piece), values));
+
+    expect(centerOfRect(moved.rect)).toEqual({ x: 16, y: 96 });
+  });
+
+  it("is put in the middle of the strip the panel shows", () => {
+    const state = pictureOn(cutTo(demo(), piece));
+    const values = valuesForWindowCenter(state);
+    const moved = pictureOn(apply(cutTo(demo(), piece), values));
+    const center = centerOfRect(moved.rect);
+
+    expect(Math.abs(center.x - 16)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(center.y - 96)).toBeLessThanOrEqual(0.5);
+    expect(moved.visibility).toBe("full");
+  });
+});
+
+describe("turning the picture", () => {
+  const piece: Crop = { x: 10, y: 20, w: 30, h: 40 };
+  const settingsWith = (cut: boolean, rot = 0) =>
+    apply(cut ? cutTo(demo(), piece) : demo(), { rot });
+
+  it("sets the turn asked for, whichever way it goes", () => {
+    for (const target of [0, 1, 2, 3]) {
+      const values = valuesForTurn(pictureOn(demo()), target)!;
+
+      expect(values.rot).toBe(target);
+      expect(pictureOn(apply(demo(), values)).picture!.turn).toBe(target);
+    }
+  });
+
+  it("holds a turn that is out of 0 to 3", () => {
+    expect(valuesForTurn(pictureOn(demo()), 5)!.rot).toBe(1);
+    expect(valuesForTurn(pictureOn(demo()), -1)!.rot).toBe(3);
+  });
+
+  it("changes nothing for the turn it already has", () => {
+    for (const cut of [false, true]) {
+      const settings = settingsWith(cut, 2);
+      const values = valuesForTurn(pictureOn(settings), 2)!;
+
+      expect(apply(settings, values)).toEqual(settings);
+    }
+  });
+
+  it("turns on the spot: the center of what shows moves by half a pixel at most", () => {
+    for (const cut of [false, true]) {
+      for (const target of [1, 2, 3]) {
+        const before = pictureOn(settingsWith(cut));
+        const after = pictureOn(
+          apply(settingsWith(cut), valuesForTurn(before, target)!),
+        );
+        const a = centerOfRect(before.rect);
+        const b = centerOfRect(after.rect);
+
+        expect(Math.abs(a.x - b.x)).toBeLessThanOrEqual(0.5);
+        expect(Math.abs(a.y - b.y)).toBeLessThanOrEqual(0.5);
+      }
+    }
+  });
+
+  it("swaps the sides of the piece that shows, and only that", () => {
+    const before = pictureOn(settingsWith(true));
+    const after = pictureOn(apply(settingsWith(true), valuesForTurn(before, 1)!));
+
+    expect(after.rect).toMatchObject({ w: before.rect.h, h: before.rect.w });
+    expect(after.picture!.shape).toEqual({ w: 69, h: 68 });
+  });
+
+  it("turns the crop with the picture, so the same pixels show", () => {
+    const before = pictureOn(settingsWith(true));
+    const clockwise = pictureOn(
+      apply(settingsWith(true), valuesForTurn(before, 1)!),
+    );
+    const counter = pictureOn(
+      apply(settingsWith(true), valuesForTurn(before, 3)!),
+    );
+
+    expect(clockwise.picture!.crop).toEqual(
+      rotateCrop(piece, { w: 68, h: 69 }, 1),
+    );
+    expect(counter.picture!.crop).toEqual(
+      rotateCrop(piece, { w: 68, h: 69 }, -1),
+    );
+  });
+
+  it("leaves a picture that is whole whole", () => {
+    const values = valuesForTurn(pictureOn(demo()), 1)!;
+
+    expect(values.cropXY).toBe(0);
+    expect(values.cropWH).toBe(0);
+  });
+
+  it("comes back to the very same settings after four quarters, whole or cut", () => {
+    for (const cut of [false, true]) {
+      const start = settingsWith(cut);
+      let settings = start;
+
+      for (let i = 0; i < 4; i++) {
+        const values = valuesForTurn(
+          pictureOn(settings),
+          pictureOn(settings).picture!.turn + 1,
+        )!;
+        settings = apply(settings, values);
+      }
+
+      expect(settings).toEqual(start);
+    }
+  });
+
+  it("is undone by turning the other way", () => {
+    for (const cut of [false, true]) {
+      const start = settingsWith(cut);
+      const turned = apply(start, valuesForTurn(pictureOn(start), 1)!);
+      const back = apply(turned, valuesForTurn(pictureOn(turned), 0)!);
+
+      expect(back).toEqual(start);
+    }
+  });
+
+  it("goes half a turn through the same piece of the picture, in the same place", () => {
+    const start = settingsWith(true);
+    const half = pictureOn(apply(start, valuesForTurn(pictureOn(start), 2)!));
+
+    expect(half.rect).toEqual(pictureOn(start).rect);
+    expect(half.picture!.crop).toEqual({ x: 68 - 10 - 30, y: 69 - 20 - 40, w: 30, h: 40 });
+  });
+
+  it("is nothing for a widget that is not the picture", () => {
+    expect(valuesForTurn(stateOf(demo(), "l_layer"), 1)).toBeNull();
+  });
+});
+
+describe("changing the picture", () => {
+  it("keeps the center of what showed, with the new picture upright and whole", () => {
+    const before = pictureOn(demo());
+    const values = valuesForKindChange(demo(), 7)!;
+    const after = pictureOn(apply(demo(), values));
+
+    expect(values).toMatchObject({ kind: 7, rot: 0, cropXY: 0, cropWH: 0 });
+    expect(after.rect).toEqual({ x: 0, y: 76, w: 32, h: 64 });
+    // The center is the one of the cat, to the pixel
+    const a = centerOfRect(before.rect);
+    const b = centerOfRect(after.rect);
+    expect(Math.abs(a.x - b.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(a.y - b.y)).toBeLessThanOrEqual(1);
+  });
+
+  it("fits a picture as tall as the screen exactly on it", () => {
+    for (const kind of [10, 13, 18, 19, 20, 24]) {
+      const after = pictureOn(apply(demo(), valuesForKindChange(demo(), kind)!));
+
+      expect(after.rect).toEqual({ ...WINDOW_RECT });
+      expect(after.visibility).toBe("full");
+    }
+  });
+
+  it("brings a picture that was off to a side onto the screen", () => {
+    // Y = 100 puts the cat 100 pixels to the right: the panel shows none of it
+    const aside = set(demo(), OLED_ID.R_ANIM_Y, 100);
+    expect(pictureOn(aside).visibility).toBe("none");
+
+    const after = pictureOn(apply(aside, valuesForKindChange(aside, 8)!));
+
+    expect(after.visibility).toBe("full");
+  });
+
+  it("keeps the center of a picture that is bigger than the screen, and does not fit it", () => {
+    // Vim is 68 x 160: it cannot fit in 32 x 128, so it stays centered on the old center
+    const before = pictureOn(demo());
+    const after = pictureOn(apply(demo(), valuesForKindChange(demo(), 5)!));
+    const a = centerOfRect(before.rect);
+    const b = centerOfRect(after.rect);
+
+    expect(after.rect).toMatchObject({ w: 68, h: 160 });
+    expect(Math.abs(a.x - b.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(a.y - b.y)).toBeLessThanOrEqual(1);
+  });
+
+  it("goes back to the cat where the build puts it", () => {
+    const equalizer = apply(demo(), valuesForKindChange(demo(), 7)!);
+    const cat = pictureOn(apply(equalizer, valuesForKindChange(equalizer, 1)!));
+
+    expect(cat.rect.x).toBe(-18);
+    expect(Math.abs(cat.rect.y - 73)).toBeLessThanOrEqual(2);
+  });
+
+  it("drops the turn and the crop of the picture that was playing", () => {
+    const worked = cutTo(set(demo(), OLED_ID.R_ANIM_ROT, 3), {
+      x: 4,
+      y: 5,
+      w: 20,
+      h: 30,
+    });
+    const values = valuesForKindChange(worked, 12)!;
+    const after = pictureOn(apply(worked, values));
+
+    expect(after.picture!.turn).toBe(0);
+    expect(after.picture!.crop).toBeNull();
+    expect(after.rect).toMatchObject({ w: 32, h: 32 });
+  });
+
+  it("keeps how the picture mixes", () => {
+    const added = set(demo(), OLED_ID.R_ANIM_MIX, MIX_ADD);
+    const values = valuesForKindChange(added, 9)!;
+
+    expect(Object.keys(values)).not.toContain("mix");
+    expect(pictureOn(apply(added, values)).picture!.mix).toBe(MIX_ADD);
+  });
+
+  it("is nothing for a keyboard with no picture", () => {
+    const none = demo().filter(
+      (s) => s.id < OLED_ID.R_ANIM_SHOW || s.id > OLED_ID.R_ANIM_MS,
+    );
+
+    expect(valuesForKindChange(none, 7)).toBeNull();
+  });
+
+  it("starts a picture of the gallery upright and whole where it is dropped", () => {
+    const worked = cutTo(set(demo(), OLED_ID.R_ANIM_ROT, 1), {
+      x: 4,
+      y: 5,
+      w: 20,
+      h: 30,
+    });
+    const values = valuesForPicture(worked, 3, { x: 34, y: 80 })!;
+    const after = pictureOn(apply(worked, values));
+
+    expect(values).toMatchObject({ kind: 3, rot: 0, cropXY: 0, cropWH: 0 });
+    expect(after.picture!.turn).toBe(0);
+    expect(after.picture!.crop).toBeNull();
+    // 68 x 69, upright: its center is on the drop, to the pixel
+    const center = centerOfRect(after.rect);
+    expect(Math.abs(center.x - 34)).toBeLessThanOrEqual(1);
+    expect(Math.abs(center.y - 80)).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("putting the picture back as the build had it", () => {
+  const picture = WIDGETS.find((w) => w.key === "r_anim")!;
+
+  it("sends the turn, the mix and the crop that changed, with the value of the build", () => {
+    let settings = set(demo(), OLED_ID.R_ANIM_ROT, 2);
+    settings = set(settings, OLED_ID.R_ANIM_MIX, 0);
+    settings = cutTo(settings, { x: 1, y: 2, w: 3, h: 4 });
+
+    expect(resetChanges(settings, [picture])).toEqual([
+      { id: 112, value: 0 },
+      { id: 113, value: 1 },
+      { id: 114, value: 0 },
+      { id: 115, value: 0 },
+    ]);
+    expect(widgetsAreDefault(settings, [picture])).toBe(false);
+  });
+
+  it("sends nothing while they are as the build had them", () => {
+    expect(resetChanges(demo(), [picture])).toEqual([]);
   });
 });

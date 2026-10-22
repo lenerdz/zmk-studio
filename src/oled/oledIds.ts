@@ -10,7 +10,10 @@
  *
  * The ids come in blocks of eight, one block per widget, from 16 on: +0 says
  * whether the widget is drawn (0 or 1), +1 and +2 are its x and y, and the
- * animation block adds +3, the kind, and +4, the time of a cycle.
+ * animation block adds +3, the kind, and +4, the time of a cycle. The block of
+ * the picture that follows (112 to 115) is the other four settings of the
+ * picture: how many quarter turns clockwise it is turned, how it mixes with the
+ * widgets, and the piece of it that shows (two numbers each holding two bytes).
  */
 
 /** The first id of the OLED layout; the ids below it are the Display tab's. */
@@ -23,6 +26,10 @@ export const OLED_ID = {
   R_ANIM_Y: 18,
   R_ANIM_KIND: 19,
   R_ANIM_MS: 20,
+  R_ANIM_ROT: 112,
+  R_ANIM_MIX: 113,
+  R_ANIM_CROP_XY: 114,
+  R_ANIM_CROP_WH: 115,
   R_BATTERY_SHOW: 24,
   R_BATTERY_X: 25,
   R_BATTERY_Y: 26,

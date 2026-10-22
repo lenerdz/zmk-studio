@@ -25,7 +25,8 @@ import {
   valuesForCorner,
   type WidgetState,
 } from "./oledLayout";
-import { LIT_COLOR, PANEL_COLOR, WidgetArt } from "./PixelArt";
+import { ScreenArt } from "./ArtLayers";
+import { LIT_COLOR, PANEL_COLOR } from "./PixelArt";
 import type { ScreenId } from "./oledCatalog";
 
 /** Canvas pixels shown on each side of the canvas, to find widgets that are off it. */
@@ -36,6 +37,17 @@ const KEEP_INSIDE = 6;
 
 /** Smaller widgets get a hit area of at least this many screen pixels. */
 const MIN_HIT = 28;
+
+/**
+ * The layers of the editor, from the bottom: the canvas and the panel, the art
+ * of the widgets (one group that blends only among its own layers, at 1: see
+ * ScreenArt), the areas that take the pointer (above the art, drawing order
+ * within them), what dims the part the panel does not show, and the border of
+ * the panel.
+ */
+const HIT_Z = 2;
+const DIM_Z = 10;
+const BORDER_Z = 11;
 
 interface Props {
   screen: ScreenId;
@@ -319,7 +331,18 @@ export const ScreenEditor = ({
         </span>
       ))}
 
-      {/* The widgets */}
+      {/* What the widgets look like, together (the picture reverses what is under it) */}
+      <ScreenArt
+        widgets={shown}
+        scale={scale}
+        frame={frame}
+        origin={{ x: -MARGIN, y: -MARGIN }}
+        size={{ w: CANVAS.width + 2 * MARGIN, h: CANVAS.height + 2 * MARGIN }}
+        variant="editor"
+        ghostKey={selectedKey}
+      />
+
+      {/* The widgets, to take hold of */}
       {shown.map((state) => {
         const selected = state.def.key === selectedKey;
         const dragging = state.def.key === draggingKey;
@@ -346,10 +369,9 @@ export const ScreenEditor = ({
               top: px(state.rect.y) - padY,
               width: w + 2 * padX,
               height: h + 2 * padY,
-              zIndex: drawOrder(state),
+              zIndex: HIT_Z + drawOrder(state),
               cursor: disabled ? "default" : dragging ? "grabbing" : "grab",
               touchAction: "none",
-              opacity: state.muted ? 0.5 : 1,
               background: selected ? "rgba(143,160,255,0.2)" : undefined,
             }}
             onPointerDown={(e) => startDrag(e, state)}
@@ -358,14 +380,6 @@ export const ScreenEditor = ({
             onPointerCancel={endDrag}
             onKeyDown={(e) => onItemKeyDown(e, state)}
           >
-            <div className="absolute" style={{ left: padX, top: padY }}>
-              <WidgetArt
-                parts={state.parts}
-                box={state.box}
-                scale={scale}
-                frame={frame}
-              />
-            </div>
             {selected && (
               <span
                 aria-hidden="true"
@@ -409,7 +423,7 @@ export const ScreenEditor = ({
           className="pointer-events-none absolute"
           style={{
             ...style,
-            zIndex: 4,
+            zIndex: DIM_Z,
             background:
               "repeating-linear-gradient(135deg, rgba(5,8,13,0.72) 0 6px, rgba(5,8,13,0.58) 6px 12px)",
           }}
@@ -422,7 +436,7 @@ export const ScreenEditor = ({
         className="pointer-events-none absolute"
         style={{
           ...windowStyle,
-          zIndex: 5,
+          zIndex: BORDER_Z,
           boxShadow: `0 0 0 2px ${LIT_COLOR}55`,
         }}
       />

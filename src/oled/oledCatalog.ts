@@ -21,11 +21,19 @@ import {
 } from "./assets/sprites";
 import { union, type Rect } from "./oledGeometry";
 import { OLED_ID } from "./oledIds";
+import { turnedSize } from "./pictureView";
 
 export type ScreenId = "left" | "right";
 
 export type Part =
-  | { type: "sprite"; sprite: SpriteName; x: number; y: number }
+  | {
+      type: "sprite";
+      sprite: SpriteName;
+      x: number;
+      y: number;
+      /** Quarter turns clockwise (the picture of the right screen can be turned). */
+      turn?: number;
+    }
   | { type: "text"; font: FontName; text: string; x: number; y: number }
   | { type: "rect"; x: number; y: number; w: number; h: number }
   | {
@@ -39,7 +47,8 @@ export function partBox(part: Part): Rect {
   switch (part.type) {
     case "sprite": {
       const { width, height } = SPRITES[part.sprite];
-      return { x: part.x, y: part.y, w: width, h: height };
+      const { w, h } = turnedSize({ w: width, h: height }, part.turn ?? 0);
+      return { x: part.x, y: part.y, w, h };
     }
     case "text": {
       const { advance, lineHeight } = FONTS[part.font];
@@ -85,6 +94,8 @@ export interface ArtContext {
   defaultY: number;
   /** The kind of the picture of the right screen. */
   kind: number;
+  /** The quarter turns clockwise of the picture of the right screen (0 when missing). */
+  turn?: number;
 }
 
 export interface WidgetIds {
@@ -96,6 +107,14 @@ export interface WidgetIds {
   kind?: number;
   /** The picture of the right screen only: the time of one cycle, in ms. */
   ms?: number;
+  /** The picture of the right screen only: the quarter turns clockwise, 0 to 3. */
+  rot?: number;
+  /** The picture of the right screen only: how it mixes with the widgets (see MIX_ADD and MIX_INVERT). */
+  mix?: number;
+  /** The picture of the right screen only: x and y of the piece that shows, a byte each. */
+  cropXY?: number;
+  /** The picture of the right screen only: width and height of the piece that shows, a byte each. */
+  cropWH?: number;
 }
 
 export interface WidgetDef {
@@ -125,11 +144,12 @@ const text = (font: FontName, value: string, x = 0, y = 0): Part => ({
   y,
 });
 
-const sprite = (name: SpriteName, x = 0, y = 0): Part => ({
+const sprite = (name: SpriteName, x = 0, y = 0, turn = 0): Part => ({
   type: "sprite",
   sprite: name,
   x,
   y,
+  ...(turn === 0 ? {} : { turn }),
 });
 
 /** The kinds of the picture of the right screen, by the value of the setting. */
@@ -141,8 +161,11 @@ export interface AnimationKind {
   hint: string;
   /** The time of one cycle with the speed of the animation itself; null for a still image. */
   cycleMs: number | null;
-  /** The option of the build that picks this one when the app does not. */
-  option: string;
+  /**
+   * The option of the build that picks this one when the app does not; null for
+   * the pictures that only the OLED layout has (they are picked at run time).
+   */
+  option: string | null;
 }
 
 export const ANIMATION_KINDS: readonly AnimationKind[] = [
@@ -201,6 +224,158 @@ export const ANIMATION_KINDS: readonly AnimationKind[] = [
     hint: "A still image with the words VIPs and Marcos (140 pixels tall).",
     cycleMs: null,
     option: "CONFIG_NICE_OLED_WIDGET_STATIC_IMAGE_PERIPHERAL_VIP_MARCOS",
+  },
+  {
+    value: 7,
+    sprite: "equalizer",
+    label: "Equalizer",
+    hint: "Eight bars of a sound equalizer that rise and fall, each with a mark that drops slowly behind it.",
+    cycleMs: 1200,
+    option: null,
+  },
+  {
+    value: 8,
+    sprite: "radar",
+    label: "Radar",
+    hint: "A radar sweep with a trail that fades, and three blips that light up as it goes by.",
+    cycleMs: 2400,
+    option: null,
+  },
+  {
+    value: 9,
+    sprite: "heartbeat",
+    label: "Heartbeat",
+    hint: "The trace of a heart monitor, scrolling down and fading as it gets old.",
+    cycleMs: 1600,
+    option: null,
+  },
+  {
+    value: 10,
+    sprite: "rain",
+    label: "Digital rain",
+    hint: "Streaks that fall down the whole screen, bright at the head and flickering behind it. It is as tall as the screen.",
+    cycleMs: 3200,
+    option: null,
+  },
+  {
+    value: 11,
+    sprite: "cube",
+    label: "Wire cube",
+    hint: "A wire cube that turns, with the edges at the back dotted.",
+    cycleMs: 1600,
+    option: null,
+  },
+  {
+    value: 12,
+    sprite: "atom",
+    label: "Atom",
+    hint: "A nucleus with three orbits and an electron on each.",
+    cycleMs: 2400,
+    option: null,
+  },
+  {
+    value: 13,
+    sprite: "helix",
+    label: "Helix",
+    hint: "The two strands of a DNA helix turning around their axis, with the rungs between them. It is as tall as the screen.",
+    cycleMs: 1600,
+    option: null,
+  },
+  {
+    value: 14,
+    sprite: "warp",
+    label: "Warp",
+    hint: "Stars that fly out from the middle, faster and longer as they get near.",
+    cycleMs: 2400,
+    option: null,
+  },
+  {
+    value: 15,
+    sprite: "sonar",
+    label: "Sonar",
+    hint: "Rings that spread from the middle and fade.",
+    cycleMs: 1600,
+    option: null,
+  },
+  {
+    value: 16,
+    sprite: "bounce",
+    label: "Bouncing ball",
+    hint: "A ball that bounces, squashes at the floor and has a shadow.",
+    cycleMs: 1200,
+    option: null,
+  },
+  {
+    value: 17,
+    sprite: "flame",
+    label: "Flame",
+    hint: "A fire that flickers.",
+    cycleMs: 1200,
+    option: null,
+  },
+  {
+    value: 18,
+    sprite: "mountains",
+    label: "Mountains",
+    hint: "A night sky with a moon, and three ridges of mountains. A still image as tall as the screen.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 19,
+    sprite: "skyline",
+    label: "Skyline",
+    hint: "A city at night, with the windows that are lit and a few stars. A still image as tall as the screen.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 20,
+    sprite: "circuit",
+    label: "Circuit",
+    hint: "The tracks of a circuit board, with a chip. A still image as tall as the screen.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 21,
+    sprite: "alien",
+    label: "Alien",
+    hint: "A small robot alien on a starry floor. A still image.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 22,
+    sprite: "heart",
+    label: "Heart",
+    hint: "A heart with a shine. A still image.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 23,
+    sprite: "keyboard",
+    label: "Keyboard",
+    hint: "The two halves of a Corne, as seen from above. A still image.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 24,
+    sprite: "pulsar",
+    label: "Pulsar",
+    hint: "Lines of a signal, one above the other, that hide the ones behind them, like the cover of an old record. A still image as tall as the screen.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 25,
+    sprite: "rocket",
+    label: "Rocket",
+    hint: "A rocket taking off. A still image.",
+    cycleMs: null,
+    option: null,
   },
 ];
 
@@ -305,7 +480,7 @@ export const WIDGETS: readonly WidgetDef[] = [
     key: "r_anim",
     screen: "right",
     label: "Animation or image",
-    hint: "The picture of the right screen: an animation that plays all the time, or a still image. It is larger than the screen, so only a part of it shows. Drag it to choose which part, and pick the picture in the gallery.",
+    hint: "The picture of the right screen: an animation that plays all the time, or a still image. The big ones are larger than the screen, so only a part of them shows: drag the picture to choose which part. It can be turned by quarter turns and cut to a piece, and a widget over it can be shown in reverse so that it stays readable. Pick the picture in the gallery.",
     placement: "picture",
     ids: {
       show: OLED_ID.R_ANIM_SHOW,
@@ -313,8 +488,14 @@ export const WIDGETS: readonly WidgetDef[] = [
       y: OLED_ID.R_ANIM_Y,
       kind: OLED_ID.R_ANIM_KIND,
       ms: OLED_ID.R_ANIM_MS,
+      rot: OLED_ID.R_ANIM_ROT,
+      mix: OLED_ID.R_ANIM_MIX,
+      cropXY: OLED_ID.R_ANIM_CROP_XY,
+      cropWH: OLED_ID.R_ANIM_CROP_WH,
     },
-    art: ({ kind }) => [sprite(animationKind(kind).sprite)],
+    art: ({ kind, turn }) => [
+      sprite(animationKind(kind).sprite, 0, 0, turn ?? 0),
+    ],
     needs:
       "CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_SMART_BATTERY=n (the default), with the same CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_* choice in both halves (corne.conf)",
   },

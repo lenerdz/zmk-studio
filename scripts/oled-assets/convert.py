@@ -23,6 +23,10 @@ What it does to the data, so that the sprites are what the OLED shows:
   panel (the widget places them on the canvas after it was rotated), so they are
   rotated back here: the sprites are upright, as the screen is looked at. Their size
   in the manifest is the upright one; the size of the file is that one swapped.
+* The pictures that scripts/pictures/make_pictures.py of the shield draws (the kinds
+  from 7 on) are listed in assets/pictures/pictures.json of the shield: the script
+  reads that list, so a new picture needs no change here, and it fails when a
+  picture is not the size the list says.
 * The fonts become one row of cells, one cell per character from 0x20 to 0x7E, as
   wide as the advance of the font and as tall as its line, so the app draws a text
   by picking a cell for each letter.
@@ -30,6 +34,7 @@ What it does to the data, so that the sprites are what the OLED shows:
 The output is deterministic: running it twice gives the same files.
 """
 import argparse
+import json
 import os
 import re
 import sys
@@ -206,6 +211,15 @@ def font_atlas(path):
     return atlas, advance, line_height, base_line
 
 
+def load_pictures(assets):
+    """The pictures of make_pictures.py, from assets/pictures/pictures.json (none if there is no file)."""
+    path = os.path.join(assets, "pictures", "pictures.json")
+    if not os.path.exists(path):
+        return []
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)["pictures"]
+
+
 def camel(name):
     parts = re.split(r"[_\-]", name)
     return parts[0] + "".join(p.capitalize() for p in parts[1:])
@@ -250,6 +264,32 @@ def main():
         file = f"still-{key}.png"
         save(img, os.path.join(args.out, file))
         entries.append((key, file, img.width, img.height, 1, "still"))
+
+    taken = {e[0] for e in entries} | set(ICONS)
+    for picture in load_pictures(assets):
+        key, cfile = picture["name"], f"pictures/{picture['name']}.c"
+        if key in taken:
+            sys.exit(f"the picture {key} of pictures.json has the name of a sprite that exists")
+        taken.add(key)
+        images = images_of(cfile)
+        if picture["type"] == "animation":
+            frames = []
+            for i in range(picture["frames"]):
+                name = f"pic_{key}_{i:02d}"
+                if name not in images:
+                    sys.exit(f"{cfile}: no image {name}")
+                frames.append(to_image(images[name][2], rotate=True))
+            out = sheet(frames)
+            file, kind, count = f"anim-{key}.png", "animation", picture["frames"]
+            size = frames[0].size
+        else:
+            out = to_image(images[f"pic_{key}"][2], rotate=True)
+            file, kind, count = f"still-{key}.png", "still", 1
+            size = out.size
+        if size != (picture["width"], picture["height"]):
+            sys.exit(f"{cfile}: {size[0]} x {size[1]} pixels, pictures.json says {picture['width']} x {picture['height']}")
+        save(out, os.path.join(args.out, file))
+        entries.append((key, file, size[0], size[1], count, kind))
 
     for key, (cfile, name) in ICONS.items():
         w, h, rows = images_of(cfile)[name]

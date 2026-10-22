@@ -5,7 +5,8 @@
  * The OLED tab: what each OLED screen of the keyboard shows and where. The two
  * screens are drawn upright with the strip the panel shows lit, every widget of
  * zmk-nice-oled that the firmware lets the app move is a thing to drag, the
- * hidden ones wait in a tray, the right screen has a gallery of pictures, and
+ * hidden ones wait in a tray, the right screen has a gallery of pictures (that
+ * can be turned, cut to a piece and mixed with the widgets), and
  * what only a new build adds is listed. Like the Display tab, every change goes
  * to the keyboard at once and the keyboard keeps it by itself: nothing to save.
  */
@@ -21,6 +22,7 @@ import {
   widgetsOf,
   type ScreenId,
   type WidgetDef,
+  type WidgetIds,
 } from "./oledCatalog";
 import { OLED_ID } from "./oledIds";
 import {
@@ -29,12 +31,17 @@ import {
   resetChanges,
   selectableKinds,
   valuesForCenter,
+  valuesForKindChange,
   valuesForPicture,
   valuesForShowing,
+  valuesForTurn,
+  valuesForWindowCenter,
   widgetStates,
   widgetsAreDefault,
+  type PictureValues,
   type WidgetState,
 } from "./oledLayout";
+import { writeCrop, type Crop } from "./pictureView";
 import { Possibilities } from "./Possibilities";
 
 const ZOOMS = [2, 3, 4, 5] as const;
@@ -134,25 +141,85 @@ export const OledTab = () => {
     setSelectedKey(key);
   };
 
+  /**
+   * What a set of values stands for, in the settings of the picture: the picture,
+   * its turn and its crop first, then where it is (an id the keyboard does not
+   * have is skipped by setValue).
+   */
+  const sendPicture = (
+    ids: WidgetIds,
+    values: Partial<PictureValues>,
+  ) => {
+    const pairs: Array<[number | undefined, number | undefined]> = [
+      [ids.kind, values.kind],
+      [ids.rot, values.rot],
+      [ids.cropXY, values.cropXY],
+      [ids.cropWH, values.cropWH],
+      [ids.x, values.x],
+      [ids.y, values.y],
+    ];
+
+    for (const [id, value] of pairs) {
+      if (id !== undefined && value !== undefined) {
+        setValue(id, value);
+      }
+    }
+  };
+
+  const pictureTarget = states.find(
+    (s) => s.def.placement === "picture" && s.present,
+  );
+
   const dropKind = (kind: number, point: { x: number; y: number }) => {
-    const target = states.find(
-      (s) => s.def.placement === "picture" && s.present,
-    );
     const values = valuesForPicture(settings, kind, point);
-    const kindId = target?.def.ids.kind;
-    if (!target || !values || kindId === undefined) {
+    if (!pictureTarget || !values) {
       return;
     }
 
-    // The picture lands centered on the drop, whatever size it has
-    setValue(kindId, values.kind);
-    setValue(target.def.ids.x, values.x);
-    setValue(target.def.ids.y, values.y);
-    if (target.def.ids.show !== undefined && !target.shown) {
-      setValue(target.def.ids.show, 1);
+    // The picture lands upright and whole, centered on the drop, whatever size it has
+    sendPicture(pictureTarget.def.ids, values);
+    if (pictureTarget.def.ids.show !== undefined && !pictureTarget.shown) {
+      setValue(pictureTarget.def.ids.show, 1);
     }
-    setSelectedKey(target.def.key);
+    setSelectedKey(pictureTarget.def.key);
   };
+
+  // A click in the gallery or a choice in the list: upright and whole, centered
+  // where the old picture was and inside the strip the panel shows when it fits
+  const pickKind = (kind: number) => {
+    const values = valuesForKindChange(settings, kind);
+    if (!pictureTarget || !values) {
+      return;
+    }
+
+    sendPicture(pictureTarget.def.ids, values);
+    setSelectedKey(pictureTarget.def.key);
+  };
+
+  const turnPicture = (state: WidgetState, turn: number) => {
+    const values = valuesForTurn(state, turn);
+    if (values) {
+      sendPicture(state.def.ids, values);
+    }
+  };
+
+  const mixPicture = (state: WidgetState, mix: number) => {
+    if (state.def.ids.mix !== undefined) {
+      setValue(state.def.ids.mix, mix);
+    }
+  };
+
+  const cropPicture = (state: WidgetState, crop: Crop | null) => {
+    if (!state.picture) {
+      return;
+    }
+
+    const written = writeCrop(crop, state.picture.shape);
+    sendPicture(state.def.ids, { cropXY: written.xy, cropWH: written.wh });
+  };
+
+  const centerPicture = (state: WidgetState) =>
+    sendPicture(state.def.ids, valuesForWindowCenter(state));
 
   const setShown = (state: WidgetState, shown: boolean) =>
     shown ? show(state) : hide(state);
@@ -275,6 +342,11 @@ export const OledTab = () => {
               onSetValue={setValue}
               onShown={setShown}
               onReset={(state) => reset([state.def])}
+              onPickKind={pickKind}
+              onTurn={turnPicture}
+              onMix={mixPicture}
+              onCrop={cropPicture}
+              onCenter={centerPicture}
             />
           </div>
         </div>
@@ -286,7 +358,7 @@ export const OledTab = () => {
             ms={msSetting?.value ?? 0}
             playing={playing}
             busy={busy}
-            onPick={(value) => setValue(OLED_ID.R_ANIM_KIND, value)}
+            onPick={pickKind}
           />
         )}
 

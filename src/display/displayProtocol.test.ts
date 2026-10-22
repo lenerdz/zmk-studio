@@ -36,8 +36,8 @@ describe("fetchDisplayInfo", () => {
 
     const ids = (await fetchDisplayInfo(conn))?.map((s) => s.id) ?? [];
     expect(ids.slice(0, 6)).toEqual([1, 2, 3, 4, 5, 6]);
-    // 13 settings of the right screen and 24 of the left one
-    expect(ids.slice(6)).toHaveLength(37);
+    // 17 settings of the right screen (the picture has nine) and 24 of the left one
+    expect(ids.slice(6)).toHaveLength(41);
     expect(ids.slice(6).every((id) => id >= 16)).toBe(true);
   });
 
