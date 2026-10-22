@@ -111,7 +111,7 @@ without simply is not listed.
 
 | Widget | Screen | Ids | The firmware has it when |
 |---|---|---|---|
-| Animation or image | right | 16 shown, 17 X, 18 Y, 19 kind, 20 cycle | the right screen has the animation or the static image (`CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL=y` or `CONFIG_NICE_OLED_WIDGET_STATIC_IMAGE_PERIPHERAL=y`, in both halves) and not the smart battery animation |
+| Animation or image | right | 16 shown, 17 X, 18 Y, 19 kind, 20 cycle | the build does not have the smart battery animation (`CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_SMART_BATTERY=n`, the default). With the layout every animation and image is in the firmware, and the `CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_*` and `CONFIG_NICE_OLED_WIDGET_STATIC_IMAGE_PERIPHERAL_*` options of the build, which have to be the same in both halves, only choose the one the screen starts with |
 | Battery | right | 24 shown, 25 x, 26 y | always |
 | Link with the left half | right | 32 shown, 33 x, 34 y | always |
 | Light toast | right | 41 x, 42 y | always listed; it is drawn when the build has `CONFIG_NICE_OLED_WIDGET_LED_TOAST=y`, and it has no switch here: turning it on and off, and how long it stays, are settings 5 and 6 of the Display tab |
@@ -234,3 +234,11 @@ and what the right half shows after it receives its settings are unconfirmed. Th
 the sprites rests on the pictures of zmk-nice-oled and on the rule that the OLED shows its
 ink lit, and the text widgets are drawn with the fonts of zmk-nice-oled as samples, so
 they may differ from the screen by a pixel. Touch input has not been tried on any device.
+
+One position is outside the panel by the design of the build, not by a mistake of the tab:
+the text with the battery of both halves (the central battery modes of zmk-nice-oled,
+`CONFIG_NICE_OLED_WIDGET_CENTRAL_SHOW_BATTERY_PERIPHERAL_*`) is drawn at x 0, y 19 of the
+canvas, and the panel shows the rows from 32 down. The editor draws it dimmed, outside the
+lit strip, and says so in the inspector; **Bring it onto the screen** (or a drag) puts it
+where the panel shows it. This comes from reading the code of zmk-nice-oled, and it has not
+been checked on a real screen.

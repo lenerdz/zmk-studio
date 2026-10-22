@@ -316,7 +316,7 @@ export const WIDGETS: readonly WidgetDef[] = [
     },
     art: ({ kind }) => [sprite(animationKind(kind).sprite)],
     needs:
-      "CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL=y or CONFIG_NICE_OLED_WIDGET_STATIC_IMAGE_PERIPHERAL=y in the conf of both halves (corne.conf), and CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_SMART_BATTERY=n",
+      "CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_SMART_BATTERY=n (the default), with the same CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_* choice in both halves (corne.conf)",
   },
   {
     key: "r_battery",
