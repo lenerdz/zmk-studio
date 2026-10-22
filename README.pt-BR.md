@@ -64,8 +64,8 @@ Outras mudanças:
 O que não muda: a edição do keymap e o que o app lê do teclado ou grava nele para isso.
 Os ícones afetam apenas como as teclas são desenhadas e como o app é hospedado; arrastar
 teclas (abaixo) grava com a mesma requisição do seletor de binding; as abas Lights e
-Display (mais abaixo) acrescentam requisições próprias e só são usadas quando o firmware
-as tem.
+Display (mais abaixo) acrescentam requisições próprias, e a aba OLED usa as da aba
+Display. As três abas só são usadas quando o firmware tem o que elas editam.
 
 ## Mover teclas arrastando (a visão Keys)
 
@@ -159,8 +159,9 @@ edita). Ela define o que as telas OLED do teclado fazem:
 Tudo é aplicado pelo teclado na hora e guardado por ele alguns segundos depois da última
 mudança; por isso não há nada para salvar: **Save**, **Discard**, **Undo** e **Redo** não
 agem sobre essas configurações. **Restore Stock Settings** também as devolve aos padrões.
-O que cada tela mostra (os widgets, a animação, o idioma do toast) continua sendo
-escolhido quando o firmware é compilado.
+O que cada tela mostra, e onde, é definido na aba OLED (abaixo) quando o firmware tem o
+layout das telas OLED; o idioma do toast e o que a aba OLED não cobre continuam sendo
+escolhidos quando o firmware é compilado.
 
 Ela precisa do módulo [zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix) de
 lenerdz (branch `corne-fixes`, compilado com `CONFIG_KEYPAW_DISPLAY_SETTINGS=y`), do fork
@@ -174,6 +175,44 @@ requisição) e o app funciona como antes.
 
 As configurações, as faixas de valores, como as mudanças trafegam e os arquivos:
 [`src/display/README.md`](src/display/README.md).
+
+## Layout das telas (a aba OLED)
+
+Com um firmware que tem o layout das telas OLED, o cabeçalho ganha uma quarta visão,
+**OLED**, ao lado de **Keys**, **Lights** e **Display** (cada uma só quando o firmware tem
+o que ela edita). Ela desenha as duas telas OLED do teclado na vertical, com a faixa que o
+painel realmente mostra acesa, e define o que cada tela mostra e onde:
+
+- **Arraste um widget** (a bateria, o link Bluetooth, o nome da camada, a velocidade de
+  digitação, a animação, ...) para movê-lo. As setas movem o selecionado um pixel, ou oito
+  com Shift. O inspetor mostra o tamanho de cada widget, onde ele está e quanto dele o
+  painel mostra.
+- **Esconda um widget** com Delete ou com a chave dele, e **mostre-o de novo** clicando nele
+  na bandeja dos widgets escondidos ou arrastando-o para a tela.
+- **Escolha a imagem da tela direita** em uma galeria: cinco animações (Gem, Cat, Head,
+  Spaceman, Pokemon) e duas imagens fixas, cada uma tocando no seu cartão, com o tamanho e
+  o tempo de um ciclo. Clique em uma, ou arraste-a para a tela direita, e ajuste o tempo de
+  um ciclo.
+- **Veja o que as telas podem mostrar**, com o tamanho de cada coisa, e quais escolhas só
+  um novo build do firmware acrescenta (o cachorro Luna, o gato Bongo, os indicadores de
+  modificadores, o Raw HID, ...), cada uma com a opção a ligar.
+
+Tudo é aplicado pelo teclado na hora e guardado por ele alguns segundos depois da última
+mudança; por isso não há nada para salvar: **Save**, **Discard**, **Undo** e **Redo** não
+agem sobre o layout. **Restore Stock Settings**, e **Restore defaults** da aba Display,
+devolvem o layout ao que o firmware tinha ao ser compilado. Os desenhos são amostras, não o
+estado ao vivo das telas.
+
+Ela precisa do que a aba Display precisa, com `CONFIG_KEYPAW_OLED_LAYOUT=y` no build das
+duas metades, e do fork [zmk-nice-oled](https://github.com/lenerdz/zmk-nice-oled) de
+lenerdz, que lê o layout enquanto o teclado funciona. Ela não tem requisições próprias: o
+layout é feito de configurações de tela (ids de 16 em diante), lidas e gravadas com as três
+requisições da aba Display. Com qualquer outro firmware a visão OLED não é oferecida e o
+app funciona como antes.
+
+Como a geometria funciona (o canvas de 68 x 160 pixels, a faixa de 32 x 128 que o painel
+mostra, a posição da imagem), os ids, os arquivos e como os sprites são gerados:
+[`src/oled/README.md`](src/oled/README.md).
 
 ## Situação
 
@@ -198,6 +237,17 @@ duração do toast), as três formas de apagar a tela, **Restore defaults** e **
 Stock Settings** com a aba aberta; o teclado de demonstração sem configurações de tela
 não tem a aba Display. Ela é coberta por `npm test`. **Não foi testada em um teclado
 real**.
+
+A aba OLED foi testada em um navegador com o teclado de demonstração, pela mesma moldura
+(framing) e codificação de mensagens usadas com um teclado real: as duas telas, arrastar
+cada widget com o ponteiro, as setas, esconder com Delete, mostrar pela bandeja com clique
+e com arraste, escolher uma imagem na galeria com clique e com arraste, o inspetor,
+devolver uma tela ao que o build tinha e os níveis de zoom; o teclado de demonstração sem
+configurações de tela não tem a aba OLED. Ela é coberta por `npm test`. **Não foi testada
+em um teclado real**: se cada widget vai para onde o app diz (a conversão das coordenadas
+da imagem se baseia na leitura do código do zmk-nice-oled), se as imagens trocam enquanto
+o teclado funciona e o que a metade direita mostra depois de receber as configurações dela
+continuam sem confirmação. O toque não foi testado em nenhum dispositivo.
 
 As teclas `Steno On` e `Steno Off` e a camada STENO foram conferidas em um navegador com o
 teclado de demonstração e na story `Keyboard/Keymap (Corne)` do Storybook, não em um
@@ -229,6 +279,8 @@ edição de uma tecla pelo seletor depois. As regras são cobertas por `npm test
 5. Se o firmware tiver mapas de luzes editáveis, escolha **Lights** no cabeçalho para
    editar as cores.
 6. Se o firmware tiver configurações de tela, escolha **Display** para ajustar as telas.
+7. Se o firmware tiver o layout das telas OLED, escolha **OLED** para mover os widgets das
+   duas telas e escolher a animação da tela direita.
 
 ## Desenvolvimento
 
@@ -245,11 +297,12 @@ requisição). Para ver os rótulos das teclas sem um teclado:
 npm run storybook
 ```
 
-Para experimentar o app, incluindo as abas Lights e Display, sem um teclado, escolha
+Para experimentar o app, incluindo as abas Lights, Display e OLED, sem um teclado, escolha
 **Demo keyboard** na lista de conexões. Ele está sempre presente com `npm run dev`; no app
 publicado, acrescente `?demo` ao endereço (<https://lenerdz.github.io/zmk-studio/?demo>).
 **Demo keyboard (no light maps)** e **Demo keyboard (no display settings)** respondem como
-um firmware sem os mapas e sem as configurações de tela. Veja
+um firmware sem os mapas e sem as configurações de tela (o segundo não tem nem a aba
+Display nem a aba OLED, porque o layout das telas é feito de configurações de tela). Veja
 [`src/lights/demo/README.md`](src/lights/demo/README.md).
 
 Para executar os testes:
@@ -295,10 +348,12 @@ Adicionados: `src/keyboard/bindingDisplay.tsx`, `src/keyboard/BindingLabel.tsx`,
 `src/keyboard/KeyDragGhost.tsx` (arrastar teclas),
 `src/lights/` (a aba Lights, o teclado de demonstração e seus testes),
 `src/display/` (a aba Display e seus testes; o teclado de demonstração responde às requisições dela),
+`src/oled/` (a aba OLED, os sprites dela e seus testes; o teclado de demonstração tem as configurações do layout),
+`scripts/oled-assets/` (transforma as imagens do zmk-nice-oled nesses sprites),
 `src/vendor/zmk-studio-ts-client/` (o cliente RPC com as mensagens do fork),
 `scripts/generate-led-data.mjs`, `.github/workflows/pages.yml`, `README.pt-BR.md`.
 
-Modificados: `README.md` (substituído), `NOTICE`, `.gitignore`, `index.html`, `download.html`,
+Modificados: `README.md` (substituído), `NOTICE`, `.gitignore`, `.prettierignore`, `index.html`, `download.html`,
 `package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.ts`,
 `src/keyboard/Keymap.tsx`, `src/keyboard/Key.tsx`, `src/keyboard/Keyboard.tsx`,
 `src/keyboard/PhysicalLayout.tsx`, `src/behaviors/BehaviorBindingPicker.tsx`,

@@ -3,6 +3,7 @@
  * Studio.
  */
 import { describe, expect, it } from "vitest";
+import { isOledLayoutId } from "../oled/oledIds";
 import { DEMO_DISPLAY_SETTINGS } from "./demo/demoDisplay";
 import type { DisplaySettingData } from "./displayProtocol";
 import {
@@ -26,12 +27,17 @@ import {
 const demo = (): DisplaySettingData[] =>
   DEMO_DISPLAY_SETTINGS.map((s) => ({ ...s }));
 
+// The settings of this tab: the demo keyboard also has the OLED layout (the
+// ids from 16 on), which the OLED tab edits.
+const tabSettings = (): DisplaySettingData[] =>
+  demo().filter((s) => !isOledLayoutId(s.id));
+
 const setting = (id: number): DisplaySettingData =>
   demo().find((s) => s.id === id)!;
 
 describe("the settings the app knows", () => {
-  it("knows every setting of the firmware (the demo has its ids)", () => {
-    for (const s of DEMO_DISPLAY_SETTINGS) {
+  it("knows every setting of the tab (the demo has its ids)", () => {
+    for (const s of tabSettings()) {
       expect(isKnownSetting(s.id)).toBe(true);
     }
   });
@@ -68,7 +74,7 @@ describe("the settings the app knows", () => {
   it("keeps every step inside the range the firmware gives", () => {
     // From the minimum, in steps, the slider reaches the maximum and the
     // default, so no value of the firmware is out of reach.
-    for (const s of DEMO_DISPLAY_SETTINGS) {
+    for (const s of tabSettings()) {
       const step = describeSetting(s.id).step ?? 1;
       if (describeSetting(s.id).kind === "slider") {
         expect((s.max - s.min) % step).toBe(0);
@@ -194,6 +200,26 @@ describe("groupSettings", () => {
       OTHER_GROUP_TITLE,
     ]);
     expect(groups[3].settings.map((s) => s.id)).toEqual([9]);
+  });
+
+  it("leaves the OLED layout to the OLED tab", () => {
+    const groups = groupSettings(demo());
+
+    expect(demo().some((s) => isOledLayoutId(s.id))).toBe(true);
+    expect(groups.flatMap((g) => g.settings.map((s) => s.id))).toEqual([
+      1, 2, 3, 4, 5, 6,
+    ]);
+    expect(groups.map((g) => g.title)).not.toContain(OTHER_GROUP_TITLE);
+  });
+
+  it("lists a setting it does not know below the layout's ids", () => {
+    const groups = groupSettings([
+      { id: 15, value: 3, min: 0, max: 10, defaultValue: 3 },
+      { id: 16, value: 1, min: 0, max: 1, defaultValue: 1 },
+    ]);
+
+    expect(groups.map((g) => g.title)).toEqual([OTHER_GROUP_TITLE]);
+    expect(groups[0].settings.map((s) => s.id)).toEqual([15]);
   });
 
   it("gives no groups for no settings", () => {

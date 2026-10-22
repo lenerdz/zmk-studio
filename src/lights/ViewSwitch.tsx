@@ -3,10 +3,17 @@
  * Studio.
  *
  * The switch of the header between the Keys tab (the keymap editor of ZMK
- * Studio), the Lights tab and the Display tab (the settings of the screens).
+ * Studio), the Lights tab, the Display tab (the settings of the screens) and
+ * the OLED tab (what the screens show and where).
  */
 import type { ComponentType } from "react";
-import { Keyboard, Lightbulb, Monitor, type LucideProps } from "lucide-react";
+import {
+  Keyboard,
+  LayoutPanelLeft,
+  Lightbulb,
+  Monitor,
+  type LucideProps,
+} from "lucide-react";
 import { availableViews, type AppView } from "./appViews";
 
 export interface ViewSwitchProps {
@@ -16,6 +23,8 @@ export interface ViewSwitchProps {
   lightsAvailable: boolean;
   /** The Display tab only exists for a keyboard that has display settings. */
   displayAvailable: boolean;
+  /** The OLED tab only exists for a keyboard that has the OLED layout. */
+  oledAvailable?: boolean;
 }
 
 const VIEWS: Record<
@@ -25,6 +34,7 @@ const VIEWS: Record<
   keys: { label: "Keys", Icon: Keyboard },
   lights: { label: "Lights", Icon: Lightbulb },
   display: { label: "Display", Icon: Monitor },
+  oled: { label: "OLED", Icon: LayoutPanelLeft },
 };
 
 export const ViewSwitch = ({
@@ -32,8 +42,13 @@ export const ViewSwitch = ({
   onChange,
   lightsAvailable,
   displayAvailable,
+  oledAvailable = false,
 }: ViewSwitchProps) => {
-  const offered = availableViews(lightsAvailable, displayAvailable);
+  const offered = availableViews(
+    lightsAvailable,
+    displayAvailable,
+    oledAvailable,
+  );
 
   // With only the Keys tab there is nothing to switch to.
   if (offered.length < 2) {

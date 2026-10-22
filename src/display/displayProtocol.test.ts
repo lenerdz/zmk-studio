@@ -31,11 +31,14 @@ describe("fetchDisplayInfo", () => {
     expect(await fetchDisplayInfo(conn)).toEqual([...DEMO_DISPLAY_SETTINGS]);
   });
 
-  it("gives the six settings of the firmware, by id", async () => {
+  it("gives the six display settings first, then the OLED layout, by id", async () => {
     const { conn } = connectDemo();
 
-    const settings = await fetchDisplayInfo(conn);
-    expect(settings?.map((s) => s.id)).toEqual([1, 2, 3, 4, 5, 6]);
+    const ids = (await fetchDisplayInfo(conn))?.map((s) => s.id) ?? [];
+    expect(ids.slice(0, 6)).toEqual([1, 2, 3, 4, 5, 6]);
+    // 13 settings of the right screen and 24 of the left one
+    expect(ids.slice(6)).toHaveLength(37);
+    expect(ids.slice(6).every((id) => id >= 16)).toBe(true);
   });
 
   it("gives null for a keyboard without the display settings", async () => {

@@ -5,7 +5,8 @@
  * The Display tab: the settings of the OLED screens of the keyboard (contrast,
  * when they turn off, the toast of the lights on the right screen). Every
  * change is applied by the keyboard at once and kept by it a few seconds later,
- * so there is no Save here.
+ * so there is no Save here. What is on the screens and where (the OLED tab) is
+ * kept by the same settings, so "Restore defaults" puts that back too.
  */
 import { useContext, type ReactNode } from "react";
 import { RotateCcw } from "lucide-react";
@@ -19,6 +20,7 @@ import {
   groupSettings,
   isSettingEnabled,
 } from "./displaySettings";
+import { hasOledLayout } from "../oled/oledLayout";
 
 const BUTTON =
   "flex items-center gap-1 rounded px-2 py-1 bg-base-100 hover:bg-base-300 disabled:opacity-50 disabled:hover:bg-base-100";
@@ -249,8 +251,9 @@ export const DisplayTab = () => {
             Restore defaults
           </button>
           <span className="opacity-70">
-            Puts every setting back to what the firmware was built with. Restore
-            Stock Settings in the header does it too.
+            {hasOledLayout(settings)
+              ? "Puts every setting back to what the firmware was built with, the places of the widgets in the OLED tab included. Restore Stock Settings in the header does it too."
+              : "Puts every setting back to what the firmware was built with. Restore Stock Settings in the header does it too."}
           </span>
         </div>
       </div>

@@ -424,7 +424,9 @@ describe("restoreDefaults", () => {
     expect(controller.getState().problem).toBeTruthy();
     // The settings it had are still there.
     expect(controller.getState().status).toBe("ready");
-    expect(controller.getState().settings).toHaveLength(6);
+    expect(controller.getState().settings).toHaveLength(
+      DEMO_DISPLAY_SETTINGS.length,
+    );
   });
 });
 

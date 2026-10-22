@@ -36,7 +36,10 @@ The firmware is built with the same protocol files: the messages fork is pinned 
 revision used here and the one the firmware is built with must be the same**; if one
 changes, regenerate this code (or update the pin) in the same step.
 
-Messages fork revision used here: `caee958c434f40143eda7195c1ca0939bf905e8b`.
+Messages fork revision used here: `3c76351f4aaf09ac61e1e2fcfce9487226add9c1`. Its `.proto`
+files are the ones of `caee958c434f40143eda7195c1ca0939bf905e8b`, from which the committed
+code was generated: the commits after that one only change `keymap.options.in` (a limit the
+firmware needs and the generated code does not use) and the READMEs of the messages fork.
 
 ## Generating the messages again
 

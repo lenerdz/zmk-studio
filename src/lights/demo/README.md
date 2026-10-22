@@ -3,7 +3,8 @@
 A keyboard that lives in the browser, to try the app (and to test it) without hardware. It
 answers the requests of ZMK Studio the way a Corne running
 [corne-zmk](https://github.com/lenerdz/corne-zmk) does, including the light maps of the
-Lights tab and the display settings of the Display tab.
+Lights tab, the display settings of the Display tab and the layout of the screens of the
+OLED tab (which is made of display settings).
 
 ## Using it
 
@@ -13,8 +14,8 @@ Lights tab and the display settings of the Display tab.
 
 There are two more entries: **Demo keyboard (no light maps)** answers like a firmware
 without the editable light maps, and **Demo keyboard (no display settings)** like one
-without the display settings. The Lights tab, or the Display tab, is not offered then, as
-it happens with any other keyboard.
+without the display settings. The Lights tab, or the Display and OLED tabs, are not
+offered then, as it happens with any other keyboard.
 
 Nothing is saved: reloading the page starts again from the stock keymap and colors.
 
@@ -25,7 +26,7 @@ Nothing is saved: reloading the page starts again from the stock keymap and colo
 | `demoDevice.ts` | The logic: the answers and the notifications for each request, on plain objects |
 | `demoTransport.ts` | Connects it to the app as a transport. The bytes go through the real framing and the real message encoding, in both directions |
 | `demoColors.ts` | The colors the maps start with (generated) |
-| `../../display/demo/demoDisplay.ts` | The display settings: ids 1 to 6 with the ranges and defaults of `display_settings.c` |
+| `../../display/demo/demoDisplay.ts` | The display settings: ids 1 to 6 of the Display tab and the 37 settings of the OLED layout (ids 16 to 106), 43 in all, with the ranges and defaults of `display_settings.c` |
 
 - The physical layout, the behaviors and the keymap come from
   [`src/keyboard/corne.mock.ts`](../../keyboard/corne.mock.ts). Like the data of the
@@ -38,8 +39,9 @@ Nothing is saved: reloading the page starts again from the stock keymap and colo
   written in `demoDevice.ts` on purpose, and not taken from the app, so a mistake in the
   app shows up as an error here.
 - The display settings follow `display_settings.c` of the same module: the six settings
-  with their ranges and defaults, `INVALID_ID` and `INVALID_VALUE` answers, and the
-  restore of the defaults. They are kept as they change (there is no saved copy and no
+  of the Display tab and the 37 of the OLED layout (the build of the Corne of corne-zmk,
+  with the cat as the animation) with their ranges and defaults, `INVALID_ID` and
+  `INVALID_VALUE` answers, and the restore of the defaults. They are kept as they change (there is no saved copy and no
   unsaved flag, as in the firmware). The ranges are written in `demoDisplay.ts` on purpose,
   like the limits of the light maps.
 - Saving, discarding and the settings reset work for the keymap and for the lights; the
@@ -52,7 +54,8 @@ Nothing is saved: reloading the page starts again from the stock keymap and colo
 `createDemoTransport(options)` takes:
 
 - `lights: false` to behave like a firmware without the light maps.
-- `display: false` to behave like a firmware without the display settings.
+- `display: false` to behave like a firmware without the display settings (and so
+  without the layout of the OLED tab).
 - `busyResponses: n` to answer `BUSY` to the first `n` requests that set colors.
 - `refuseDisplayWrites: n` to answer `INVALID_VALUE` to the first `n` requests that change
   a display setting.

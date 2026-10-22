@@ -10,6 +10,25 @@
 import { SetDisplaySettingResponse } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import type { DisplaySettingData } from "../displayProtocol";
 
+/**
+ * The settings of one widget of the OLED layout: the switch (on), the x and the
+ * y, which the build gives, and then the ones the widget adds. They go from -160
+ * to 320, the range display_settings.c gives.
+ */
+function oledWidget(
+  first: number,
+  x: number,
+  y: number,
+  extra: DisplaySettingData[] = [],
+): DisplaySettingData[] {
+  return [
+    { id: first, value: 1, min: 0, max: 1, defaultValue: 1 },
+    { id: first + 1, value: x, min: -160, max: 320, defaultValue: x },
+    { id: first + 2, value: y, min: -160, max: 320, defaultValue: y },
+    ...extra,
+  ];
+}
+
 /** The settings of a Corne built from lenerdz/corne-zmk. */
 export const DEMO_DISPLAY_SETTINGS: ReadonlyArray<DisplaySettingData> = [
   // 1 and 2: the contrast of the left and of the right screen
@@ -23,6 +42,32 @@ export const DEMO_DISPLAY_SETTINGS: ReadonlyArray<DisplaySettingData> = [
   // 5 and 6: the toast of the lights on the right screen, and its duration
   { id: 5, value: 1, min: 0, max: 1, defaultValue: 1 },
   { id: 6, value: 1500, min: 500, max: 5000, defaultValue: 1500 },
+
+  // The OLED layout (CONFIG_KEYPAW_OLED_LAYOUT), from 16 on, in blocks of eight:
+  // +0 whether the widget is drawn, +1 its x, +2 its y; the picture adds +3 the
+  // kind (0 gem, 1 cat, 2 head, 3 spaceman, 4 pokemon, 5 vim, 6 vip marcos) and
+  // +4 the time of a cycle in ms (0 is the one of the animation). The positions
+  // are the ones of this repository's build (the nice!oled widget options).
+  // Right screen: the picture (the cat), the battery, the link, the toast.
+  ...oledWidget(16, 18, -18, [
+    { id: 19, value: 1, min: 0, max: 6, defaultValue: 1 },
+    { id: 20, value: 0, min: 0, max: 60000, defaultValue: 0 },
+  ]),
+  ...oledWidget(24, 0, 50),
+  ...oledWidget(32, 4, 32),
+  // The toast has no switch: the position only (5 turns it on and off)
+  ...oledWidget(40, 0, 143).slice(1),
+  // Left screen: the output, the battery (the text with both halves, which the
+  // build puts at y = 19, above what the screen shows), the profile marks, the
+  // profile number, the layer, the speedometer, the speed number, the graph.
+  ...oledWidget(48, 0, 34),
+  ...oledWidget(56, 0, 19),
+  ...oledWidget(64, 0, 137),
+  ...oledWidget(72, 25, 32),
+  ...oledWidget(80, 0, 146),
+  ...oledWidget(88, 0, 70),
+  ...oledWidget(96, 0, 75),
+  ...oledWidget(104, -1, 95),
 ];
 
 export class DemoDisplay {

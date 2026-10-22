@@ -1,6 +1,6 @@
-// Modified by the lenerdz/zmk-studio fork: the Lights and Display tabs (and the switch
-// between them and the keymap editor), Save and Discard that also act on the light maps,
-// and a demo keyboard to try the app without hardware.
+// Modified by the lenerdz/zmk-studio fork: the Lights, Display and OLED tabs (and the
+// switch between them and the keymap editor), Save and Discard that also act on the light
+// maps, and a demo keyboard to try the app without hardware.
 import { AppHeader } from "./AppHeader";
 
 import { create_rpc_connection } from "@zmkfirmware/zmk-studio-ts-client";
@@ -40,6 +40,8 @@ import { AppView, viewToShow } from "./lights/appViews";
 import { createDemoTransport } from "./lights/demo/demoTransport";
 import { DisplayContext } from "./display/DisplayContext";
 import { DisplayTab } from "./display/DisplayTab";
+import { OledTab } from "./oled/OledTab";
+import { hasOledLayout } from "./oled/oledLayout";
 import { useDisplaySettings } from "./display/useDisplaySettings";
 
 declare global {
@@ -248,12 +250,22 @@ function App() {
   const displayAvailable =
     display.status === "ready" || display.status === "error";
 
+  // The OLED tab (what the screens show and where) is part of the same
+  // settings: it exists when the firmware lists the ids of the OLED layout.
+  const oledAvailable =
+    display.status === "ready" && hasOledLayout(display.settings);
+
   useEffect(() => {
-    const shown = viewToShow(view, lightsAvailable, displayAvailable);
+    const shown = viewToShow(
+      view,
+      lightsAvailable,
+      displayAvailable,
+      oledAvailable,
+    );
     if (shown !== view) {
       setView(shown);
     }
-  }, [lightsAvailable, displayAvailable, view]);
+  }, [lightsAvailable, displayAvailable, oledAvailable, view]);
 
   // Whether the keymap has changes that are not saved. Unknown (the question
   // failed) counts as yes, so that nothing is left behind.
@@ -393,6 +405,7 @@ function App() {
                     onChange={setView}
                     lightsAvailable={lightsAvailable}
                     displayAvailable={displayAvailable}
+                    oledAvailable={oledAvailable}
                   />
                 }
                 canUndo={canUndo}
@@ -414,6 +427,11 @@ function App() {
               {view === "display" && (
                 <DisplayContext.Provider value={display}>
                   <DisplayTab />
+                </DisplayContext.Provider>
+              )}
+              {view === "oled" && (
+                <DisplayContext.Provider value={display}>
+                  <OledTab />
                 </DisplayContext.Provider>
               )}
               <AppFooter

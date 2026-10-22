@@ -62,8 +62,8 @@ Other changes:
 What does not change: the editing of the keymap, and what the app reads from or writes to
 the keyboard for it. The icons only affect how keys are drawn and how the app is hosted;
 dragging keys (below) writes with the same request as the binding picker; the Lights and
-Display tabs (further below) add requests of their own and are used only when the firmware
-has them.
+Display tabs (further below) add requests of their own, and the OLED tab uses the ones of
+the Display tab. The three tabs are used only when the firmware has what they edit.
 
 ## Moving keys by dragging (the Keys view)
 
@@ -151,7 +151,8 @@ what the OLED screens of the keyboard do:
 Everything is applied by the keyboard at once and kept by it a few seconds after the last
 change, so there is nothing to save: **Save**, **Discard**, **Undo** and **Redo** do not
 act on these settings. **Restore Stock Settings** puts them back to the defaults too. What
-each screen shows (the widgets, the animation, the language of the toast) is still chosen
+each screen shows, and where, is set in the OLED tab (below) when the firmware has the OLED
+layout; the language of the toast, and what the OLED tab does not cover, are still chosen
 when the firmware is built.
 
 It needs the [zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix) module of
@@ -165,6 +166,44 @@ keymap subsystem of ZMK Studio. With any other firmware the Display view is not 
 
 The settings, their ranges, how the changes travel and the files:
 [`src/display/README.md`](src/display/README.md).
+
+## Screen layout (the OLED tab)
+
+With a firmware that has the OLED layout, the header has a fourth view, **OLED**, next to
+**Keys**, **Lights** and **Display** (each one only when the firmware has what it edits).
+It draws the two OLED screens of the keyboard upright, with the strip that the panel really
+shows lit, and sets what each screen shows and where:
+
+- **Drag a widget** (the battery, the Bluetooth link, the layer name, the typing speed, the
+  animation, ...) to move it. The arrow keys move the selected one by a pixel, or by eight
+  with Shift. The inspector shows the size of each widget, where it is, and how much of it
+  the panel shows.
+- **Hide a widget** with Delete or with its switch, and **show it again** by clicking it
+  in the tray of hidden widgets or by dragging it onto the screen.
+- **Choose the picture of the right screen** in a gallery: five animations (Gem, Cat,
+  Head, Spaceman, Pokemon) and two still images, each one playing in its card, with its
+  size and the time of a cycle. Click one, or drag it onto the right screen, and set the
+  time of one cycle.
+- **See what the screens can show**, with the size of each thing, and which choices only a
+  new firmware build adds (the Luna dog, the Bongo cat, the modifier indicators, Raw HID,
+  ...), each with the option to turn on.
+
+Everything is applied by the keyboard at once and kept by it a few seconds after the last
+change, so there is nothing to save: **Save**, **Discard**, **Undo** and **Redo** do not
+act on the layout. **Restore Stock Settings**, and **Restore defaults** of the Display tab,
+put it back to what the firmware was built with. The drawings are samples, not the live
+state of the screens.
+
+It needs what the Display tab needs, with `CONFIG_KEYPAW_OLED_LAYOUT=y` in the build of
+both halves, and the [zmk-nice-oled](https://github.com/lenerdz/zmk-nice-oled) fork of
+lenerdz, which reads the layout while the keyboard runs. It has no requests of its own: the
+layout is made of display settings (ids 16 and up), read and written with the three
+requests of the Display tab. With any other firmware the OLED view is not offered and the
+app works as before.
+
+How the geometry works (the canvas of 68 x 160 pixels, the strip of 32 x 128 that the panel
+shows, the position of the picture), the ids, the files and how the sprites are generated:
+[`src/oled/README.md`](src/oled/README.md).
 
 ## Status
 
@@ -188,6 +227,17 @@ another (the time to turn off, the duration of the toast), the three ways of tur
 screen off, **Restore defaults** and **Restore Stock Settings** with the tab open; the
 demo keyboard without display settings has no Display tab. It is covered by `npm test`.
 It has **not been tried on a real keyboard**.
+
+The OLED tab was tried in a browser against the demo keyboard, through the same framing and
+message encoding as with a real keyboard: the two screens, dragging each widget with the
+pointer, the arrow keys, hiding with Delete, showing from the tray by click and by drag,
+choosing a picture in the gallery by click and by drag, the inspector, putting a screen
+back as built and the zoom levels; the demo keyboard without display settings has no OLED
+tab. It is covered by `npm test`. It has **not been tried on a real keyboard**: whether
+each widget moves where the app says (the conversion of the coordinates of the picture
+rests on reading the code of zmk-nice-oled), whether the pictures switch while the
+keyboard runs, and what the right half shows after it receives its settings are
+unconfirmed. Touch input has not been tried on any device.
 
 The keys `Steno On` and `Steno Off`, and the STENO layer, were checked in a browser against
 the demo keyboard and in the Storybook story `Keyboard/Keymap (Corne)`, not on a real
@@ -219,6 +269,8 @@ keyboard**, and touch input has not been tried on any device.
 5. If the firmware has editable light maps, choose **Lights** in the header to edit the
    colors.
 6. If the firmware has display settings, choose **Display** to set the screens.
+7. If the firmware has the OLED layout, choose **OLED** to move the widgets of the two
+   screens and to pick the animation of the right screen.
 
 ## Development
 
@@ -235,11 +287,13 @@ limits). To see the key labels without a keyboard:
 npm run storybook
 ```
 
-To try the app, including the Lights and Display tabs, without a keyboard, choose **Demo
+To try the app, including the Lights, Display and OLED tabs, without a keyboard, choose **Demo
 keyboard** in the connection list. It is always there with `npm run dev`; on the published
 app, add `?demo` to the address (<https://lenerdz.github.io/zmk-studio/?demo>). **Demo
 keyboard (no light maps)** and **Demo keyboard (no display settings)** answer like a
-firmware without them. See [`src/lights/demo/README.md`](src/lights/demo/README.md).
+firmware without them (the second has neither the Display nor the OLED tab, because the
+layout of the screens is made of display settings). See
+[`src/lights/demo/README.md`](src/lights/demo/README.md).
 
 To run the tests:
 
@@ -283,10 +337,12 @@ Added: `src/keyboard/bindingDisplay.tsx`, `src/keyboard/BindingLabel.tsx`,
 `src/keyboard/KeyDragGhost.tsx` (dragging keys),
 `src/lights/` (the Lights tab, the demo keyboard and their tests),
 `src/display/` (the Display tab and its tests; the demo keyboard answers its requests),
+`src/oled/` (the OLED tab, its sprites and its tests; the demo keyboard has the settings of the layout),
+`scripts/oled-assets/` (turns the pictures of zmk-nice-oled into those sprites),
 `src/vendor/zmk-studio-ts-client/` (the RPC client with the messages of the fork),
 `scripts/generate-led-data.mjs`, `.github/workflows/pages.yml`, `README.pt-BR.md`.
 
-Modified: `README.md` (replaced), `NOTICE`, `.gitignore`, `index.html`, `download.html`,
+Modified: `README.md` (replaced), `NOTICE`, `.gitignore`, `.prettierignore`, `index.html`, `download.html`,
 `package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.ts`,
 `src/keyboard/Keymap.tsx`, `src/keyboard/Key.tsx`, `src/keyboard/Keyboard.tsx`,
 `src/keyboard/PhysicalLayout.tsx`, `src/behaviors/BehaviorBindingPicker.tsx`,

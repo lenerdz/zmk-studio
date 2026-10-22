@@ -6,8 +6,11 @@
  * of control and the rules between them for the ids of the protocol
  * (lenerdz/zmk-studio-messages), and the plain functions the Display tab is
  * built from. The range of every setting comes from the keyboard, never from
- * here; an id this file does not know is still shown, as a number.
+ * here; an id this file does not know is still shown, as a number. The ids from
+ * 16 on belong to the OLED tab (the layout of the screens, src/oled) and are not
+ * listed here.
  */
+import { isOledLayoutId } from "../oled/oledIds";
 import type { DisplaySettingData } from "./displayProtocol";
 
 export type SettingKind = "slider" | "choice" | "toggle";
@@ -174,7 +177,10 @@ export function isKnownSetting(id: number): boolean {
   return KNOWN[id] !== undefined;
 }
 
-/** The settings of the keyboard split in the groups of the tab. */
+/**
+ * The settings of the keyboard split in the groups of the tab. The ids of the
+ * OLED layout (16 and up) are left out: the OLED tab edits them.
+ */
 export function groupSettings(settings: DisplaySettingData[]): SettingGroup[] {
   const byId = new Map(settings.map((s) => [s.id, s]));
   const used = new Set<number>();
@@ -191,7 +197,9 @@ export function groupSettings(settings: DisplaySettingData[]): SettingGroup[] {
     }
   }
 
-  const others = settings.filter((s) => !used.has(s.id));
+  const others = settings.filter(
+    (s) => !used.has(s.id) && !isOledLayoutId(s.id),
+  );
   if (others.length > 0) {
     groups.push({ title: OTHER_GROUP_TITLE, settings: others });
   }

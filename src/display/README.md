@@ -12,6 +12,10 @@ settings) and the protocol of
 offered (the keyboard answers "RPC not found" to the first request) and the app works
 like the original ZMK Studio.
 
+What the screens show and where (the widgets, the picture of the right screen) is the
+[OLED tab](../oled/README.md), which is made of the settings with the ids from 16 up and
+uses the same requests as this tab.
+
 ## What it does
 
 The header has a third view, **Display**, next to **Keys** and **Lights** (each one only
@@ -26,8 +30,9 @@ ranges come from the keyboard:
 - **Light toast**: a switch for the notice that the right screen shows when the lights
   change (effect, brightness, on and off), and a slider for how long it stays. The slider
   is disabled while the switch is off.
-- **Restore defaults**: puts every setting back to what the firmware was built with. It
-  is disabled while nothing differs.
+- **Restore defaults**: puts every setting back to what the firmware was built with, the
+  places of the widgets in the [OLED tab](../oled/README.md) included. It is disabled
+  while nothing differs.
 
 Unlike the keys and the lights, **there is nothing to save**: the keyboard applies each
 change at once and keeps it in its own memory a few seconds after the last change
@@ -42,7 +47,8 @@ take a few seconds after it connects.
 
 A setting this version of the app does not know (a newer firmware) is not hidden: it is
 shown as `Setting N`, in a group of its own, with a slider from the minimum to the maximum
-the keyboard reports.
+the keyboard reports. The exception is the ids from 16 up, which belong to the OLED tab and
+are not listed here.
 
 ## The settings
 
@@ -58,6 +64,10 @@ of every setting come from the keyboard.
 | 4 | Time without activity before it goes off | Slider, step 10 s | 30 s to 1 h | 1 min | The minimum is the idle time of ZMK (30 s). Used only while setting 3 is not Never |
 | 5 | Light toast on the right screen | Switch | 0 or 1 | 1 (On) | Needs the widget of zmk-nice-oled, which corne-zmk builds |
 | 6 | Toast duration | Slider, step 0.1 s | 0.5 s to 5 s | 1.5 s | Used only while setting 5 is on |
+
+The ids from 16 up are the layout of the OLED screens (37 settings on the Corne of
+corne-zmk, from the animation of the right screen to the graph of the left one). The
+[OLED tab](../oled/README.md) edits them, and this tab does not list them.
 
 ## How the changes travel
 
@@ -96,7 +106,7 @@ has; a value the user changed while it was reading is kept.
 | `displayWriter.ts` | The queue described above |
 | `displayController.ts` | What the tab does with the keyboard, without React: reading, changing, restoring and recovering from a refusal |
 | `useDisplaySettings.ts`, `DisplayContext.ts` | Carry the state of a controller into React |
-| `demo/demoDisplay.ts` | The settings of the demo keyboard (see [`../lights/demo/README.md`](../lights/demo/README.md)) |
+| `demo/demoDisplay.ts` | The settings of the demo keyboard: the six of this tab and the 37 of the OLED layout (see [`../lights/demo/README.md`](../lights/demo/README.md)) |
 
 `src/App.tsx`, `src/AppHeader.tsx` and `src/lights/ViewSwitch.tsx` connect the tab to the
 rest of the app (the header switch, the text of the reset confirmation).
@@ -108,7 +118,8 @@ the interval, the order, one request in flight, a failure, `cancel`), the rules 
 texts (groups, dependencies, limits, an unknown id), the three requests against the demo
 keyboard (through the real framing and message encoding), the controller (reading,
 changing, holding a value inside the range, not flooding the keyboard, a refusal, a
-restore, `dispose`) and which tabs a keyboard gets.
+restore, `dispose`), that the ids from 16 up are left to the OLED tab, and which tabs a
+keyboard gets.
 
 ## Status on a real keyboard
 
@@ -116,7 +127,9 @@ The tab was tried in a browser against the demo keyboard: reading the settings, 
 slider (72 changes became 13 requests, the last one with the final value), the dependencies
 between the controls, the switch, the three buttons, **Restore defaults**, **Restore Stock
 Settings** from the header while the tab was open, and the demo keyboard without display
-settings, which has no Display tab. The firmware side compiles in the CI of corne-zmk. It
+settings, which has no Display tab. With the 43 settings of the demo keyboard (the 37 of
+the OLED layout included), the tab still lists only its six. The firmware side compiles
+in the CI of corne-zmk. It
 has **not been tried on a real keyboard**: whether each screen changes its contrast, the
 three ways of turning the screen off, what the right half receives and what is still there
 after a restart are unconfirmed.

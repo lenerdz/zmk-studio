@@ -79,8 +79,8 @@ ZMK Studio holds 30 and drops the bytes that do not fit.
 | `useKeyboardView.ts` | Loads the physical layout, the keymap and the behaviors to draw the keys |
 | `exportDtsi.ts`, `dtsiTemplate.ts` | The text of `led_colors.dtsi` (the template is generated) |
 | `keyNames.ts`, `text.ts` | The names of the keys for the comments of the exported file, in plain ASCII |
-| `ViewSwitch.tsx` | The Keys, Lights and Display buttons of the header |
-| `appViews.ts` | Which tabs a keyboard offers (Lights and Display only when the firmware has what they edit) and which one to show |
+| `ViewSwitch.tsx` | The Keys, Lights, Display and OLED buttons of the header |
+| `appViews.ts` | Which tabs a keyboard offers (Lights, Display and OLED only when the firmware has what they edit) and which one to show |
 | `stockSettingsText.ts` | The text of the confirmation of Restore Stock Settings (what it puts back) |
 | `demo/` | A keyboard that lives in the browser (see [`demo/README.md`](demo/README.md)) |
 | `testUtils.ts` | A helper of the tests; the app does not use it |
