@@ -9,7 +9,7 @@
  */
 import { PropsWithChildren } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeftRight, Copy } from "lucide-react";
+import { ArrowLeftRight, Copy, Layers } from "lucide-react";
 import type { DropMode } from "./keyDrag";
 
 /**
@@ -27,10 +27,14 @@ export interface KeyDragGhostProps {
   /** The size the dragged key has on the screen. */
   width: number;
   height: number;
-  /** What dropping on the key under the pointer does; none when over no key. */
+  /** Swapping or copying: the icon of the tag. */
   mode: DropMode;
+  /** The words of the tag under the copy (see ghostTag in keyDrag.ts). */
+  tag: string;
   /** The pointer is over another key, so a drop would do `mode`. */
   droppable: boolean;
+  /** The pointer is over a layer of the list that opens if the key stays. */
+  opening?: boolean;
 }
 
 export const KeyDragGhost = ({
@@ -39,11 +43,12 @@ export const KeyDragGhost = ({
   width,
   height,
   mode,
+  tag,
   droppable,
+  opening = false,
   children,
 }: PropsWithChildren<KeyDragGhostProps>) => {
-  const Icon = mode === "copy" ? Copy : ArrowLeftRight;
-  const text = mode === "copy" ? "Copy" : "Swap";
+  const Icon = opening ? Layers : mode === "copy" ? Copy : ArrowLeftRight;
 
   return createPortal(
     <div
@@ -57,14 +62,14 @@ export const KeyDragGhost = ({
     >
       <div
         className={`flex h-full w-full items-center justify-center overflow-hidden rounded bg-primary text-primary-content opacity-90 shadow-xl ${
-          droppable ? "ring-2 ring-accent" : ""
+          droppable || opening ? "ring-2 ring-accent" : ""
         }`}
       >
         {children}
       </div>
       <div className="absolute left-1/2 top-full mt-1 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded bg-base-100 px-1.5 py-0.5 text-[0.65rem] text-base-content shadow">
         <Icon size={10} strokeWidth={2.5} aria-hidden="true" />
-        {droppable ? text : `${text}: drop on a key`}
+        {tag}
       </div>
     </div>,
     document.body,

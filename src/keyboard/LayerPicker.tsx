@@ -1,3 +1,5 @@
+// Modified by the lenerdz/zmk-studio fork: the layer a key is dragged over is marked, and
+// the list can be found under the pointer by useKeyDrag (see keyDrag.ts).
 import { Pencil, Minus, Plus } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -22,6 +24,11 @@ export type LayerMovedCallback = (index: number, destination: number) => void;
 interface LayerPickerProps {
   layers: Array<Layer>;
   selectedLayerIndex: number;
+  /**
+   * The layer a dragged key is held over (its id): it is marked, and the
+   * keyboard opens it if the key stays there.
+   */
+  dropLayerId?: number;
   canAdd?: boolean;
   canRemove?: boolean;
 
@@ -105,6 +112,7 @@ const EditLabelModal = ({
 export const LayerPicker = ({
   layers,
   selectedLayerIndex,
+  dropLayerId,
   canAdd,
   canRemove,
   onLayerClicked,
@@ -199,6 +207,9 @@ export const LayerPicker = ({
         />
       )}
       <ListBox
+        // useKeyDrag finds the layer under a dragged key with this mark and the
+        // data-key that react-aria puts on each item (the id of the layer).
+        data-layer-picker=""
         aria-label="Keymap Layer"
         selectionMode="single"
         items={layer_items}
@@ -216,7 +227,9 @@ export const LayerPicker = ({
         {(layer_item) => (
           <ListBoxItem
             textValue={layer_item.name}
-            className="p-1 b-1 my-1 group grid grid-cols-[1fr_auto] items-center aria-selected:bg-primary aria-selected:text-primary-content border rounded border-transparent border-solid hover:bg-base-300"
+            className={`p-1 b-1 my-1 group grid grid-cols-[1fr_auto] items-center aria-selected:bg-primary aria-selected:text-primary-content border rounded border-transparent border-solid hover:bg-base-300 ${
+              layer_item.id === dropLayerId ? "outline outline-2 outline-accent" : ""
+            }`}
           >
             <span>{layer_item.name}</span>
             <Pencil

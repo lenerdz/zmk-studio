@@ -1,5 +1,5 @@
-// Modified by the lenerdz/zmk-studio fork: a key can be dragged onto another key (see
-// keyDrag.ts and useKeyDrag.ts).
+// Modified by the lenerdz/zmk-studio fork: a key can be dragged onto another key, also
+// on another layer (see keyDrag.ts and useKeyDrag.ts).
 import {
   CSSProperties,
   PropsWithChildren,
@@ -9,7 +9,7 @@ import {
 } from "react";
 import { Key } from "./Key";
 import { KeyDragGhost } from "./KeyDragGhost";
-import type { Drop, DropMode } from "./keyDrag";
+import { type Drop, ghostTag, layerToOpen } from "./keyDrag";
 import { useKeyDrag } from "./useKeyDrag";
 
 export type KeyPosition = PropsWithChildren<{
@@ -41,7 +41,18 @@ interface PhysicalLayoutProps {
   zoom?: LayoutZoom;
   onPositionClicked?: (position: number) => void;
   /** A key was dragged onto another one. Dragging is off when this is not given. */
-  onPositionDropped?: (from: number, to: number, mode: DropMode) => void;
+  onPositionDropped?: (drop: Drop) => void;
+  /** The id of the layer these keys belong to, when they belong to one. */
+  layerId?: number;
+  /** The name of that layer, for the tag of a key dragged from another layer. */
+  layerName?: string;
+  /**
+   * The dragged key is over a layer of the list (its id), or over none
+   * (undefined, also when the drag ends).
+   */
+  onDragLayerOver?: (layerId: number | undefined) => void;
+  /** A drag ended without a drop; `fromLayer` is the layer the key came from. */
+  onDragAbort?: (fromLayer: number | undefined) => void;
 }
 
 interface PhysicalLayoutPositionLocation {
@@ -87,14 +98,20 @@ export const PhysicalLayout = ({
   oneU = 48,
   onPositionClicked,
   onPositionDropped,
+  layerId,
+  layerName,
+  onDragLayerOver,
+  onDragAbort,
   ...props
 }: PhysicalLayoutProps) => {
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
-  const drag = useKeyDrag(
-    onPositionDropped &&
-      ((drop: Drop) => onPositionDropped(drop.from, drop.to, drop.mode)),
-  );
+  const drag = useKeyDrag({
+    onDrop: onPositionDropped,
+    layerId,
+    onLayerOver: onDragLayerOver,
+    onAbort: onDragAbort,
+  });
 
   useLayoutEffect(() => {
     const element = ref.current;
@@ -139,7 +156,24 @@ export const PhysicalLayout = ({
     .reduce((a, b) => Math.max(a, b), 0);
 
   const dragged = drag.state.phase === "dragging" ? drag.state : undefined;
-  const draggedKey = dragged ? positions[dragged.from] : undefined;
+
+  // The copy that follows the pointer keeps what the key looked like when it was
+  // picked up: the layer on the screen can change while the key is held, and the
+  // key at the same position of the new layer is not the one in the hand.
+  const grabbed = useRef<{ key: KeyPosition; layerName?: string }>();
+  if (!dragged) {
+    grabbed.current = undefined;
+  } else if (!grabbed.current && positions[dragged.from]) {
+    grabbed.current = { key: positions[dragged.from], layerName };
+  }
+  const draggedKey = grabbed.current?.key;
+
+  // The dragged key belongs to another layer than the one on the screen: its
+  // position here is another key, and a drop on it crosses layers.
+  const fromOtherLayer = dragged !== undefined && dragged.fromLayer !== layerId;
+  // The pointer is over a layer of the list that is not the one on the screen.
+  const opening =
+    dragged !== undefined && layerToOpen(dragged.overLayer, layerId) !== undefined;
 
   const positionItems = positions.map((p, idx) => (
     <div
@@ -160,7 +194,7 @@ export const PhysicalLayout = ({
         <Key
           oneU={oneU}
           selected={idx === selectedPosition}
-          dragging={dragged?.from === idx}
+          dragging={dragged?.from === idx && !fromOtherLayer}
           dropMode={dragged?.over === idx ? dragged.mode : undefined}
           {...p}
         />
@@ -188,7 +222,14 @@ export const PhysicalLayout = ({
           width={(draggedKey.width * oneU - 2) * scale}
           height={(draggedKey.height * oneU - 2) * scale}
           mode={dragged.mode}
+          tag={ghostTag({
+            mode: dragged.mode,
+            droppable: dragged.over !== undefined,
+            fromLayer: fromOtherLayer ? grabbed.current?.layerName : undefined,
+            opening,
+          })}
           droppable={dragged.over !== undefined}
+          opening={opening}
         >
           {draggedKey.children}
         </KeyDragGhost>

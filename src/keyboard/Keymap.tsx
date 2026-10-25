@@ -1,6 +1,6 @@
 // Modified by the lenerdz/zmk-studio fork: keys are drawn with BindingLabel, which
 // adds icons and readable labels for behaviors that are not plain key presses, and a key
-// can be dragged onto another one.
+// can be dragged onto another one, also on another layer.
 import {
   PhysicalLayout,
   Keymap as KeymapMsg,
@@ -13,7 +13,7 @@ import {
 } from "./PhysicalLayout";
 import { BindingLabel } from "./BindingLabel";
 import { getBindingDisplay } from "./bindingDisplay";
-import type { DropMode } from "./keyDrag";
+import type { Drop } from "./keyDrag";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -25,8 +25,12 @@ export interface KeymapProps {
   selectedLayerIndex: number;
   selectedKeyPosition: number | undefined;
   onKeyPositionClicked: (keyPosition: number) => void;
-  /** A key was dragged onto another one of the same layer. */
-  onKeyPositionDropped?: (from: number, to: number, mode: DropMode) => void;
+  /** A key was dragged onto another one, of this layer or of the one it came from. */
+  onKeyPositionDropped?: (drop: Drop) => void;
+  /** The dragged key is over a layer of the list (its id), or over none. */
+  onKeyDragLayerOver?: (layerId: number | undefined) => void;
+  /** A drag ended without a drop; `fromLayer` is the layer the key came from. */
+  onKeyDragAbort?: (fromLayer: number | undefined) => void;
 }
 
 export const Keymap = ({
@@ -38,6 +42,8 @@ export const Keymap = ({
   selectedKeyPosition,
   onKeyPositionClicked,
   onKeyPositionDropped,
+  onKeyDragLayerOver,
+  onKeyDragAbort,
 }: KeymapProps) => {
   if (!keymap.layers[selectedLayerIndex]) {
     return <></>;
@@ -83,6 +89,13 @@ export const Keymap = ({
       selectedPosition={selectedKeyPosition}
       onPositionClicked={onKeyPositionClicked}
       onPositionDropped={onKeyPositionDropped}
+      layerId={keymap.layers[selectedLayerIndex].id}
+      // The same name the list of layers shows.
+      layerName={
+        keymap.layers[selectedLayerIndex].name || String(selectedLayerIndex)
+      }
+      onDragLayerOver={onKeyDragLayerOver}
+      onDragAbort={onKeyDragAbort}
     />
   );
 };

@@ -1,6 +1,8 @@
-// Modified by the lenerdz/zmk-studio fork: a key of the layer can be dragged onto another
-// one to swap their bindings, or to copy one onto the other (see keyDrag.ts), and the
-// keymap is read again when the Files tab has applied a file ("keys.reload").
+// Modified by the lenerdz/zmk-studio fork: a key can be dragged onto another one, on the
+// same layer or on another (holding it over a layer of the list opens that layer), to swap
+// their bindings or to copy one onto the other (see keyDrag.ts); the keys can show what
+// they print with Shift held (see shiftLegend.ts); and the keymap is read again when the
+// Files tab has applied a file ("keys.reload").
 import React, {
   SetStateAction,
   useCallback,
@@ -36,7 +38,21 @@ import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { deserializeLayoutZoom, LayoutZoom } from "./PhysicalLayout";
 import { useLocalStorageState } from "../misc/useLocalStorageState";
-import { BindingEdit, DropMode, planDrop } from "./keyDrag";
+import {
+  Drop,
+  LAYER_HOVER_MS,
+  LayerBindingEdit,
+  layerToOpen,
+  layerToRestore,
+  planDropAcross,
+} from "./keyDrag";
+import { ShiftLayoutContext } from "./ShiftLayoutContext";
+import {
+  DEFAULT_SHIFT_LAYOUT,
+  SHIFT_LAYOUTS,
+  ShiftLayout,
+  parseShiftLayout,
+} from "./shiftLegend";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -184,10 +200,20 @@ export default function Keyboard() {
     deserialize: deserializeLayoutZoom,
   });
 
+  const [shiftLayout, setShiftLayout] = useLocalStorageState<ShiftLayout>(
+    "shiftLayout",
+    DEFAULT_SHIFT_LAYOUT,
+    { deserialize: parseShiftLayout },
+  );
+
   const [selectedLayerIndex, setSelectedLayerIndex] = useState<number>(0);
   const [selectedKeyPosition, setSelectedKeyPosition] = useState<
     number | undefined
   >(undefined);
+  // The layer of the list a dragged key is held over (its id).
+  const [dragOverLayer, setDragOverLayer] = useState<number | undefined>(
+    undefined,
+  );
   const behaviors = useBehaviors();
 
   const conn = useContext(ConnectionContext);
@@ -311,20 +337,21 @@ export default function Keyboard() {
   );
 
   // Writes the bindings of a drop (or of undoing it) to the keyboard, one key
-  // after the other. If the keyboard refuses one, the ones already written are put
-  // back, so the keyboard and the screen never disagree.
+  // after the other, each on its own layer. If the keyboard refuses one, the ones
+  // already written are put back, so the keyboard and the screen never disagree.
   const writeEdits = useCallback(
-    async (layerId: number, edits: BindingEdit[], undoing: boolean) => {
+    async (edits: LayerBindingEdit[], undoing: boolean) => {
       const connection = conn.conn;
       if (!connection) {
         throw new Error("Not connected");
       }
 
-      const wanted = (edit: BindingEdit) =>
+      const wanted = (edit: LayerBindingEdit) =>
         undoing ? edit.previous : edit.binding;
-      const before = (edit: BindingEdit) =>
+      const before = (edit: LayerBindingEdit) =>
         undoing ? edit.binding : edit.previous;
-      const write = async (keyPosition: number, binding: BehaviorBinding) => {
+      const write = async (edit: LayerBindingEdit, binding: BehaviorBinding) => {
+        const { layerId, keyPosition } = edit;
         const resp = await call_rpc(connection, {
           keymap: { setLayerBinding: { layerId, keyPosition, binding } },
         });
@@ -334,11 +361,11 @@ export default function Keyboard() {
         );
       };
 
-      const written: BindingEdit[] = [];
+      const written: LayerBindingEdit[] = [];
       for (const edit of edits) {
-        if (!(await write(edit.keyPosition, wanted(edit)))) {
+        if (!(await write(edit, wanted(edit)))) {
           for (const done of written.reverse()) {
-            await write(done.keyPosition, before(done));
+            await write(done, before(done));
           }
           throw new Error(
             `The keyboard did not accept the change of the key ${edit.keyPosition}`
@@ -349,13 +376,12 @@ export default function Keyboard() {
 
       setKeymap(
         produce((draft: any) => {
-          const layer = draft.layers.find((l: Layer) => l.id === layerId);
-          if (!layer) {
-            return;
-          }
-
           for (const edit of edits) {
-            layer.bindings[edit.keyPosition] = wanted(edit);
+            const layer = draft.layers.find((l: Layer) => l.id === edit.layerId);
+
+            if (layer) {
+              layer.bindings[edit.keyPosition] = wanted(edit);
+            }
           }
         })
       );
@@ -363,30 +389,42 @@ export default function Keyboard() {
     [conn, setKeymap]
   );
 
-  // A key was dragged onto another one: swap the two bindings, or copy the first
-  // onto the second. One step of undo and redo, whichever it was.
+  // A key was dragged onto another one, on the same layer or on another (the layer
+  // it came from, which is where its binding is): swap the two bindings, or copy the
+  // first onto the second. One step of undo and redo, whichever it was.
   const doDropKey = useCallback(
-    (from: number, to: number, mode: DropMode) => {
-      const layer = keymap?.layers[selectedLayerIndex];
-      if (!layer) {
+    (drop: Drop) => {
+      // The layer on the screen when the key was let go is the one that got it.
+      const target =
+        keymap?.layers.find((l) => l.id === drop.toLayer) ??
+        keymap?.layers[selectedLayerIndex];
+      const source =
+        keymap?.layers.find((l) => l.id === drop.fromLayer) ?? target;
+      if (!keymap || !target || !source) {
         return;
       }
 
       // Whatever the drop does, the key that received it is the one to look at.
-      setSelectedKeyPosition(to);
+      setSelectedLayerIndex(keymap.layers.indexOf(target));
+      setSelectedKeyPosition(drop.to);
 
-      const edits = planDrop(layer.bindings, from, to, mode);
+      const edits = planDropAcross(
+        { layerId: source.id, bindings: source.bindings },
+        drop.from,
+        { layerId: target.id, bindings: target.bindings },
+        drop.to,
+        drop.mode,
+      );
       if (edits.length === 0) {
         return;
       }
 
-      const layerId = layer.id;
       undoRedo?.(async () => {
-        await writeEdits(layerId, edits, false);
+        await writeEdits(edits, false);
 
         return async () => {
           try {
-            await writeEdits(layerId, edits, true);
+            await writeEdits(edits, true);
           } catch (e) {
             console.error("Failed to undo the change of the keys", e);
           }
@@ -394,13 +432,58 @@ export default function Keyboard() {
       })?.catch((e) => {
         console.error("Failed to change the keys", e);
         window.alert(
-          `Failed to ${mode === "copy" ? "copy" : "swap"} the keys: ${
+          `Failed to ${drop.mode === "copy" ? "copy" : "swap"} the keys: ${
             e instanceof Error ? e.message : e
           }`
         );
       });
     },
     [keymap, selectedLayerIndex, undoRedo, writeEdits]
+  );
+
+  // A dragged key rests over a layer of the list: after a short pause that layer
+  // opens, so the key can be dropped on it. Moving off the layer before that
+  // cancels the pause.
+  useEffect(() => {
+    const open = layerToOpen(
+      dragOverLayer,
+      keymap?.layers[selectedLayerIndex]?.id
+    );
+    const index =
+      open === undefined
+        ? -1
+        : keymap?.layers.findIndex((l) => l.id === open) ?? -1;
+
+    if (index < 0) {
+      return;
+    }
+
+    const timer = window.setTimeout(
+      () => setSelectedLayerIndex(index),
+      LAYER_HOVER_MS
+    );
+
+    return () => window.clearTimeout(timer);
+  }, [dragOverLayer, keymap, selectedLayerIndex]);
+
+  // A drag ended without a drop (Escape, or the button let go over no key): if the
+  // key was carried to another layer, the view goes back to the one it came from.
+  const abortKeyDrag = useCallback(
+    (fromLayer: number | undefined) => {
+      const back = layerToRestore(
+        fromLayer,
+        keymap?.layers[selectedLayerIndex]?.id
+      );
+      const index =
+        back === undefined
+          ? -1
+          : keymap?.layers.findIndex((l) => l.id === back) ?? -1;
+
+      if (index >= 0) {
+        setSelectedLayerIndex(index);
+      }
+    },
+    [keymap, selectedLayerIndex]
   );
 
   let selectedBinding = useMemo(() => {
@@ -629,6 +712,7 @@ export default function Keyboard() {
             <LayerPicker
               layers={keymap.layers}
               selectedLayerIndex={selectedLayerIndex}
+              dropLayerId={dragOverLayer}
               onLayerClicked={setSelectedLayerIndex}
               onLayerMoved={moveLayer}
               canAdd={(keymap.availableLayers || 0) > 0}
@@ -642,37 +726,59 @@ export default function Keyboard() {
       </div>
       {layouts && keymap && behaviors && (
         <div className="p-2 col-start-2 row-start-1 grid items-center justify-center relative min-w-0">
-          <KeymapComp
-            keymap={keymap}
-            layout={layouts[selectedPhysicalLayoutIndex]}
-            behaviors={behaviors}
-            scale={keymapScale}
-            selectedLayerIndex={selectedLayerIndex}
-            selectedKeyPosition={selectedKeyPosition}
-            onKeyPositionClicked={setSelectedKeyPosition}
-            onKeyPositionDropped={doDropKey}
-          />
+          <ShiftLayoutContext.Provider value={shiftLayout}>
+            <KeymapComp
+              keymap={keymap}
+              layout={layouts[selectedPhysicalLayoutIndex]}
+              behaviors={behaviors}
+              scale={keymapScale}
+              selectedLayerIndex={selectedLayerIndex}
+              selectedKeyPosition={selectedKeyPosition}
+              onKeyPositionClicked={setSelectedKeyPosition}
+              onKeyPositionDropped={doDropKey}
+              onKeyDragLayerOver={setDragOverLayer}
+              onKeyDragAbort={abortKeyDrag}
+            />
+          </ShiftLayoutContext.Provider>
           <p className="absolute bottom-2 left-2 flex select-none items-center gap-1 text-[0.7rem] opacity-70">
             <Move size={12} aria-hidden="true" />
-            Drag a key onto another to swap them. Hold Ctrl or Alt to copy. Esc cancels.
+            Drag a key onto another to swap them, or hold it over a layer of the list to drop it there. Hold Ctrl or Alt to copy. Esc cancels.
           </p>
-          <select
-            className="absolute top-2 right-2 h-8 rounded px-2"
-            value={keymapScale}
-            onChange={(e) => {
-              const value = deserializeLayoutZoom(e.target.value);
-              setKeymapScale(value);
-            }}
-          >
-            <option value="auto">Auto</option>
-            <option value={0.25}>25%</option>
-            <option value={0.5}>50%</option>
-            <option value={0.75}>75%</option>
-            <option value={1}>100%</option>
-            <option value={1.25}>125%</option>
-            <option value={1.5}>150%</option>
-            <option value={2}>200%</option>
-          </select>
+          <div className="absolute top-2 right-2 flex gap-2">
+            <select
+              className="h-8 rounded px-2"
+              aria-label="What the keys print with Shift held"
+              title={
+                SHIFT_LAYOUTS.find((l) => l.value === shiftLayout)?.title
+              }
+              value={shiftLayout}
+              onChange={(e) => setShiftLayout(parseShiftLayout(e.target.value))}
+            >
+              {SHIFT_LAYOUTS.map((l) => (
+                <option key={l.value} value={l.value} title={l.title}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+            <select
+              className="h-8 rounded px-2"
+              aria-label="Zoom"
+              value={keymapScale}
+              onChange={(e) => {
+                const value = deserializeLayoutZoom(e.target.value);
+                setKeymapScale(value);
+              }}
+            >
+              <option value="auto">Auto</option>
+              <option value={0.25}>25%</option>
+              <option value={0.5}>50%</option>
+              <option value={0.75}>75%</option>
+              <option value={1}>100%</option>
+              <option value={1.25}>125%</option>
+              <option value={1.5}>150%</option>
+              <option value={2}>200%</option>
+            </select>
+          </div>
         </div>
       )}
       {keymap && selectedBinding && (
