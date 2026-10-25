@@ -63,7 +63,9 @@ What does not change: the editing of the keymap, and what the app reads from or 
 the keyboard for it. The icons only affect how keys are drawn and how the app is hosted;
 dragging keys (below) writes with the same request as the binding picker; the Lights and
 Display tabs (further below) add requests of their own, and the OLED tab uses the ones of
-the Display tab. The three tabs are used only when the firmware has what they edit.
+the Display tab. The Diagnostics tab, and the live values of the OLED tab, only read, with
+two requests of their own; the Files tab writes with requests the other tabs already use.
+The tabs are used only when the firmware has what they edit or read.
 
 ## Moving keys by dragging (the Keys view)
 
@@ -149,9 +151,16 @@ what the OLED screens of the keyboard do:
 - **Restore defaults** puts every setting back to what the firmware was built with.
 
 Everything is applied by the keyboard at once and kept by it a few seconds after the last
-change, so there is nothing to save: **Save**, **Discard**, **Undo** and **Redo** do not
-act on these settings. **Restore Stock Settings** puts them back to the defaults too. What
-each screen shows, and where, is set in the OLED tab (below) when the firmware has the OLED
+change, so there is nothing to save: **Save** and **Discard** do not act on these
+settings. **Undo** and **Redo** do, while this tab or the OLED tab is open: the buttons of
+the header, and Ctrl+Z and Ctrl+Y (Ctrl+Shift+Z too), take back and redo what you changed
+in the two tabs, which share one history of up to 100 steps. A drag of a slider is one
+step, so is a widget dragged along any path (or moved with the arrow keys), and so is
+**Restore defaults**. The history starts empty each time the app connects or reads the
+keyboard again (after **Discard** or **Restore Stock Settings**), and it is forgotten when
+the keyboard refuses a change and the app reads the settings again. With any other tab
+open, Undo and Redo are the ones of the keys and the lights, as before. **Restore Stock Settings** puts the settings back to the defaults too. What each
+screen shows, and where, is set in the OLED tab (below) when the firmware has the OLED
 layout; the language of the toast, and what the OLED tab does not cover, are still chosen
 when the firmware is built.
 
@@ -183,27 +192,38 @@ view only, nothing is sent to the keyboard.
   the panel shows.
 - **Hide a widget** with Delete or with its switch, and **show it again** by clicking it
   in the tray of hidden widgets or by dragging it onto the screen.
-- **Choose the picture of the right screen** in a gallery of 26 pictures, in two groups:
-  16 animations (Gem, Cat, Head, Spaceman, Pokemon, and 11 more: Equalizer, Radar,
-  Heartbeat, Digital rain, Wire cube, Atom, Helix, Warp, Sonar, Bouncing ball, Flame) and
-  10 still images (Vim, VIPs Marcos, and 8 more: Mountains, Skyline, Circuit, Alien, Heart,
-  Keyboard, Pulsar, Rocket), each one playing in its card, with its size and the time of a
-  cycle. Click one, or drag it onto the right screen, and set the time of one cycle.
+- **Choose the picture of the right screen** in a gallery of 66 pictures, in two groups:
+  36 animations (Gem, Cat, Head, Spaceman, Pokemon, and 31 more: Equalizer, Radar,
+  Heartbeat, Digital rain, Wire cube, Atom, Helix, Warp, Sonar, Bouncing ball, Flame,
+  Waterfall, Lava lamp, Storm, Snowfall, Jellyfish, Falling blocks, Pong, Invaders,
+  Chomper, Game of Life, Plasma, Spiral, Newton's cradle, Gears, Hourglass, Windmill,
+  Fireworks, Flying saucer, Eye, Key wave) and 30 still images (Vim, VIPs Marcos, and 28
+  more: Mountains, Skyline, Circuit, Alien, Heart, Keyboard, Pulsar, Rocket, Coffee,
+  Cactus, Lighthouse, Moon cat, Robot, Planet, Castle, Tree, Skull, Sword, Key, Antenna,
+  Potion, Sailboat, Compass, Crown, Cassette, Floppy disk, Moon phases, Mushroom), each one
+  playing in its card, with its size and the time of a cycle. Click one, or drag it onto
+  the right screen, and set the time of one cycle.
 - **Turn the picture** a quarter of a turn to either side, **cut it** to a piece that is
   selected with a frame (drag it, resize it or type its numbers), and choose **how the
   widgets mix with it**: shown in reverse where they are over a lit part of the picture, so
   that they stay readable (the default), or added to it. The firmware draws the picture on
   top of the widgets, so any widget, the battery of the right half included, can be moved
   over it.
+- **Watch the screens with live values.** Turn on **Live values** and the drawings follow
+  what the keyboard says now (the battery of each half, the link with the left half, the
+  output and the Bluetooth profile, the layer, the typing speed) instead of being samples;
+  see [What the keyboard is doing](#what-the-keyboard-is-doing-live-values-and-the-diagnostics-tab).
 - **See what the screens can show**, with the size of each thing, and which choices only a
   new firmware build adds (the Luna dog, the Bongo cat, the modifier indicators, Raw HID,
   ...), each with the option to turn on.
 
 Everything is applied by the keyboard at once and kept by it a few seconds after the last
-change, so there is nothing to save: **Save**, **Discard**, **Undo** and **Redo** do not
-act on the layout. **Restore Stock Settings**, and **Restore defaults** of the Display tab,
-put it back to what the firmware was built with. The drawings are samples, not the live
-state of the screens.
+change, so there is nothing to save: **Save** and **Discard** do not act on the layout.
+**Undo** and **Redo** (the header, Ctrl+Z and Ctrl+Y) take back and redo what you changed
+here and in the Display tab while either one is open (see the Display tab, above).
+**Restore Stock Settings**, and **Restore defaults** of the Display tab, put it back to
+what the firmware was built with. Without Live values the drawings are samples (a battery
+of 85%, the layer `QWERTY`, a typing speed of 42), not the live state of the screens.
 
 It needs what the Display tab needs, with `CONFIG_KEYPAW_OLED_LAYOUT=y` in the build of
 both halves, and the [zmk-nice-oled](https://github.com/lenerdz/zmk-nice-oled) fork of
@@ -215,6 +235,102 @@ app works as before.
 How the geometry works (the canvas of 68 x 160 pixels, the strip of 32 x 128 that the panel
 shows, the position of the picture), the ids, the files and how the sprites are generated:
 [`src/oled/README.md`](src/oled/README.md).
+
+## What the keyboard is doing (Live values and the Diagnostics tab)
+
+With a firmware that answers two read-only requests, the app can ask the left half (the
+one connected to it) what it is doing and what firmware it runs. Two things use them:
+
+- **Live values**, a switch in the OLED tab. With it on, the drawings of the screens follow
+  the keyboard instead of being samples: the battery of each half (the right one is what
+  the left half knows of it, and it is written as `--%` while there is no reading), the
+  link with the left half, the output (the USB icon while the keys go to USB, otherwise
+  the state of the selected Bluetooth profile: connected, paired without signal or not
+  paired), the marks and the number of the profile, the name of the layer, and the typing
+  speed (the needle, the number and the graph, to which the app adds a reading a second).
+  The light toast has nothing to read and stays a sample.
+- **Diagnostics**, the sixth view, after **Files**. It has three groups: the **firmware**
+  (keyboard, board, Zephyr and the build: branch, commit, number of the CI run and day),
+  the **memory of the left half** (the flash and the RAM, a bar each, with the bytes used,
+  the bytes free and a word: plenty left, getting tight when less than 15% is free, almost
+  full when less than 3% is) and **now** (the batteries of the two halves, whether the
+  right half is connected, the layer, the typing speed, where the keys go and how long the
+  keyboard has been on). **Copy the report** puts all of it in the clipboard as plain
+  text, to paste into a message or an issue. The tab only reads: nothing in it changes the
+  keyboard.
+
+The numbers are the **left** half's. The right half runs a firmware of its own, which ZMK
+Studio cannot ask, so from the app only its battery and its connection are known. The flash
+and the RAM are the figures the build prints (`FLASH` and `RAM`), read by the firmware from
+the symbols of the linker, so they can be compared with the log of the CI.
+
+**How it asks.** The keyboard has no notification for this, so the app asks, one request at
+a time (the next one half a second, or a second in the Diagnostics tab, after the answer
+to the one before). It asks only while the tab that needs it is open, the
+keyboard is connected and unlocked, and **the page is shown**: a hidden browser tab asks
+nothing. After three failures in a row it stops and says so; with Live values, turning the
+switch off and on tries again. Every request restarts the idle timer of the lock of ZMK
+Studio (a firmware with `CONFIG_ZMK_STUDIO_LOCKING`), so **while Live values is on, or the
+Diagnostics tab is open, the keyboard does not lock itself**.
+
+It needs the [zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix) module of
+lenerdz (branch `corne-fixes`) with `CONFIG_KEYPAW_DEVICE_STATUS_STUDIO` (on by default
+with the RPC of ZMK Studio, so on the central half) and the protocol of
+[zmk-studio-messages](https://github.com/lenerdz/zmk-studio-messages), which adds the
+requests `get_live_status` (109) and `get_firmware_info` (110) to the keymap subsystem.
+With any other firmware the Diagnostics tab is not offered (the keyboard answers "RPC not
+found" to the first request) and Live values says that the firmware cannot tell its state,
+leaving the drawings as samples. The demo keyboard answers both (its numbers are those of
+the left half of the build of corne-zmk); **Demo keyboard (no live status)** does not.
+
+How it works, the files and the tests: [`src/live/README.md`](src/live/README.md) and
+[`src/diagnostics/README.md`](src/diagnostics/README.md).
+
+## Everything in one file (the Files tab)
+
+The **Files** view, offered while the keyboard is unlocked, puts what the app edits into one
+text file, and applies such a file again here or on another keyboard:
+
+- **Save to a file** writes a JSON file (`corne-backup-2026-10-25-1530.json`: the name the
+  keyboard gave itself, the day and the hour in UTC) with the parts that are checked:
+  the **keys** (every layer: its name, and for each key the name of its behavior and the
+  two parameters), the **lights** (the colors of the map of every layer, as `#rrggbb`) and
+  the **screens** (every display setting, the layout of the OLED screens included, each
+  with its id and its name). It has what the app shows now, **changes that are not yet
+  saved in the keyboard included**. It is plain text, with a key or a list of colors per
+  line, so it can be read, compared with another and kept in a repository (the whole demo
+  keyboard is about 33 KB and 670 lines).
+- **Open a file** reads such a file and shows a **plan** before anything is written: for
+  each part, what would change (how many keys and in which layers, which layers are
+  renamed, how many colors in which maps, which settings from what to what) and what cannot
+  be applied and why. A part that is already the same as the keyboard says so and is left
+  unchecked. Nothing is written until **Apply the checked parts**.
+- **How a file is matched with the keyboard.** The keys by the **place of the layer** in
+  the keymap and the position of the key, with the behavior found by its name (a key whose
+  behavior the keyboard does not have, and a layer with another number of keys, are left as
+  they are and reported; a layer name that is too long is cut); the colors by the **id of
+  the layer**, and only when the file has the same number of colors per map (54 on the
+  Corne), so a file made for another LED layout applies no color; the screens by the **id of
+  the setting**, a value out of the range the keyboard gave being held at the nearest end,
+  and said so.
+- **A file that is refused.** One that is not valid JSON, is not a backup of this app, has a
+  part the app cannot use (the message says which one) or comes from a newer version of the
+  app (a higher format number) is refused, and a file is never applied halfway: the keys
+  are written all or none (if the keyboard refuses one, the ones already written are put
+  back).
+- **A file of another keyboard.** If the name in the file is not the name the keyboard has
+  now, the tab warns that the file can fail or look wrong here and tells to check the plan.
+- **Undo and Save.** The keys of a file are **one step**, and the colors of each layer are
+  one step, of the header's Undo and Redo (Ctrl+Z and Ctrl+Y), like any change in the Keys
+  or the Lights tab. They need **Save** in the header to be kept by the keyboard: after
+  applying them, the tab says so and has a button that does the same as Save. The screens
+  are one step of the history of the Display and OLED tabs, which is where to undo them,
+  and the keyboard keeps them by itself.
+
+It uses only requests the other tabs use (the keymap, the light maps and the display
+settings), so it needs nothing of the firmware beyond them: a part the keyboard lacks (the
+lights or the screens) is shown as unavailable, with the reason, and is left out of the
+file. The format, the plan and the files: [`src/backup/README.md`](src/backup/README.md).
 
 ## Status
 
@@ -249,11 +365,39 @@ dragged over the picture in reverse, and the button that turns the view of a scr
 demo keyboard without display settings has no OLED tab. It is covered by `npm test`. The
 first version of the tab (moving, showing and hiding the widgets, and the seven pictures of
 zmk-nice-oled) was used on the Corne of the keyboard's owner, who reported that it worked,
-without detail about each operation, so none of those has an individual confirmation. What
-was added after it (turning, cutting and mixing the picture, the reverse where a widget is
-over it, and the 19 new pictures) has **not been tried on a real keyboard**: the preview of
-it rests on the code of the firmware and on its tests on a computer, not on the screen.
-Touch input has not been tried on any device.
+without detail about each operation, so none of those has an individual confirmation. The
+second one (turning, cutting and mixing the picture, the reverse where a widget is over it,
+the preview standing up and the 19 pictures that came with it) was used on the same
+keyboard too: the owner reported that it worked perfectly and that he liked the animations
+and the still images, again without detail about each operation. What was added after that,
+the 40 new pictures (kinds 26 to 65, 20 animations and 20 still images), has **not been
+tried on a real keyboard**: how they look on the screen rests on the code of the firmware,
+on its tests on a computer and on the sprites the app draws from the same pictures, not on
+the screen. Touch input has not been tried on any device.
+
+The live values, the Diagnostics tab, the Files tab and the Undo and Redo of the Display and
+OLED tabs were tried against the demo keyboard, through the same framing and message
+encoding as with a real keyboard, in two browsers: the one embedded in an editor and a
+headless Microsoft Edge driven through the DevTools protocol (the live values needed the
+second: the first reports its page as hidden, where, as designed, nothing is asked).
+**Live values** drew the
+layer, the speed (the needle, the number and the graph), the batteries, the output and the
+profile from the keyboard, and they changed as its values changed (the layer from `FN1` to
+`RAISE`, the speed from 60 to 21 words per minute); the Diagnostics tab showed the
+firmware, the two memory bars and the state of the keyboard; the demo keyboard without live
+status has no Diagnostics tab, and Live values says that the firmware cannot tell its state.
+The **Files** tab saved a backup (a real download of 33,466 bytes), read it back and said
+that it was the same as the keyboard in the three parts, applied an edited copy (two keys
+swapped and a layer renamed, two colors, two settings, one of them held at the nearest
+value) and showed the Save button of the keys; the Keys tab showed the new keys at once,
+and Ctrl+Z and Ctrl+Y in the header took the colors, then the keys, back and forth. In the
+Display tab, Ctrl+Z and Ctrl+Y took back and redid a slider and then the screens of the
+file. All of it is covered by `npm test` (the plan, the writing with its rollback, the
+format, the history, the poller, the drawing from live values). **None of it has been tried
+on a real keyboard**: the numbers that the firmware reports (the flash and the RAM, which
+come from symbols of the linker that the firmware did not use before, the state of the
+Bluetooth profile, the battery of the right half), what each live widget draws from them,
+and the keyboard keeping the screens that a file sets, are unconfirmed.
 
 The keys `Steno On` and `Steno Off`, and the STENO layer, were checked in a browser against
 the demo keyboard and in the Storybook story `Keyboard/Keymap (Corne)`, not on a real
@@ -286,7 +430,14 @@ keyboard**, and touch input has not been tried on any device.
    colors.
 6. If the firmware has display settings, choose **Display** to set the screens.
 7. If the firmware has the OLED layout, choose **OLED** to move the widgets of the two
-   screens and to pick the animation of the right screen.
+   screens and to pick the animation of the right screen; turn on **Live values** to see
+   them with what the keyboard says now.
+8. Choose **Files** to save the keys, the colors and the screens into one file, or to
+   apply one.
+9. If the firmware tells its state, choose **Diagnostics** to see the firmware, the flash
+   and the RAM that are left and what the keyboard is doing.
+10. In the Display and OLED tabs, **Undo** and **Redo** of the header (Ctrl+Z, Ctrl+Y) take
+    back what you changed in the screens.
 
 ## Development
 
@@ -303,12 +454,14 @@ limits). To see the key labels without a keyboard:
 npm run storybook
 ```
 
-To try the app, including the Lights, Display and OLED tabs, without a keyboard, choose **Demo
-keyboard** in the connection list. It is always there with `npm run dev`; on the published
-app, add `?demo` to the address (<https://lenerdz.github.io/zmk-studio/?demo>). **Demo
-keyboard (no light maps)** and **Demo keyboard (no display settings)** answer like a
-firmware without them (the second has neither the Display nor the OLED tab, because the
-layout of the screens is made of display settings). See
+To try the app, including the Lights, Display, OLED, Files and Diagnostics tabs, without a
+keyboard, choose **Demo keyboard** in the connection list. It is always there with `npm
+run dev`; on the published app, add `?demo` to the address
+(<https://lenerdz.github.io/zmk-studio/?demo>). **Demo keyboard (no light maps)**,
+**Demo keyboard (no display settings)** and **Demo keyboard (no live status)** answer like
+a firmware without them (the second has neither the Display nor the OLED tab, because the
+layout of the screens is made of display settings; the third has no Diagnostics tab, and
+its Live values say that the firmware cannot tell its state). See
 [`src/lights/demo/README.md`](src/lights/demo/README.md).
 
 To run the tests:
@@ -352,8 +505,11 @@ Added: `src/keyboard/bindingDisplay.tsx`, `src/keyboard/BindingLabel.tsx`,
 `src/keyboard/keyDrag.ts`, `src/keyboard/keyDrag.test.ts`, `src/keyboard/useKeyDrag.ts`,
 `src/keyboard/KeyDragGhost.tsx` (dragging keys),
 `src/lights/` (the Lights tab, the demo keyboard and their tests),
-`src/display/` (the Display tab and its tests; the demo keyboard answers its requests),
+`src/display/` (the Display tab, the history of its changes and their tests; the demo keyboard answers its requests),
 `src/oled/` (the OLED tab, its sprites and its tests; the demo keyboard has the settings of the layout),
+`src/live/` (the two read-only requests, the poller and the demo keyboard's state),
+`src/diagnostics/` (the Diagnostics tab), `src/backup/` (the Files tab),
+`src/undoShortcuts.ts` (Ctrl+Z, Ctrl+Y) and its test,
 `scripts/oled-assets/` (turns the pictures of zmk-nice-oled into those sprites),
 `src/vendor/zmk-studio-ts-client/` (the RPC client with the messages of the fork),
 `scripts/generate-led-data.mjs`, `.github/workflows/pages.yml`, `README.pt-BR.md`.

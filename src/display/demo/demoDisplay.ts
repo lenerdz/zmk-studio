@@ -46,7 +46,7 @@ export const DEMO_DISPLAY_SETTINGS: ReadonlyArray<DisplaySettingData> = [
   // The OLED layout (CONFIG_KEYPAW_OLED_LAYOUT), from 16 on, in blocks of eight:
   // +0 whether the widget is drawn, +1 its x, +2 its y; the picture adds +3 the
   // kind (0 gem, 1 cat, 2 head, 3 spaceman, 4 pokemon, 5 vim, 6 vip marcos, then
-  // the 19 pictures of the lenerdz/zmk-nice-oled fork, 7 to 25) and +4 the time of
+  // the 59 pictures of the lenerdz/zmk-nice-oled fork, 7 to 65) and +4 the time of
   // a cycle in ms (0 is the one of the animation), and then, in a block of its
   // own (112 to 115, listed right after the time of a cycle, as the firmware
   // does), the quarter turns clockwise (0 to 3), how it mixes with the widgets
@@ -56,7 +56,7 @@ export const DEMO_DISPLAY_SETTINGS: ReadonlyArray<DisplaySettingData> = [
   // are the ones of this repository's build (the nice!oled widget options).
   // Right screen: the picture (the cat), the battery, the link, the toast.
   ...oledWidget(16, 18, -18, [
-    { id: 19, value: 1, min: 0, max: 25, defaultValue: 1 },
+    { id: 19, value: 1, min: 0, max: 65, defaultValue: 1 },
     { id: 20, value: 0, min: 0, max: 60000, defaultValue: 0 },
     { id: 112, value: 0, min: 0, max: 3, defaultValue: 0 },
     { id: 113, value: 1, min: 0, max: 1, defaultValue: 1 },

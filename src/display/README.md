@@ -18,9 +18,10 @@ uses the same requests as this tab.
 
 ## What it does
 
-The header has a third view, **Display**, next to **Keys** and **Lights** (each one only
-when the firmware has what it edits). It has three groups of controls, whose names and
-ranges come from the keyboard:
+The header has a view **Display**, next to **Keys**, **Lights**, **OLED**, **Files** and
+**Diagnostics** (each one only when the firmware has what it edits or reads; **Files**
+needs only a keyboard that is connected and unlocked). It has three groups of controls,
+whose names and ranges come from the keyboard:
 
 - **Contrast**: one slider for the left screen and one for the right screen.
 - **Screen off**: when the screens turn off (**Never**, **Only on battery**, that is,
@@ -37,9 +38,12 @@ ranges come from the keyboard:
 Unlike the keys and the lights, **there is nothing to save**: the keyboard applies each
 change at once and keeps it in its own memory a few seconds after the last change
 (`CONFIG_KEYPAW_DISPLAY_SAVE_DEBOUNCE_MS`, 3 s). So **Save** and **Discard** in the header
-do not act on these settings and a change is **not a step of Undo and Redo**. **Restore
-Stock Settings** (menu of the connected keyboard) puts them back to the defaults too, and
-its confirmation says so for a firmware that has them.
+do not act on these settings. A change is not a step of the Undo and Redo of the keys and
+the lights either: the changes made here and in the OLED tab have a history of their own,
+which Undo and Redo in the header act on while one of these two tabs is open (see
+[Undo and Redo](#undo-and-redo)). **Restore Stock Settings** (menu of the connected
+keyboard) puts them back to the defaults too, and its confirmation says so for a firmware
+that has them.
 
 A change also turns the screens on for at least ten seconds, so it can be seen (this is
 done by the firmware). The right screen gets its settings from the left half, which can
@@ -97,6 +101,42 @@ for the answer. When the keyboard refuses a change, or does not answer, the app 
 problem and reads the settings again, so the controls go back to what the keyboard really
 has; a value the user changed while it was reading is kept.
 
+## Undo and Redo
+
+The Display tab and the [OLED tab](../oled/README.md) change the same settings, so they
+share one history, which the app keeps (`changeHistory.ts` holds the steps and
+`displayController.ts` records into it and writes back what it returns).
+
+- **Undo** and **Redo** in the header, and **Ctrl+Z**, **Ctrl+Y** and **Ctrl+Shift+Z**
+  (Cmd instead of Ctrl on a Mac), act on this history while the Display tab or the OLED
+  tab is open. In the other tabs they act on the history of the keys and the lights, as
+  before. The shortcuts are left alone while the focus is in a text field, where they undo
+  the typing; a slider, a switch or a button is not typing (`undoShortcuts.ts`).
+- A step is what one gesture changed: a slider, a switch, a button, a widget that was
+  moved, a picture that was turned or cut, a screen put back as built, the screens of a
+  file applied in the [Files tab](../backup/README.md). Undo writes back the value each
+  setting had before the step and Redo writes the value it got. The keyboard applies and
+  keeps them like any other change, so there is still nothing to save.
+- A drag is one step. A change that comes within 800 ms (`MERGE_WINDOW_MS`) of the
+  previous one and belongs to the same group joins its step. The group is the setting
+  (a slider), or a name the tab gives to a gesture that changes different settings along
+  the way: dragging a widget changes only its x in one move of the pointer and only its y
+  in the next (the arrow keys and the fields do too), and dragging the frame of the crop
+  of a picture changes where it starts and how big it is; the names are `move:` and
+  `crop:` followed by the widget. A setting that ends where the step began is left out of
+  the step, and a drag that ends where it began leaves nothing to undo. A change made
+  after a pause is a step of its own.
+- **Restore defaults** is a step of its own (nothing joins it and it joins nothing): Undo
+  gives back the values from before the restore, in the keyboard as well.
+- A new change ends the steps that Redo could do (they would not lead anywhere any more).
+- A value that the keyboard held inside its range (a number outside it is cut to the
+  limit) is given back exactly as it was before.
+- The history keeps the last 100 steps (`HISTORY_LIMIT`) and starts empty each time the
+  app connects or reads the keyboard again (after **Discard** or **Restore Stock
+  Settings**). It is also forgotten when the keyboard refuses a change: the app then reads
+  the settings again, and the values it had recorded may not stand for what the keyboard
+  has.
+
 ## Files
 
 | File | What it is |
@@ -105,12 +145,14 @@ has; a value the user changed while it was reading is kept.
 | `displaySettings.ts` | What the app knows about each id (name, control, hint, dependency) and the plain functions the tab is built from: groups, which controls are enabled, limits, the writing of values |
 | `displayProtocol.ts` | The three requests, and `null` when the firmware does not have them |
 | `displayWriter.ts` | The queue described above |
-| `displayController.ts` | What the tab does with the keyboard, without React: reading, changing, restoring and recovering from a refusal |
+| `changeHistory.ts` | The history of [Undo and Redo](#undo-and-redo): the steps, how a drag becomes one step, the limit |
+| `displayController.ts` | What the tab does with the keyboard, without React: reading, changing, undoing and redoing, restoring and recovering from a refusal |
 | `useDisplaySettings.ts`, `DisplayContext.ts` | Carry the state of a controller into React |
-| `demo/demoDisplay.ts` | The settings of the demo keyboard: the six of this tab and the 37 of the OLED layout (see [`../lights/demo/README.md`](../lights/demo/README.md)) |
+| `demo/demoDisplay.ts` | The settings of the demo keyboard: the six of this tab and the 41 of the OLED layout (see [`../lights/demo/README.md`](../lights/demo/README.md)) |
 
-`src/App.tsx`, `src/AppHeader.tsx` and `src/lights/ViewSwitch.tsx` connect the tab to the
-rest of the app (the header switch, the text of the reset confirmation).
+`src/App.tsx`, `src/AppHeader.tsx`, `src/undoShortcuts.ts` and `src/lights/ViewSwitch.tsx`
+connect the tab to the rest of the app (the header switch, Undo and Redo and their
+shortcuts, the text of the reset confirmation).
 
 ## Tests
 
@@ -119,8 +161,11 @@ the interval, the order, one request in flight, a failure, `cancel`), the rules 
 texts (groups, dependencies, limits, an unknown id), the three requests against the demo
 keyboard (through the real framing and message encoding), the controller (reading,
 changing, holding a value inside the range, not flooding the keyboard, a refusal, a
-restore, `dispose`), that the ids from 16 up are left to the OLED tab, and which tabs a
-keyboard gets.
+restore, `dispose`, and Undo and Redo: one step for a drag, also for a drag that changes
+different settings in turn, several settings in one step, a restore taken back), the
+history itself (`changeHistory.test.ts`: the steps, the window of a drag, the groups, the
+limit of 100, a step that nothing joins), the shortcuts (`undoShortcuts.test.ts`), that
+the ids from 16 up are left to the OLED tab, and which tabs a keyboard gets.
 
 ## Status on a real keyboard
 
@@ -128,9 +173,15 @@ The tab was tried in a browser against the demo keyboard: reading the settings, 
 slider (72 changes became 13 requests, the last one with the final value), the dependencies
 between the controls, the switch, the three buttons, **Restore defaults**, **Restore Stock
 Settings** from the header while the tab was open, and the demo keyboard without display
-settings, which has no Display tab. With the 43 settings of the demo keyboard (the 37 of
-the OLED layout included), the tab still lists only its six. The firmware side compiles
-in the CI of corne-zmk. It
-has **not been tried on a real keyboard**: whether each screen changes its contrast, the
-three ways of turning the screen off, what the right half receives and what is still there
-after a restart are unconfirmed.
+settings, which has no Display tab. With the 47 settings of the demo keyboard (the 41 of
+the OLED layout included), the tab still lists only its six. Undo and Redo were tried
+there too, in a browser that is really shown: a widget dragged along a bent path, ten
+presses of an arrow key and a move after a pause were one step each, Ctrl+Z and Ctrl+Y
+took them back and did them again, and the buttons of the header followed. The firmware
+side compiles in the CI of corne-zmk, and the owner of the keyboard reported that the
+release that has this tab worked on the keyboard ("it worked perfectly"), without listing
+what was tried: whether each screen changes its contrast, the three ways of turning the
+screen off, what the right half receives and what is still there after a restart are
+**not confirmed one by one**. Undo and Redo of these settings are **not tested on the
+keyboard**; the basis is the demo keyboard and the tests, which write and read the same
+requests the controls use.

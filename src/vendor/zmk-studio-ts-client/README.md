@@ -10,7 +10,8 @@ installed from npm.
 The Lights tab needs six more requests in the keymap subsystem (read and set the color
 maps, save, discard, restore the defaults) and one more notification. The fork also adds
 three requests for the display (OLED) settings of the firmware (list them, change one,
-restore the defaults). They are defined
+restore the defaults) and two read-only requests for the live preview and the Diagnostics
+tab (what the keyboard is doing now, and the firmware information). They are defined
 in [lenerdz/zmk-studio-messages](https://github.com/lenerdz/zmk-studio-messages), a fork
 of the protocol definitions, and the published package only has the upstream messages.
 Because the fork is not published to npm, the generated code is committed here, and the
@@ -27,19 +28,21 @@ app finds it under the same package name through an alias (`vite.config.ts` and 
 | `LICENSE` | The license of the package |
 
 The only difference in behavior from the published package is that the generated
-messages include the requests of the fork (tags 100 to 108 of the keymap `Request`, and
+messages include the requests of the fork (tags 100 to 110 of the keymap `Request`, and
 tag 100 of the keymap `Notification`). A firmware that does not know them answers
-"RPC not found", which the app uses to detect firmware without the light maps.
+"RPC not found", which the app uses to detect firmware without the light maps, the display
+settings, the live status or the firmware information.
 
 The firmware is built with the same protocol files: the messages fork is pinned in
 `config/west.yml` of [lenerdz/corne-zmk](https://github.com/lenerdz/corne-zmk). **The
 revision used here and the one the firmware is built with must be the same**; if one
 changes, regenerate this code (or update the pin) in the same step.
 
-Messages fork revision used here: `3c76351f4aaf09ac61e1e2fcfce9487226add9c1`. Its `.proto`
-files are the ones of `caee958c434f40143eda7195c1ca0939bf905e8b`, from which the committed
-code was generated: the commits after that one only change `keymap.options.in` (a limit the
-firmware needs and the generated code does not use) and the READMEs of the messages fork.
+Messages fork revision used here: `6d86c98c7a35e9492a8cedbd2a91141ded1a0dce`, the commit
+that added the requests 109 and 110 (`get_live_status` and `get_firmware_info`): its
+`.proto` files are the ones from which the committed code was generated, and the same commit
+changed `keymap.options.in` (the limits the firmware needs and the generated code does not
+use) and the READMEs of the messages fork.
 
 ## Generating the messages again
 

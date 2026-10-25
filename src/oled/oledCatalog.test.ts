@@ -10,12 +10,17 @@ import {
   WIDGETS,
   animationKind,
   cycleMsOf,
+  graphPoints,
+  layerLabel,
+  needlePoints,
   partBox,
   partsBox,
   spriteFrame,
   widgetsOf,
   type ArtContext,
+  type Part,
 } from "./oledCatalog";
+import type { LiveReading } from "../live/liveStatusPoller";
 import { FIRST_OLED_ID, OLED_ID } from "./oledIds";
 
 const context = (over: Partial<ArtContext> = {}): ArtContext => ({
@@ -291,7 +296,8 @@ describe("how the widgets are drawn", () => {
   });
 
   it("draws the speedometer with the needle sticking out of the top and the bottom", () => {
-    expect(art("l_wpm_gauge")).toEqual({ x: 0, y: -5, w: 33, h: 21 });
+    // The needle at the middle of the range goes from y 16 to y -5
+    expect(art("l_wpm_gauge")).toEqual({ x: 0, y: -5, w: 33, h: 22 });
   });
 
   it("draws the graph on its grid, and the speed number 2 pixels in", () => {
@@ -305,7 +311,7 @@ describe("how the widgets are drawn", () => {
 });
 
 describe("the pictures of the right screen", () => {
-  it("are 26, from 0, in the order of the firmware: the seven of nice!oled and the 19 of the fork", () => {
+  it("are 66, from 0, in the order of the firmware: the seven of nice!oled, the 19 of the fork and the 40 of its second batch", () => {
     expect(ANIMATION_KINDS.map((k) => [k.value, k.sprite])).toEqual([
       [0, "crystal"],
       [1, "cat"],
@@ -333,6 +339,46 @@ describe("the pictures of the right screen", () => {
       [23, "keyboard"],
       [24, "pulsar"],
       [25, "rocket"],
+      [26, "waterfall"],
+      [27, "lava"],
+      [28, "lightning"],
+      [29, "snow"],
+      [30, "jellyfish"],
+      [31, "tetris"],
+      [32, "pong"],
+      [33, "invaders"],
+      [34, "pacman"],
+      [35, "life"],
+      [36, "plasma"],
+      [37, "spiral"],
+      [38, "newton"],
+      [39, "gears"],
+      [40, "hourglass"],
+      [41, "windmill"],
+      [42, "fireworks"],
+      [43, "ufo"],
+      [44, "eye"],
+      [45, "keywave"],
+      [46, "coffee"],
+      [47, "cactus"],
+      [48, "lighthouse"],
+      [49, "moon_cat"],
+      [50, "robot"],
+      [51, "planet"],
+      [52, "castle"],
+      [53, "tree"],
+      [54, "skull"],
+      [55, "sword"],
+      [56, "key"],
+      [57, "antenna"],
+      [58, "potion"],
+      [59, "sailboat"],
+      [60, "compass"],
+      [61, "crown"],
+      [62, "cassette"],
+      [63, "floppy"],
+      [64, "phases"],
+      [65, "mushroom"],
     ]);
   });
 
@@ -373,6 +419,9 @@ describe("the pictures of the right screen", () => {
     expect(frames).toEqual([
       16, 8, 16, 20, 48, 1, 1, 16, 24, 16, 32, 16, 24, 16, 24, 16, 24, 16,
       1, 1, 1, 1, 1, 1, 1, 1,
+      // The 40 of the second batch: the 20 animations, then the 20 still images
+      16, 16, 16, 24, 16, 20, 24, 8, 16, 30, 24, 16, 16, 12, 20, 16, 24, 16, 24,
+      24, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     ]);
   });
 
@@ -397,6 +446,47 @@ describe("the pictures of the right screen", () => {
       1600,
       1200,
       1200,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      // The 40 of the second batch: the 20 animations, then the 20 still images
+      1600,
+      3200,
+      1600,
+      2400,
+      1600,
+      2000,
+      1500,
+      1600,
+      1600,
+      3000,
+      2400,
+      1600,
+      1600,
+      1000,
+      2000,
+      1600,
+      2400,
+      1600,
+      2400,
+      2400,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
       null,
       null,
       null,
@@ -500,5 +590,243 @@ describe("what only a new build adds", () => {
     expect(new Set(BUILD_ONLY_FEATURES.map((f) => f.key)).size).toBe(
       BUILD_ONLY_FEATURES.length,
     );
+  });
+});
+
+describe("the widgets drawn from the live reading", () => {
+  const live = (over: Partial<LiveReading> = {}): LiveReading => ({
+    batteryCentral: 80,
+    batteryPeripheral: 90,
+    peripheralConnected: true,
+    layerIndex: 1,
+    layerName: "Nav",
+    wpm: 42,
+    output: "usb",
+    bleProfile: 2,
+    bleState: "connected",
+    usbState: "hid",
+    uptimeS: 9,
+    wpmHistory: [0, 0, 0, 0, 0, 20, 58, 36, 83, 64],
+    ...over,
+  });
+
+  const parts = (key: string, ctx: Partial<ArtContext> = {}) =>
+    WIDGETS.find((w) => w.key === key)!.art(context(ctx));
+
+  const lit = (key: string, over: Partial<LiveReading> = {}, ctx: Partial<ArtContext> = {}) =>
+    parts(key, { ...ctx, live: live(over) });
+
+  it("draw the same sample as before while there is no reading", () => {
+    expect(parts("r_battery")).toEqual([
+      { type: "text", font: "pixel16", text: "85%", x: 0, y: 0 },
+    ]);
+    expect(parts("r_link")).toEqual([
+      { type: "sprite", sprite: "bt", x: 0, y: 0 },
+    ]);
+    expect(parts("l_output")).toEqual([
+      { type: "sprite", sprite: "usb", x: 0, y: 0 },
+    ]);
+    expect(parts("l_battery", { defaultY: 19 })).toEqual([
+      { type: "text", font: "unscii8", text: "85  90", x: 0, y: 0 },
+    ]);
+    expect(parts("l_profile_num")).toEqual([
+      { type: "text", font: "pixel8", text: "1", x: 0, y: 0 },
+    ]);
+    expect(parts("l_layer")).toEqual([
+      { type: "text", font: "pixel16", text: "QWERTY", x: 0, y: 0 },
+    ]);
+    expect(parts("l_wpm_number")).toEqual([
+      { type: "text", font: "pixel12", text: "42", x: 2, y: 0 },
+    ]);
+    expect(parts("l_profile", { defaultY: 137 })).toEqual([
+      { type: "sprite", sprite: "profiles", x: 0, y: 0 },
+      { type: "rect", x: 0, y: 0, w: 3, h: 3 },
+    ]);
+    // The line of the graph is the one the sample always had
+    expect(parts("l_wpm_graph")[1]).toEqual({
+      type: "line",
+      points: [
+        [2, 26],
+        [9, 14],
+        [16, 21],
+        [24, 6],
+        [31, 12],
+      ],
+      width: 2,
+    });
+  });
+
+  it("write the battery of the right half, and dashes when it has not reported", () => {
+    expect(lit("r_battery")).toEqual([
+      { type: "text", font: "pixel16", text: "90%", x: 0, y: 0 },
+    ]);
+    expect(lit("r_battery", { batteryPeripheral: 100 })[0]).toMatchObject({
+      text: "100%",
+    });
+    expect(lit("r_battery", { batteryPeripheral: null })[0]).toMatchObject({
+      text: "--%",
+    });
+  });
+
+  it("cross the link out when the right half is not connected", () => {
+    expect(lit("r_link")[0]).toMatchObject({ sprite: "bt" });
+    expect(lit("r_link", { peripheralConnected: false })[0]).toMatchObject({
+      sprite: "bt_no_signal",
+    });
+  });
+
+  it("draw the USB icon while the keys go to USB", () => {
+    expect(lit("l_output")).toEqual([
+      { type: "sprite", sprite: "usb", x: 0, y: 0 },
+    ]);
+    // Whatever the profile does
+    expect(lit("l_output", { bleState: "open" })[0]).toMatchObject({
+      sprite: "usb",
+    });
+  });
+
+  it("draw the state of the profile when the keys go to Bluetooth, near the USB icon", () => {
+    const ble = { output: "ble" } as const;
+
+    expect(lit("l_output", { ...ble, bleState: "connected" })).toEqual([
+      { type: "sprite", sprite: "bt", x: 4, y: -2 },
+    ]);
+    expect(lit("l_output", { ...ble, bleState: "paired" })).toEqual([
+      { type: "sprite", sprite: "bt_no_signal", x: 4, y: -2 },
+    ]);
+    expect(lit("l_output", { ...ble, bleState: "open" })).toEqual([
+      { type: "sprite", sprite: "bt_unbonded", x: -1, y: -2 },
+    ]);
+    // No transport ready: the screen draws the profile too
+    expect(
+      lit("l_output", { output: "none", bleState: "open" })[0],
+    ).toMatchObject({ sprite: "bt_unbonded" });
+  });
+
+  it("write the level of both halves, a level that did not arrive being 0 (the screen starts with 0)", () => {
+    expect(lit("l_battery", {}, { defaultY: 19 })).toEqual([
+      { type: "text", font: "unscii8", text: "80  90", x: 0, y: 0 },
+    ]);
+    expect(
+      lit("l_battery", { batteryPeripheral: null }, { defaultY: 19 })[0],
+    ).toMatchObject({ text: "80  0" });
+    // The other builds show the percentage of the left half
+    expect(lit("l_battery", {}, { defaultY: 50 })).toEqual([
+      { type: "text", font: "pixel16", text: "80%", x: 0, y: 0 },
+    ]);
+    expect(
+      lit("l_battery", { batteryCentral: null }, { defaultY: 50 })[0],
+    ).toMatchObject({ text: "0%" });
+  });
+
+  it("mark the selected profile: a mark 7 pixels along, or the big box that is filled", () => {
+    expect(lit("l_profile", { bleProfile: 2 }, { defaultY: 137 })).toEqual([
+      { type: "sprite", sprite: "profiles", x: 0, y: 0 },
+      { type: "rect", x: 14, y: 0, w: 3, h: 3 },
+    ]);
+
+    const big = lit("l_profile", { bleProfile: 2 }, { defaultY: 129 });
+    expect(big.map((part) => [part.type === "sprite" && part.sprite, part.type === "sprite" && part.x])).toEqual([
+      ["profile", 0],
+      ["profile", 14],
+      ["profile_active", 28],
+      ["profile", 42],
+      ["profile", 56],
+    ]);
+  });
+
+  it("keep the selected profile inside the five marks", () => {
+    expect(lit("l_profile", { bleProfile: 9 }, { defaultY: 137 })[1]).toMatchObject({
+      x: 28,
+    });
+    expect(lit("l_profile_num", { bleProfile: 9 })[0]).toMatchObject({ text: "5" });
+  });
+
+  it("number the profile from 1", () => {
+    expect(lit("l_profile_num", { bleProfile: 0 })[0]).toMatchObject({ text: "1" });
+    expect(lit("l_profile_num", { bleProfile: 2 })[0]).toMatchObject({ text: "3" });
+  });
+
+  it("name the layer in capitals, cut at nine letters, or number it when it has no name", () => {
+    expect(lit("l_layer")[0]).toMatchObject({ text: "NAV" });
+    expect(lit("l_layer", { layerName: "Navigation" })[0]).toMatchObject({
+      text: "NAVIGATIO",
+    });
+    expect(lit("l_layer", { layerName: "", layerIndex: 3 })[0]).toMatchObject({
+      text: "Layer 3",
+    });
+    expect(layerLabel(0, "qwerty")).toBe("QWERTY");
+  });
+
+  it("write the speed, shifted right by the digits it lacks", () => {
+    expect(lit("l_wpm_number", { wpm: 5 })[0]).toMatchObject({ text: "5", x: 5 });
+    expect(lit("l_wpm_number", { wpm: 42 })[0]).toMatchObject({ text: "42", x: 2 });
+    expect(lit("l_wpm_number", { wpm: 120 })[0]).toMatchObject({ text: "120", x: 0 });
+  });
+
+  it("turn the needle with the speed, the way wpm.c computes it", () => {
+    expect(needlePoints(0)).toEqual([[9, 17], [-6, 3]]);
+    expect(needlePoints(25)).toEqual([[11, 16], [3, -3]]);
+    expect(needlePoints(50)).toEqual([[12, 16], [12, -5]]);
+    expect(needlePoints(75)).toEqual([[13, 16], [21, -3]]);
+    expect(needlePoints(100)).toEqual([[15, 17], [29, 2]]);
+  });
+
+  it("hold the needle inside the dial", () => {
+    expect(needlePoints(-30)).toEqual(needlePoints(0));
+    expect(needlePoints(400)).toEqual(needlePoints(100));
+  });
+
+  it("draw the needle of the reading, and the one in the middle without it", () => {
+    const line = (parts: Part[]) => parts.find((p) => p.type === "line");
+
+    expect(line(parts("l_wpm_gauge"))).toMatchObject({ points: needlePoints(50) });
+    expect(line(lit("l_wpm_gauge", { wpm: 100 }))).toMatchObject({
+      points: needlePoints(100),
+    });
+  });
+
+  it("put the last five readings on the grid: the first five are to the left of it", () => {
+    const history = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+
+    expect(graphPoints(history)).toEqual([
+      [2, 32 - 19],
+      [9, 32 - 22],
+      [16, 32 - 25],
+      [24, 32 - 28],
+      [31, 32 - 32],
+    ]);
+  });
+
+  it("scale a reading to 32 pixels of the range 0 to 100, and hold it inside", () => {
+    expect(graphPoints([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]).map(([, y]) => y)).toEqual([
+      32, 32, 32, 32, 32,
+    ]);
+    expect(graphPoints([0, 0, 0, 0, 0, 0, 0, 0, 0, 100]).at(-1)).toEqual([31, 0]);
+    expect(graphPoints([0, 0, 0, 0, 0, 0, 0, 0, 0, 500]).at(-1)).toEqual([31, 0]);
+    expect(graphPoints([0, 0, 0, 0, 0, 0, 0, 0, 0, 50]).at(-1)).toEqual([31, 16]);
+    expect(graphPoints([0, 0, 0, 0, 0, 0, 0, 0, 0, -5]).at(-1)).toEqual([31, 32]);
+  });
+
+  it("cut the pixels of the line the way the firmware does, from the position of the grid", () => {
+    // x = (grid - 35) + 7.4 i, cut towards zero, in canvas pixels
+    const xs = graphPoints([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]).map(([x]) => x);
+    expect(xs).toEqual([2, 9, 16, 24, 31]);
+  });
+
+  it("draw the history of the reading in the graph", () => {
+    const part = lit("l_wpm_graph", { wpmHistory: [0, 0, 0, 0, 0, 0, 0, 0, 0, 100] })[1];
+
+    expect(part).toMatchObject({ type: "line", width: 2 });
+    expect(part.type === "line" && part.points.at(-1)).toEqual([31, 0]);
+  });
+
+  it("keep every widget a known size while it is drawn from a reading", () => {
+    for (const widget of WIDGETS) {
+      const box = partsBox(widget.art(context({ live: live() })));
+
+      expect(box.w).toBeGreaterThan(0);
+      expect(box.h).toBeGreaterThan(0);
+    }
   });
 });

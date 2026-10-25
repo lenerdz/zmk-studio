@@ -3,28 +3,28 @@
  * Studio.
  *
  * The switch of the header between the Keys tab (the keymap editor of ZMK
- * Studio), the Lights tab, the Display tab (the settings of the screens) and
- * the OLED tab (what the screens show and where).
+ * Studio), the Lights tab, the Display tab (the settings of the screens), the
+ * OLED tab (what the screens show and where), the Files tab (save everything to
+ * a file, or apply a file) and the Diagnostics tab (the firmware and its memory,
+ * and the state of the keyboard).
  */
 import type { ComponentType } from "react";
 import {
+  Activity,
+  FolderOpen,
   Keyboard,
   LayoutPanelLeft,
   Lightbulb,
   Monitor,
   type LucideProps,
 } from "lucide-react";
-import { availableViews, type AppView } from "./appViews";
+import { availableViews, type AppView, type ViewOffers } from "./appViews";
 
 export interface ViewSwitchProps {
   view: AppView;
   onChange: (view: AppView) => void;
-  /** The Lights tab only exists for a keyboard that has light maps. */
-  lightsAvailable: boolean;
-  /** The Display tab only exists for a keyboard that has display settings. */
-  displayAvailable: boolean;
-  /** The OLED tab only exists for a keyboard that has the OLED layout. */
-  oledAvailable?: boolean;
+  /** The tabs the keyboard has something for (the Keys tab is always there). */
+  offers: ViewOffers;
 }
 
 const VIEWS: Record<
@@ -35,20 +35,12 @@ const VIEWS: Record<
   lights: { label: "Lights", Icon: Lightbulb },
   display: { label: "Display", Icon: Monitor },
   oled: { label: "OLED", Icon: LayoutPanelLeft },
+  files: { label: "Files", Icon: FolderOpen },
+  diagnostics: { label: "Diagnostics", Icon: Activity },
 };
 
-export const ViewSwitch = ({
-  view,
-  onChange,
-  lightsAvailable,
-  displayAvailable,
-  oledAvailable = false,
-}: ViewSwitchProps) => {
-  const offered = availableViews(
-    lightsAvailable,
-    displayAvailable,
-    oledAvailable,
-  );
+export const ViewSwitch = ({ view, onChange, offers }: ViewSwitchProps) => {
+  const offered = availableViews(offers);
 
   // With only the Keys tab there is nothing to switch to.
   if (offered.length < 2) {

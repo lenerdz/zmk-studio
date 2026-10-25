@@ -1,6 +1,8 @@
-// Modified by the lenerdz/zmk-studio fork: the Lights, Display and OLED tabs (and the
-// switch between them and the keymap editor), Save and Discard that also act on the light
-// maps, and a demo keyboard to try the app without hardware.
+// Modified by the lenerdz/zmk-studio fork: the Lights, Display, OLED, Files and
+// Diagnostics tabs (and the switch between them and the keymap editor), Save and Discard
+// that also act on the light maps, Undo and Redo that also act on the Display and OLED
+// tabs (with the usual keyboard shortcuts), and a demo keyboard to try the app without
+// hardware.
 import { AppHeader } from "./AppHeader";
 
 import { create_rpc_connection } from "@zmkfirmware/zmk-studio-ts-client";
@@ -36,13 +38,17 @@ import { LedMapsContext } from "./lights/LedMapsContext";
 import { LightsTab } from "./lights/LightsTab";
 import { useLedMaps } from "./lights/useLedMaps";
 import { ViewSwitch } from "./lights/ViewSwitch";
-import { AppView, viewToShow } from "./lights/appViews";
+import { AppView, ViewOffers, viewToShow } from "./lights/appViews";
 import { createDemoTransport } from "./lights/demo/demoTransport";
 import { DisplayContext } from "./display/DisplayContext";
 import { DisplayTab } from "./display/DisplayTab";
 import { OledTab } from "./oled/OledTab";
 import { hasOledLayout } from "./oled/oledLayout";
 import { useDisplaySettings } from "./display/useDisplaySettings";
+import { FilesTab } from "./backup/FilesTab";
+import { DiagnosticsTab } from "./diagnostics/DiagnosticsTab";
+import { useFirmwareInfo } from "./diagnostics/useFirmwareInfo";
+import { undoShortcut } from "./undoShortcuts";
 
 declare global {
   interface Window {
@@ -52,9 +58,10 @@ declare global {
 
 // Keyboards that live in the browser, to try the app without hardware. They are
 // always there in development and in the published app with "?demo" in the
-// address. The second one answers like a firmware without the light maps and the
-// third like one without the display settings, to see that the Lights and the
-// Display tabs are not offered then.
+// address. The second one answers like a firmware without the light maps, the
+// third like one without the display settings and the fourth like one without the
+// live status, to see that the Lights, the Display and the Diagnostics tabs (and
+// the live values of the OLED tab) are not offered then.
 const DEMO_ENABLED =
   import.meta.env.DEV || new URLSearchParams(window.location.search).has("demo");
 
@@ -70,6 +77,10 @@ const TRANSPORTS: TransportFactory[] = [
         {
           label: "Demo keyboard (no display settings)",
           connect: async () => createDemoTransport({ display: false }),
+        },
+        {
+          label: "Demo keyboard (no live status)",
+          connect: async () => createDemoTransport({ status: false }),
         },
       ]
     : []),
@@ -255,17 +266,70 @@ function App() {
   const oledAvailable =
     display.status === "ready" && hasOledLayout(display.settings);
 
+  // The Diagnostics tab exists only for a keyboard whose firmware tells what it
+  // is (get_firmware_info); the Files tab for any keyboard that is connected and
+  // unlocked, because the keys of every ZMK Studio keyboard can be saved.
+  const firmware = useFirmwareInfo(conn, lockState);
+  const unlocked =
+    Boolean(conn.conn) &&
+    lockState === LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED;
+  const offers: ViewOffers = {
+    lights: lightsAvailable,
+    display: displayAvailable,
+    oled: oledAvailable,
+    files: unlocked,
+    diagnostics: firmware.status === "ready" || firmware.status === "error",
+  };
+
   useEffect(() => {
-    const shown = viewToShow(
-      view,
-      lightsAvailable,
-      displayAvailable,
-      oledAvailable,
-    );
+    const shown = viewToShow(view, offers);
     if (shown !== view) {
       setView(shown);
     }
-  }, [lightsAvailable, displayAvailable, oledAvailable, view]);
+  }, [
+    lightsAvailable,
+    displayAvailable,
+    oledAvailable,
+    unlocked,
+    firmware.status,
+    view,
+  ]);
+
+  // The Display and OLED tabs have a history of their own, because the keyboard
+  // keeps what they change without Save: while one of them is open, Undo and Redo
+  // (the header and the shortcuts) go to it. The other tabs use the one of the app.
+  const onScreens = view === "display" || view === "oled";
+  const headerUndo = useCallback(
+    async () => (onScreens ? display.undo() : undo()),
+    [onScreens, display, undo],
+  );
+  const headerRedo = useCallback(
+    async () => (onScreens ? display.redo() : redo()),
+    [onScreens, display, redo],
+  );
+  const headerCanUndo = onScreens ? display.canUndo : canUndo;
+  const headerCanRedo = onScreens ? display.canRedo : canRedo;
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const action = undoShortcut(e, e.target as HTMLElement | null);
+      if (!action || !unlocked) {
+        return;
+      }
+
+      if (action === "undo" ? !headerCanUndo : !headerCanRedo) {
+        return;
+      }
+
+      e.preventDefault();
+      (action === "undo" ? headerUndo() : headerRedo()).catch((error) =>
+        console.error(`Failed to ${action}`, error),
+      );
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [unlocked, headerCanUndo, headerCanRedo, headerUndo, headerRedo]);
 
   // Whether the keymap has changes that are not saved. Unknown (the question
   // failed) counts as yes, so that nothing is left behind.
@@ -400,18 +464,12 @@ function App() {
                 connectedDeviceLabel={connectedDeviceName}
                 restoresDisplay={display.status === "ready"}
                 viewSwitch={
-                  <ViewSwitch
-                    view={view}
-                    onChange={setView}
-                    lightsAvailable={lightsAvailable}
-                    displayAvailable={displayAvailable}
-                    oledAvailable={oledAvailable}
-                  />
+                  <ViewSwitch view={view} onChange={setView} offers={offers} />
                 }
-                canUndo={canUndo}
-                canRedo={canRedo}
-                onUndo={undo}
-                onRedo={redo}
+                canUndo={headerCanUndo}
+                canRedo={headerCanRedo}
+                onUndo={headerUndo}
+                onRedo={headerRedo}
                 onSave={save}
                 onDiscard={discard}
                 onDisconnect={disconnect}
@@ -433,6 +491,17 @@ function App() {
                 <DisplayContext.Provider value={display}>
                   <OledTab />
                 </DisplayContext.Provider>
+              )}
+              {view === "files" && (
+                <DisplayContext.Provider value={display}>
+                  <FilesTab keyboardName={connectedDeviceName} onSave={save} />
+                </DisplayContext.Provider>
+              )}
+              {view === "diagnostics" && (
+                <DiagnosticsTab
+                  firmware={firmware}
+                  keyboardName={connectedDeviceName}
+                />
               )}
               <AppFooter
                 onShowAbout={() => setShowAbout(true)}

@@ -3,8 +3,9 @@
 A keyboard that lives in the browser, to try the app (and to test it) without hardware. It
 answers the requests of ZMK Studio the way a Corne running
 [corne-zmk](https://github.com/lenerdz/corne-zmk) does, including the light maps of the
-Lights tab, the display settings of the Display tab and the layout of the screens of the
-OLED tab (which is made of display settings).
+Lights tab, the display settings of the Display tab, the layout of the screens of the
+OLED tab (which is made of display settings), what the keyboard is doing now (the live
+values of the OLED tab) and the firmware information of the Diagnostics tab.
 
 ## Using it
 
@@ -12,10 +13,13 @@ OLED tab (which is made of display settings).
 - On the published app, add `?demo` to the address
   (<https://lenerdz.github.io/zmk-studio/?demo>).
 
-There are two more entries: **Demo keyboard (no light maps)** answers like a firmware
-without the editable light maps, and **Demo keyboard (no display settings)** like one
-without the display settings. The Lights tab, or the Display and OLED tabs, are not
-offered then, as it happens with any other keyboard.
+There are three more entries: **Demo keyboard (no light maps)** answers like a firmware
+without the editable light maps, **Demo keyboard (no display settings)** like one without
+the display settings, and **Demo keyboard (no live status)** like one without the live
+status and the firmware information. The Lights tab, the Display and OLED tabs, or the
+Diagnostics tab (and the live values of the OLED tab, which then keeps its samples) are
+not offered then, as it happens with any other keyboard. The Files tab is offered with all
+four, since it needs only a keyboard that is connected and unlocked.
 
 Nothing is saved: reloading the page starts again from the stock keymap and colors.
 
@@ -27,6 +31,7 @@ Nothing is saved: reloading the page starts again from the stock keymap and colo
 | `demoTransport.ts` | Connects it to the app as a transport. The bytes go through the real framing and the real message encoding, in both directions |
 | `demoColors.ts` | The colors the maps start with (generated) |
 | `../../display/demo/demoDisplay.ts` | The display settings: ids 1 to 6 of the Display tab and the 41 settings of the OLED layout (ids 16 to 115), 47 in all, with the ranges and defaults of `display_settings.c` |
+| `../../live/demo/demoStatus.ts` | The live status and the firmware information: a keyboard that is in use (the layer changes every 4 seconds among the first three, the typing speed swings between 20 and 80 words per minute, the batteries go down one point a minute) and the memory numbers of the left half of the build of corne-zmk (the FLASH and RAM lines of its CI log) |
 
 - The physical layout, the behaviors and the keymap come from
   [`src/keyboard/corne.mock.ts`](../../keyboard/corne.mock.ts). Like the data of the
@@ -41,9 +46,12 @@ Nothing is saved: reloading the page starts again from the stock keymap and colo
 - The display settings follow `display_settings.c` of the same module: the six settings
   of the Display tab and the 41 of the OLED layout (the build of the Corne of corne-zmk,
   with the cat as the animation) with their ranges and defaults, `INVALID_ID` and
-  `INVALID_VALUE` answers, and the restore of the defaults. They are kept as they change (there is no saved copy and no
-  unsaved flag, as in the firmware). The ranges are written in `demoDisplay.ts` on purpose,
-  like the limits of the light maps.
+  `INVALID_VALUE` answers, and the restore of the defaults. They are kept as they change
+  (there is no saved copy and no unsaved flag, as in the firmware). The ranges are written
+  in `demoDisplay.ts` on purpose, like the limits of the light maps.
+- The live status and the firmware information follow a clock, so the values are
+  predictable and a test can set the clock (`clock`). The memory numbers are written in
+  `demoStatus.ts` on purpose and are not read from the build.
 - Saving, discarding and the settings reset work for the keymap and for the lights; the
   settings reset also puts the display settings back.
 - What it does not have: moving, adding and removing layers (the layer count is fixed),
@@ -56,6 +64,9 @@ Nothing is saved: reloading the page starts again from the stock keymap and colo
 - `lights: false` to behave like a firmware without the light maps.
 - `display: false` to behave like a firmware without the display settings (and so
   without the layout of the OLED tab).
+- `status: false` to behave like a firmware without the live status and the firmware
+  information (the requests 109 and 110).
+- `clock` to give the clock of the live status, in milliseconds (the real one by default).
 - `busyResponses: n` to answer `BUSY` to the first `n` requests that set colors.
 - `refuseDisplayWrites: n` to answer `INVALID_VALUE` to the first `n` requests that change
   a display setting.

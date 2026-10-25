@@ -17,6 +17,7 @@ import type {
 import { ConnectionContext } from "../rpc/ConnectionContext";
 import { LockStateContext } from "../rpc/LockStateContext";
 import { call_rpc_strict } from "../rpc/logging";
+import { useSub } from "../usePubSub";
 
 export type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -30,6 +31,27 @@ export function useKeyboardView(): KeyboardView {
   const connection = useContext(ConnectionContext);
   const lockState = useContext(LockStateContext);
   const [view, setView] = useState<KeyboardView>({ behaviors: {} });
+
+  // The Files tab wrote keys (or took them back): read the keymap again, and
+  // only the keymap, because the layout and the behaviors did not change.
+  useSub("keys.reload", async () => {
+    const conn = connection.conn;
+    if (!conn || lockState != LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED) {
+      return;
+    }
+
+    try {
+      const response = await call_rpc_strict(conn, {
+        keymap: { getKeymap: true },
+      });
+      const keymap = response.keymap?.getKeymap;
+      if (keymap) {
+        setView((v) => ({ ...v, keymap }));
+      }
+    } catch (e) {
+      console.error("Failed to read the keymap again", e);
+    }
+  });
 
   useEffect(() => {
     const conn = connection.conn;

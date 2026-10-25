@@ -8,10 +8,15 @@
  * hidden ones wait in a tray, the right screen has a gallery of pictures (that
  * can be turned, cut to a piece and mixed with the widgets), and
  * what only a new build adds is listed. Like the Display tab, every change goes
- * to the keyboard at once and the keyboard keeps it by itself: nothing to save.
+ * to the keyboard at once and the keyboard keeps it by itself: nothing to save, and
+ * Undo and Redo of the header go to the history of the Display and OLED tabs. With
+ * "Live values" the drawings follow what the keyboard says now (the batteries, the
+ * link, the output, the profile, the layer and the typing speed), asked about twice a
+ * second while the tab is open.
  */
 import { useContext, useMemo, useState, type ReactNode } from "react";
 import { DisplayContext } from "../display/DisplayContext";
+import { useLiveStatus } from "../live/useLiveStatus";
 import { SPRITES } from "./assets/sprites";
 import { AnimationGallery } from "./AnimationGallery";
 import { OledInspector } from "./OledInspector";
@@ -57,14 +62,24 @@ const Notice = ({ children }: { children: ReactNode }) => (
 
 export const OledTab = () => {
   const display = useContext(DisplayContext);
-  const { settings, busy, setValue } = display;
+  const { settings, busy, setValue, setValues } = display;
 
   const [scale, setScale] = useState<number>(3);
   const [grid, setGrid] = useState(true);
   const [playing, setPlaying] = useState(() => !prefersReducedMotion());
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
-  const states = useMemo(() => widgetStates(settings), [settings]);
+  // The drawings are samples until this is on: then the keyboard is asked what the
+  // screens draw from (battery, link, output, profile, layer and speed), about twice
+  // a second, and only while this tab is open.
+  const [live, setLive] = useState(false);
+  const liveState = useLiveStatus(live);
+  const reading = live ? (liveState.reading ?? undefined) : undefined;
+
+  const states = useMemo(
+    () => widgetStates(settings, reading),
+    [settings, reading],
+  );
   const picture = pictureOf(settings);
   const frame = useFrame(
     SPRITES[picture.kind.sprite].frames,
@@ -102,9 +117,17 @@ export const OledTab = () => {
     );
   }
 
+  // Moving is one gesture however it is done (a drag, the arrow keys, the fields):
+  // the moves of the same widget that follow each other closely are one step of
+  // Undo, even when one of them changes only x and the next only y.
   const move = (state: WidgetState, values: { x: number; y: number }) => {
-    setValue(state.def.ids.x, values.x);
-    setValue(state.def.ids.y, values.y);
+    setValues(
+      [
+        [state.def.ids.x, values.x],
+        [state.def.ids.y, values.y],
+      ],
+      `move:${state.def.key}`,
+    );
   };
 
   const hide = (state: WidgetState) => {
@@ -119,11 +142,13 @@ export const OledTab = () => {
       return;
     }
 
-    // Where it was, or where the panel shows it when it was outside
+    // Where it was, or where the panel shows it when it was outside: one step
     const values = valuesForShowing(state);
-    setValue(x, values.x);
-    setValue(y, values.y);
-    setValue(showId, 1);
+    setValues([
+      [x, values.x],
+      [y, values.y],
+      [showId, 1],
+    ]);
     setSelectedKey(state.def.key);
   };
 
@@ -135,22 +160,30 @@ export const OledTab = () => {
     }
 
     const values = valuesForCenter(state, point);
-    setValue(state.def.ids.x, values.x);
-    setValue(state.def.ids.y, values.y);
-    setValue(showId, 1);
+    setValues([
+      [state.def.ids.x, values.x],
+      [state.def.ids.y, values.y],
+      [showId, 1],
+    ]);
     setSelectedKey(key);
   };
 
   /**
    * What a set of values stands for, in the settings of the picture: the picture,
    * its turn and its crop first, then where it is (an id the keyboard does not
-   * have is skipped by setValue).
+   * have is skipped by setValues). They are one step of Undo, with `also`, other
+   * settings that go with them (the switch that shows the picture), and `group`
+   * names a gesture that goes on, like dragging the frame of the crop.
    */
   const sendPicture = (
     ids: WidgetIds,
     values: Partial<PictureValues>,
+    options: {
+      group?: string;
+      also?: ReadonlyArray<readonly [id: number, value: number]>;
+    } = {},
   ) => {
-    const pairs: Array<[number | undefined, number | undefined]> = [
+    const candidates: Array<[number | undefined, number | undefined]> = [
       [ids.kind, values.kind],
       [ids.rot, values.rot],
       [ids.cropXY, values.cropXY],
@@ -159,11 +192,14 @@ export const OledTab = () => {
       [ids.y, values.y],
     ];
 
-    for (const [id, value] of pairs) {
+    const pairs: Array<readonly [number, number]> = [];
+    for (const [id, value] of candidates) {
       if (id !== undefined && value !== undefined) {
-        setValue(id, value);
+        pairs.push([id, value]);
       }
     }
+
+    setValues([...pairs, ...(options.also ?? [])], options.group);
   };
 
   const pictureTarget = states.find(
@@ -177,10 +213,10 @@ export const OledTab = () => {
     }
 
     // The picture lands upright and whole, centered on the drop, whatever size it has
-    sendPicture(pictureTarget.def.ids, values);
-    if (pictureTarget.def.ids.show !== undefined && !pictureTarget.shown) {
-      setValue(pictureTarget.def.ids.show, 1);
-    }
+    const showId = pictureTarget.def.ids.show;
+    sendPicture(pictureTarget.def.ids, values, {
+      also: showId !== undefined && !pictureTarget.shown ? [[showId, 1]] : [],
+    });
     setSelectedKey(pictureTarget.def.key);
   };
 
@@ -214,8 +250,14 @@ export const OledTab = () => {
       return;
     }
 
+    // Dragging the frame of the crop is one step of Undo, even when a move of the
+    // pointer changes only where it starts and the next only how big it is
     const written = writeCrop(crop, state.picture.shape);
-    sendPicture(state.def.ids, { cropXY: written.xy, cropWH: written.wh });
+    sendPicture(
+      state.def.ids,
+      { cropXY: written.xy, cropWH: written.wh },
+      { group: `crop:${state.def.key}` },
+    );
   };
 
   const centerPicture = (state: WidgetState) =>
@@ -224,10 +266,11 @@ export const OledTab = () => {
   const setShown = (state: WidgetState, shown: boolean) =>
     shown ? show(state) : hide(state);
 
+  // Putting a screen back as built is one step of Undo
   const reset = (defs: WidgetDef[]) => {
-    for (const { id, value } of resetChanges(settings, defs)) {
-      setValue(id, value);
-    }
+    setValues(
+      resetChanges(settings, defs).map(({ id, value }) => [id, value] as const),
+    );
   };
 
   const defsOf = (screen: ScreenId) =>
@@ -252,9 +295,13 @@ export const OledTab = () => {
             in the gallery. Every change is applied by the keyboard at once and
             kept by it a few seconds later, so there is nothing to save here
             (Save and Discard in the header are for the keys and the lights).
-            The right screen receives its settings from the left half, which can
-            take a few seconds after it connects. The drawings are samples, not
-            the live state of the screens.
+            Undo and Redo in the header (Ctrl+Z and Ctrl+Y) take back and redo
+            what you changed here and in the Display tab. The right screen
+            receives its settings from the left half, which can
+            take a few seconds after it connects.{" "}
+            {reading
+              ? "The drawings follow what the keyboard says now: the batteries, the link, the output, the profile, the layer and the typing speed."
+              : "The drawings are samples. Turn on Live values to draw them from what the keyboard says now."}
           </p>
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -298,7 +345,33 @@ export const OledTab = () => {
               />
               Play the animations
             </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                className="size-4 accent-primary"
+                checked={live}
+                onChange={(e) => setLive(e.currentTarget.checked)}
+              />
+              Live values
+            </label>
           </div>
+          {live && (
+            <p
+              role={liveState.status === "error" ? "alert" : "status"}
+              className={`max-w-4xl ${
+                liveState.status === "error" ? "text-red-600" : "opacity-70"
+              }`}
+            >
+              {liveState.status === "loading" &&
+                "Reading the keyboard..."}
+              {liveState.status === "ready" &&
+                "Live from the left half, which asks the other one for its battery and link. While this is on, the keyboard is asked a few times a second, which also keeps ZMK Studio unlocked."}
+              {liveState.status === "unsupported" &&
+                "This firmware cannot tell its state (it needs CONFIG_KEYPAW_DEVICE_STATUS_STUDIO, in the zmk-rgb-matrix of lenerdz). The drawings stay samples."}
+              {liveState.status === "error" &&
+                `The keyboard could not be read${liveState.error ? `: ${liveState.error}` : "."} Turn Live values off and on to try again.`}
+            </p>
+          )}
         </header>
 
         {display.problem && (
@@ -364,6 +437,7 @@ export const OledTab = () => {
 
         <Possibilities
           states={states}
+          live={reading !== undefined}
           selectedKey={selected?.def.key ?? null}
           frame={frame}
           onSelect={setSelectedKey}

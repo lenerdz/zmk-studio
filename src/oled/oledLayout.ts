@@ -9,6 +9,7 @@
  */
 import type { DisplaySettingData } from "../display/displayProtocol";
 import { withValue } from "../display/displaySettings";
+import type { LiveReading } from "../live/liveStatusPoller";
 import {
   WIDGETS,
   animationKind,
@@ -138,8 +139,15 @@ export function rectOf(
     : whole;
 }
 
-/** The widgets of the catalog and what the keyboard says about each one. */
-export function widgetStates(settings: DisplaySettingData[]): WidgetState[] {
+/**
+ * The widgets of the catalog and what the keyboard says about each one.
+ * @param live what the keyboard is doing now: with it the widgets are drawn from
+ *   the real readings, without it from a sample
+ */
+export function widgetStates(
+  settings: DisplaySettingData[],
+  live?: LiveReading,
+): WidgetState[] {
   const kind = pictureKind(settings);
   const toast = find(settings, TOAST_SETTING_ID);
   const rot = find(settings, OLED_ID.R_ANIM_ROT);
@@ -158,7 +166,7 @@ export function widgetStates(settings: DisplaySettingData[]): WidgetState[] {
     const y = sy?.value ?? 0;
     const defaultX = sx?.defaultValue ?? 0;
     const defaultY = sy?.defaultValue ?? 0;
-    const parts = def.art({ defaultX, defaultY, kind, turn });
+    const parts = def.art({ defaultX, defaultY, kind, turn, live });
     const box = partsBox(parts);
 
     // Only the picture of the right screen is turned, cut and mixed

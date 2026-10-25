@@ -72,8 +72,23 @@ export function useDisplaySettings(
     controllerRef.current?.setValue(id, value);
   }, []);
 
+  const setValues = useCallback(
+    (changes: ReadonlyArray<readonly [number, number]>, group?: string) => {
+      controllerRef.current?.setValues(changes, group);
+    },
+    [],
+  );
+
   const restoreDefaults = useCallback(async () => {
     await controllerRef.current?.restoreDefaults();
+  }, []);
+
+  const undo = useCallback(() => {
+    controllerRef.current?.undo();
+  }, []);
+
+  const redo = useCallback(() => {
+    controllerRef.current?.redo();
   }, []);
 
   return useMemo<DisplayApi>(
@@ -84,9 +99,14 @@ export function useDisplaySettings(
       settings: state.settings,
       problem: state.problem,
       busy: state.busy,
+      canUndo: state.canUndo,
+      canRedo: state.canRedo,
       setValue,
+      setValues,
       restoreDefaults,
+      undo,
+      redo,
     }),
-    [state, setValue, restoreDefaults],
+    [state, setValue, setValues, restoreDefaults, undo, redo],
   );
 }

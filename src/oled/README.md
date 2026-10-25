@@ -25,8 +25,9 @@ and writes them with the same three requests as the [Display tab](../display/REA
 ## What it does
 
 The header has a fourth view, **OLED**, next to **Keys**, **Lights** and **Display** (each
-one only when the firmware has what it edits). It shows the two screens, the left one (the
-central half, the one on USB) and the right one (the peripheral half), each in a panel:
+one only when the firmware has what it edits; **Files** and **Diagnostics** come after it).
+It shows the two screens, the left one (the central half, the one on USB) and the right one
+(the peripheral half), each in a panel:
 
 - **The panel as it looks on the keyboard.** The strip the OLED shows, 32 x 128 pixels,
   standing up the way the screen is read on the keyboard (the panel is a 128 x 32 one, but
@@ -50,14 +51,14 @@ central half, the one on USB) and the right one (the peripheral half), each in a
   it.
 - **The inspector.** Click a widget to see its **size**, where it is on the canvas, how
   much of it the panel shows (all of it, a part or nothing), and the position and state
-  the firmware was built with. It has   the switch, the fields of x and y, four arrows that
+  the firmware was built with. It has the switch, the fields of x and y, four arrows that
   move it by one pixel (eight with Shift), a button that brings a widget that is outside
   what the panel shows onto it, and **Put it back as built**. For the picture of the right
   screen it also has the **Picture** menu, the speed, **Turn the picture**, **Widgets over
   the picture** and **Show only a piece of the picture** (see below).
-- **The pictures of the right screen.** A gallery with the 26 pictures, in two groups: the
-  16 animations (Gem, Cat, Head, Spaceman, Pokemon and the 11 that lenerdz added) and the 10
-  still images (Vim, VIPs Marcos and the 8 that lenerdz added), each one playing in its card,
+- **The pictures of the right screen.** A gallery with the 66 pictures, in two groups: the
+  36 animations (Gem, Cat, Head, Spaceman, Pokemon and the 31 that lenerdz added) and the 30
+  still images (Vim, VIPs Marcos and the 28 that lenerdz added), each one playing in its card,
   with its size and, for the animations, its frames and the time of a cycle. Click a card
   to play it on the right screen, or drag it onto the screen to play it centered where you
   drop it. A new picture starts upright and whole, with its center where the center of the
@@ -92,20 +93,50 @@ central half, the one on USB) and the right one (the peripheral half), each in a
   panel shows of it now, and, after it, **Only with a new firmware build**: the widgets the
   firmware was built without, and the things the layout does not cover (the Luna dog, the
   Bongo cat, the modifier indicators, Raw HID, ...), each with the option to turn on.
-- **Zoom** from 2x to 5x, a **grid of 8 pixels**, and a switch to play the animations (off
-  to begin with when the system asks for reduced motion).
+- **Zoom** from 2x to 5x, a **grid of 8 pixels**, a switch to play the animations (off
+  to begin with when the system asks for reduced motion) and **Live values** (below).
 - **Put this screen back as built**, on each screen.
 
 Everything is applied by the keyboard at once and kept by it a few seconds after the last
 change (`CONFIG_KEYPAW_DISPLAY_SAVE_DEBOUNCE_MS`, 3 s), so there is nothing to save:
-**Save** and **Discard** in the header do not act on the layout, and a change is **not a
-step of Undo and Redo**. **Restore defaults** of the Display tab and **Restore Stock
-Settings** put it back to the defaults too.
+**Save** and **Discard** in the header do not act on the layout. **Undo** and **Redo** do,
+while this tab or the Display tab is open (the header buttons, Ctrl+Z, Ctrl+Y and
+Ctrl+Shift+Z): the two tabs share one history, which is kept by the display controller (see
+the [Display tab](../display/README.md#undo-and-redo)). One drag of a widget is one step, and
+so are ten presses of an arrow key close together, a widget shown or dropped from the tray,
+a picture chosen, a turn, a drag of the frame of the cut and **Put this screen back as
+built**. **Restore defaults** of the Display tab and **Restore Stock Settings** put the
+layout back to the defaults too.
 
-The drawings are samples (a battery of 85%, the layer `QWERTY`, a typing speed of 42, the
-toast `EFFECT 4` and `RAINBOW`), not what the screens show at this moment: the app cannot
-read that. The right screen gets its settings from the left half, which can take a few
-seconds after it connects.
+## Live values
+
+By default the drawings are samples (a battery of 85% on the left and 90% on the right,
+the layer `QWERTY`, a typing speed of 42, the toast `EFFECT 4` and `RAINBOW`). The switch
+**Live values** next to **Play the animations** draws them from the keyboard instead, with
+`useLiveStatus` of [`../live`](../live/README.md), which asks the left half what it is
+doing (the request `get_live_status`) about twice a second, while the switch is on and this
+tab is open. What follows the keyboard:
+
+| Widget | Drawn from |
+|---|---|
+| Battery (right) | The battery of the right half, as the left one knows it: `--%` while it has not reported |
+| Link with the left half | Filled while the left half sees the right one, crossed out when it does not |
+| Output (USB or Bluetooth) | The USB icon while the keys go to USB; otherwise the state of the selected profile: connected, paired without signal, or not paired |
+| Battery (left) | The level of each half (both, in the build with the text of the two batteries; the left one with the big percentage in the other build). A level that was not read is 0, as on the screen, which starts with 0 in every battery |
+| Bluetooth profiles | The mark on the selected profile, in both looks (the dots and the five boxes) |
+| Profile number | The selected profile, from 1 |
+| Layer | The name of the highest active layer, in capitals and cut at nine letters, or `Layer N` when it has no name |
+| Speedometer | The needle, at the typing speed: the angle is worked out as `wpm.c` of zmk-nice-oled does, in single precision and with the pixels cut as C cuts them |
+| Typing speed (number) | The number, moved right by the digits it lacks, as the screen does |
+| Typing speed (graph) | The last five readings of the ten the screen keeps (one reading a second, the oldest first): the left half of the grid is the part the panel shows |
+
+The animation or image and the light toast have nothing to read and stay as they are. The
+widgets keep their positions and switches: only what they draw changes, so the size and the
+part that the panel shows (the inspector and the list of what the screens can show) follow
+the live text too (a battery of three digits is wider). Without an answer from the keyboard
+(it is still reading, the firmware cannot tell its state, or an error) the drawings stay
+samples, and the line below the switch says which. The right screen gets its settings from
+the left half, which can take a few seconds after it connects.
 
 ## The geometry
 
@@ -172,10 +203,12 @@ without simply is not listed.
 | Typing speed (graph) | left | 104 shown, 105 x, 106 y | `CONFIG_NICE_OLED_WIDGET_WPM_GRAPH=y`, without the Luna dog, the Bongo cat or the fixed modifier indicators |
 
 The kinds of the picture are 0 Gem (the crystal of zmk-nice-oled), 1 Cat, 2 Head,
-3 Spaceman, 4 Pokemon, 5 Vim and 6 VIPs Marcos (the seven of zmk-nice-oled), and 7 to 25,
-the 19 that the lenerdz fork adds (`scripts/pictures/` of the shield draws them, and the
-numbers are kept in the flash of the keyboard, so a new picture is only added at the end).
-The sizes are the upright ones, the way the screen is looked at:
+3 Spaceman, 4 Pokemon, 5 Vim and 6 VIPs Marcos (the seven of zmk-nice-oled), and 7 to 65,
+the 59 that the lenerdz fork adds: 7 to 25 the first batch (11 animations and 8 still
+images) and 26 to 65 the second (20 animations, 26 to 45, and 20 still images, 46 to 65).
+`scripts/pictures/` of the shield draws them, and the numbers are kept in the flash of the
+keyboard, so a new picture is only added at the end. The sizes are the upright ones, the
+way the screen is looked at:
 
 | Picture | Kind | Size | Frames | A cycle of its own |
 |---|---|---|---|---|
@@ -205,6 +238,46 @@ The sizes are the upright ones, the way the screen is looked at:
 | Keyboard | 23 | 32 x 64 | still | none |
 | Pulsar | 24 | 32 x 128 | still | none |
 | Rocket | 25 | 32 x 64 | still | none |
+| Waterfall | 26 | 32 x 128 | 16 | 1600 ms |
+| Lava lamp | 27 | 32 x 128 | 16 | 3200 ms |
+| Storm | 28 | 32 x 64 | 16 | 1600 ms |
+| Snowfall | 29 | 32 x 64 | 24 | 2400 ms |
+| Jellyfish | 30 | 32 x 64 | 16 | 1600 ms |
+| Falling blocks | 31 | 32 x 64 | 20 | 2000 ms |
+| Pong | 32 | 32 x 64 | 24 | 1500 ms |
+| Invaders | 33 | 32 x 64 | 8 | 1600 ms |
+| Chomper | 34 | 32 x 32 | 16 | 1600 ms |
+| Game of Life | 35 | 32 x 64 | 30 | 3000 ms |
+| Plasma | 36 | 32 x 64 | 24 | 2400 ms |
+| Spiral | 37 | 32 x 32 | 16 | 1600 ms |
+| Newton's cradle | 38 | 32 x 32 | 16 | 1600 ms |
+| Gears | 39 | 32 x 32 | 12 | 1000 ms |
+| Hourglass | 40 | 32 x 64 | 20 | 2000 ms |
+| Windmill | 41 | 32 x 64 | 16 | 1600 ms |
+| Fireworks | 42 | 32 x 64 | 24 | 2400 ms |
+| Flying saucer | 43 | 32 x 64 | 16 | 1600 ms |
+| Eye | 44 | 32 x 32 | 24 | 2400 ms |
+| Key wave | 45 | 32 x 64 | 24 | 2400 ms |
+| Coffee | 46 | 32 x 64 | still | none |
+| Cactus | 47 | 32 x 64 | still | none |
+| Lighthouse | 48 | 32 x 128 | still | none |
+| Moon cat | 49 | 32 x 64 | still | none |
+| Robot | 50 | 32 x 64 | still | none |
+| Planet | 51 | 32 x 64 | still | none |
+| Castle | 52 | 32 x 64 | still | none |
+| Tree | 53 | 32 x 128 | still | none |
+| Skull | 54 | 32 x 64 | still | none |
+| Sword | 55 | 32 x 128 | still | none |
+| Key | 56 | 32 x 64 | still | none |
+| Antenna | 57 | 32 x 128 | still | none |
+| Potion | 58 | 32 x 64 | still | none |
+| Sailboat | 59 | 32 x 64 | still | none |
+| Compass | 60 | 32 x 32 | still | none |
+| Crown | 61 | 32 x 32 | still | none |
+| Cassette | 62 | 32 x 32 | still | none |
+| Floppy disk | 63 | 32 x 32 | still | none |
+| Moon phases | 64 | 32 x 128 | still | none |
+| Mushroom | 65 | 32 x 32 | still | none |
 
 The sizes of the other widgets are the ones of their drawing (the fonts `pixel8`,
 `pixel12` and `pixel16` of zmk-nice-oled advance 4, 6 and 8 pixels per character, and
@@ -234,7 +307,7 @@ half the settings of the right screen.
 
 | File | What it is |
 |---|---|
-| `OledTab.tsx` | The tab: the controls, the two screens, the inspector, the gallery and the list of possibilities |
+| `OledTab.tsx` | The tab: the controls (zoom, grid, animations, Live values), the two screens, the inspector, the gallery and the list of possibilities; every gesture that changes several settings is sent as one step of Undo |
 | `ScreenPanel.tsx` | One screen: the panel standing up (with the button that turns the view), the upright editor, the tray of hidden widgets and the reset |
 | `ScreenEditor.tsx` | The upright canvas: the dimming, the rulers, the widgets to drag (pointer, keys and drop) |
 | `PanelPreview.tsx` | The strip the panel shows, standing up or turned (the view only) |
@@ -244,16 +317,16 @@ half the settings of the right screen.
 | `PictureControls.tsx` | The picture of the right screen in the inspector: the menu, the speed, the turn, the mix with the widgets and the cut |
 | `PictureCrop.tsx` | The frame that picks the piece of the picture that shows (drag, resize, fields) |
 | `NumberField.tsx` | A whole number the keyboard accepts (position and cut) |
-| `AnimationGallery.tsx` | The 26 pictures of the right screen, in two groups: animations and still images |
-| `Possibilities.tsx` | What the screens can show, and what only a new build adds |
+| `AnimationGallery.tsx` | The 66 pictures of the right screen, in two groups: animations and still images |
+| `Possibilities.tsx` | What the screens can show (with what the panel shows of each one, from the samples or from the live values), and what only a new build adds |
 | `PixelArt.tsx`, `useFrame.ts` | The drawing of sprites (turned by quarter turns when asked), fonts and samples, and the clock of the animations |
 | `useViewTurn.ts` | The turn of the view of each screen, which the browser remembers |
 | `dragTypes.ts` | The two kinds of drag (a widget of the tray, a picture of the gallery) |
 | `oledIds.ts` | The ids of the layout settings |
 | `oledGeometry.ts` | The canvas, the part the panel shows, rectangles, the coordinates of the picture |
 | `pictureView.ts` | The arithmetic of the picture: turns, the two bytes of a setting, the cut (holding it inside the picture, turning it, the handles of the frame) |
-| `oledCatalog.ts` | The widgets, the pictures and the build-only features, with their texts and sample drawings |
-| `oledLayout.ts` | The functions the tab is built from: the state of each widget from the settings, moving, showing, resetting, dropping, and changing, turning and cutting the picture |
+| `oledCatalog.ts` | The widgets, the 66 pictures and the build-only features, with their texts and their drawings: the `*_ART` functions draw the samples, or the live readings when they get them (with `needlePoints`, `graphPoints` and `layerLabel`) |
+| `oledLayout.ts` | The functions the tab is built from: the state of each widget from the settings (and from the live readings, when there are any), moving, showing, resetting, dropping, and changing, turning and cutting the picture |
 | `assets/` | The sprites and fonts (PNG) and `sprites.ts`, the manifest (generated) |
 | `*.test.ts` | Tests of the geometry, the catalog, the layout, the arithmetic of the picture and the turn of the view |
 
@@ -267,7 +340,7 @@ demo keyboard.
 The pictures and fonts are the ones of zmk-nice-oled, converted from its LVGL files (1 bit
 per pixel) by `scripts/oled-assets/convert.py`, which writes the PNG files and
 `assets/sprites.ts` (the size, the frames and the URL of each one, and the revision of
-zmk-nice-oled they come from). The 19 pictures that the lenerdz fork adds (kinds 7 to 25)
+zmk-nice-oled they come from). The 59 pictures that the lenerdz fork adds (kinds 7 to 65)
 are listed in `assets/pictures/pictures.json` of the shield, which `make_pictures.py`
 writes with the C files: the script reads that list, so a new picture needs no change in
 the script, and it stops when a picture is not the size the list says. It needs
@@ -285,16 +358,20 @@ A pixel is drawn lit when the palette of the image has it dark (zmk-nice-oled dr
 black and the OLED shows that lit), the animations and the still images of the right
 screen are turned back to upright, and the output is the same every time. Run it again when
 zmk-nice-oled changes a picture or adds one. The revision of zmk-nice-oled the sprites
-come from is `3e620f488afe3641539ea656804e44c1be4928e1` (the commit that added the 19
-pictures; the commits after it only change the documentation of the shield).
+come from is `5940fcdb6f6d53b632b7a058deac6d612edc01bf`: the first batch of 19 pictures is
+from `3e620f488afe3641539ea656804e44c1be4928e1`, the second batch (40 pictures, kinds 26 to
+65) from `e30b8ce670e94eff7dd132043d32ba1c63f179e5`, and the commit after it only changes
+the documentation of the shield.
 
 ## Tests
 
 `npm test` covers the geometry (the rectangles, how much the panel shows, the conversion
 of the coordinates of the picture both ways), the catalog (the ids in blocks of eight, the
-drawing and the size of each widget, the 26 pictures with their frames and cycle times, the
-clock of the frames, what only a new build adds), the layout (the state of each widget
-from the settings, moving inside the range, showing and hiding, dropping a widget and a
+drawing and the size of each widget, the 66 pictures with their frames and cycle times, the
+clock of the frames, the drawings from live readings (the output, the batteries, the link, the
+profile, the layer name, the needle and the graph), what only a new build adds), the layout
+(the state of each widget from the settings and from the readings, moving inside the range,
+showing and hiding, dropping a widget and a
 picture, resetting, what is listed when the firmware lacks a widget, and for the picture
 the turn about its center in both directions and in four quarters, the cut that turns with
 it, the choice of another picture, the cut as it is read and written, and the position
@@ -315,20 +392,28 @@ the pointer: turning it left and right, the frame of the cut (moving it with big
 pointer, which hold it inside the picture, and typing its four numbers), **Whole picture**,
 and the battery of the right half dragged over the picture in reverse. The view of each
 screen was turned with its button (the preview standing up, then on its side above the
-editor). The firmware side compiles in the CI of corne-zmk.
+editor). The gallery was looked at with its 66 pictures, the two groups and the cards of the
+second batch. **Live values** were tried in a browser that is really shown (a headless
+Microsoft Edge, because the page of the editor reports itself as hidden, and the poller asks
+nothing then): the values changed over time, the drawings followed them, and the demo
+keyboard without live status kept the samples. Undo and Redo were tried with real pointer
+events: a widget dragged along a bent path, ten presses of an arrow key and a move after a
+pause, one step each. The firmware side compiles in the CI of corne-zmk.
 
 The first version of the tab (moving, showing and hiding the widgets, and the menu with the
 seven pictures of zmk-nice-oled) was used on the Corne of the keyboard's owner, who reported
 that it worked, without detail about each operation, so none of those has an individual
 confirmation (the conversion of the coordinates of the picture, for one, rests on reading
-the code of zmk-nice-oled). **What was added after it has not been tried on a real
-keyboard**: the turn, the cut and the reverse of the picture, the 19 new pictures, and the
-rule that the picture is drawn over the widgets by the firmware; what the preview shows of
-them rests on the code of the firmware and on its tests on a computer, not on the screen.
-The look of the sprites rests on the pictures of zmk-nice-oled and on the rule that the OLED
-shows its ink lit, and the text widgets are drawn with the fonts of zmk-nice-oled as
-samples, so they may differ from the screen by a pixel. Touch input has not been tried on
-any device.
+the code of zmk-nice-oled). The next release (the turn, the cut and the reverse of the
+picture, the first 19 new pictures and the picture drawn over the widgets by the firmware)
+was used there too: the owner reported that it "worked perfectly" and liked the animations
+and the still images, again without detail about each operation. **What was added after it
+has not been tried on a real keyboard**: the 40 pictures of the second batch (kinds 26 to
+65), the live values and Undo and Redo. What the gallery and the preview show of the new
+pictures rests on the generator and its tests on a computer, not on the screen. The look of
+the sprites rests on the pictures of zmk-nice-oled and on the rule that the OLED shows its
+ink lit, and the text widgets are drawn with the fonts of zmk-nice-oled as samples, so they
+may differ from the screen by a pixel. Touch input has not been tried on any device.
 
 One position is outside the panel by the design of the build, not by a mistake of the tab:
 the text with the battery of both halves (the central battery modes of zmk-nice-oled,

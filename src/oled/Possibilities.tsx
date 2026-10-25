@@ -16,6 +16,8 @@ import { PANEL_COLOR, WidgetArt } from "./PixelArt";
 
 interface Props {
   states: WidgetState[];
+  /** Whether the drawings follow the keyboard (Live values is on and has an answer). */
+  live: boolean;
   selectedKey: string | null;
   frame: number;
   onSelect: (key: string) => void;
@@ -26,6 +28,7 @@ const screenOf = (feature: BuildOnlyFeature): string =>
 
 export const Possibilities = ({
   states,
+  live,
   selectedKey,
   frame,
   onSelect,
@@ -42,9 +45,10 @@ export const Possibilities = ({
         <h3 className="font-semibold">What the screens can show</h3>
         <p className="max-w-4xl opacity-70">
           The widgets of this keyboard are listed with their size and with what
-          the panel shows of each one now. The drawings are samples (a battery
-          of 85%, the layer QWERTY, a typing speed of 42), not what the screen
-          shows at this moment: the app cannot read it.
+          the panel shows of each one now.{" "}
+          {live
+            ? "The drawings follow what the keyboard says now (Live values is on)."
+            : "The drawings are samples (a battery of 85%, the layer QWERTY, a typing speed of 42); turn on Live values to draw them from what the keyboard says now."}
         </p>
       </header>
 

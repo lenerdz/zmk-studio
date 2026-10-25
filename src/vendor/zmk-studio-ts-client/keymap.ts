@@ -429,6 +429,129 @@ export function setDisplaySettingResponseToJSON(object: SetDisplaySettingRespons
   }
 }
 
+export enum LiveOutput {
+  /** LIVE_OUTPUT_NONE - no host: the keyboard is not connected to anything */
+  LIVE_OUTPUT_NONE = 0,
+  LIVE_OUTPUT_USB = 1,
+  LIVE_OUTPUT_BLE = 2,
+  UNRECOGNIZED = -1,
+}
+
+export function liveOutputFromJSON(object: any): LiveOutput {
+  switch (object) {
+    case 0:
+    case "LIVE_OUTPUT_NONE":
+      return LiveOutput.LIVE_OUTPUT_NONE;
+    case 1:
+    case "LIVE_OUTPUT_USB":
+      return LiveOutput.LIVE_OUTPUT_USB;
+    case 2:
+    case "LIVE_OUTPUT_BLE":
+      return LiveOutput.LIVE_OUTPUT_BLE;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return LiveOutput.UNRECOGNIZED;
+  }
+}
+
+export function liveOutputToJSON(object: LiveOutput): string {
+  switch (object) {
+    case LiveOutput.LIVE_OUTPUT_NONE:
+      return "LIVE_OUTPUT_NONE";
+    case LiveOutput.LIVE_OUTPUT_USB:
+      return "LIVE_OUTPUT_USB";
+    case LiveOutput.LIVE_OUTPUT_BLE:
+      return "LIVE_OUTPUT_BLE";
+    case LiveOutput.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
+export enum LiveBleState {
+  /** LIVE_BLE_OPEN - the profile has no host paired (it is advertising) */
+  LIVE_BLE_OPEN = 0,
+  /** LIVE_BLE_PAIRED - paired, but its host is not connected */
+  LIVE_BLE_PAIRED = 1,
+  LIVE_BLE_CONNECTED = 2,
+  UNRECOGNIZED = -1,
+}
+
+export function liveBleStateFromJSON(object: any): LiveBleState {
+  switch (object) {
+    case 0:
+    case "LIVE_BLE_OPEN":
+      return LiveBleState.LIVE_BLE_OPEN;
+    case 1:
+    case "LIVE_BLE_PAIRED":
+      return LiveBleState.LIVE_BLE_PAIRED;
+    case 2:
+    case "LIVE_BLE_CONNECTED":
+      return LiveBleState.LIVE_BLE_CONNECTED;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return LiveBleState.UNRECOGNIZED;
+  }
+}
+
+export function liveBleStateToJSON(object: LiveBleState): string {
+  switch (object) {
+    case LiveBleState.LIVE_BLE_OPEN:
+      return "LIVE_BLE_OPEN";
+    case LiveBleState.LIVE_BLE_PAIRED:
+      return "LIVE_BLE_PAIRED";
+    case LiveBleState.LIVE_BLE_CONNECTED:
+      return "LIVE_BLE_CONNECTED";
+    case LiveBleState.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
+export enum LiveUsbState {
+  /** LIVE_USB_NONE - nothing on the USB connector */
+  LIVE_USB_NONE = 0,
+  /** LIVE_USB_POWERED - power, but the host has not set the keyboard up yet */
+  LIVE_USB_POWERED = 1,
+  /** LIVE_USB_HID - the host uses the keyboard */
+  LIVE_USB_HID = 2,
+  UNRECOGNIZED = -1,
+}
+
+export function liveUsbStateFromJSON(object: any): LiveUsbState {
+  switch (object) {
+    case 0:
+    case "LIVE_USB_NONE":
+      return LiveUsbState.LIVE_USB_NONE;
+    case 1:
+    case "LIVE_USB_POWERED":
+      return LiveUsbState.LIVE_USB_POWERED;
+    case 2:
+    case "LIVE_USB_HID":
+      return LiveUsbState.LIVE_USB_HID;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return LiveUsbState.UNRECOGNIZED;
+  }
+}
+
+export function liveUsbStateToJSON(object: LiveUsbState): string {
+  switch (object) {
+    case LiveUsbState.LIVE_USB_NONE:
+      return "LIVE_USB_NONE";
+    case LiveUsbState.LIVE_USB_POWERED:
+      return "LIVE_USB_POWERED";
+    case LiveUsbState.LIVE_USB_HID:
+      return "LIVE_USB_HID";
+    case LiveUsbState.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
 export interface Request {
   getKeymap?: boolean | undefined;
   setLayerBinding?: SetLayerBindingRequest | undefined;
@@ -465,7 +588,12 @@ export interface Request {
   /** Fork (lenerdz): display (OLED) settings, tags 106 to 108. */
   getDisplayInfo?: boolean | undefined;
   setDisplaySetting?: SetDisplaySettingRequest | undefined;
-  restoreDisplayDefaults?: boolean | undefined;
+  restoreDisplayDefaults?:
+    | boolean
+    | undefined;
+  /** Fork (lenerdz): live status and firmware information (read only), tags 109 and 110. */
+  getLiveStatus?: boolean | undefined;
+  getFirmwareInfo?: boolean | undefined;
 }
 
 export interface Response {
@@ -504,7 +632,12 @@ export interface Response {
     | SetDisplaySettingResponse
     | undefined;
   /** the settings after the restore */
-  restoreDisplayDefaults?: DisplayInfo | undefined;
+  restoreDisplayDefaults?:
+    | DisplayInfo
+    | undefined;
+  /** Fork (lenerdz): live status and firmware information. */
+  getLiveStatus?: LiveStatus | undefined;
+  getFirmwareInfo?: FirmwareInfo | undefined;
 }
 
 export interface Notification {
@@ -662,6 +795,55 @@ export interface SetDisplaySettingRequest {
   value: number;
 }
 
+export interface LiveStatus {
+  /** percent from 0 to 100; 255 when there is no reading */
+  batteryCentral: number;
+  /** percent from 0 to 100; 255 when the other half has not reported */
+  batteryPeripheral: number;
+  peripheralConnected: boolean;
+  /** the highest active layer, as its index in the keymap order */
+  layerIndex: number;
+  /** the name of that layer (empty when it has none) */
+  layerName: string;
+  /** words per minute now */
+  wpm: number;
+  /** where the keys go now */
+  output: LiveOutput;
+  /** the selected Bluetooth profile, from 0 */
+  bleProfile: number;
+  /** the state of that profile */
+  bleState: LiveBleState;
+  /** the state of the USB connector */
+  usbState: LiveUsbState;
+  /** seconds since the keyboard started */
+  uptimeS: number;
+}
+
+export interface FirmwareInfo {
+  /** the name of the keyboard (CONFIG_ZMK_KEYBOARD_NAME) */
+  keyboard: string;
+  /** the board (CONFIG_BOARD) */
+  board: string;
+  /** the version of Zephyr */
+  zephyr: string;
+  /** the commit that was built, short; empty when it is not known */
+  buildId: string;
+  /** the branch of that commit; empty when it is not known */
+  buildBranch: string;
+  /** the number of the CI run that built it; 0 when it is not known */
+  buildNumber: number;
+  /** the day it was built, yyyy-mm-dd (UTC) */
+  buildDate: string;
+  /** bytes of flash for the program (the code partition) */
+  flashTotal: number;
+  /** bytes of it that the program takes */
+  flashUsed: number;
+  /** bytes of RAM */
+  ramTotal: number;
+  /** bytes of it that the program takes at start (data, bss, stacks, heap) */
+  ramUsed: number;
+}
+
 function createBaseRequest(): Request {
   return {
     getKeymap: undefined,
@@ -685,6 +867,8 @@ function createBaseRequest(): Request {
     getDisplayInfo: undefined,
     setDisplaySetting: undefined,
     restoreDisplayDefaults: undefined,
+    getLiveStatus: undefined,
+    getFirmwareInfo: undefined,
   };
 }
 
@@ -752,6 +936,12 @@ export const Request = {
     }
     if (message.restoreDisplayDefaults !== undefined) {
       writer.uint32(864).bool(message.restoreDisplayDefaults);
+    }
+    if (message.getLiveStatus !== undefined) {
+      writer.uint32(872).bool(message.getLiveStatus);
+    }
+    if (message.getFirmwareInfo !== undefined) {
+      writer.uint32(880).bool(message.getFirmwareInfo);
     }
     return writer;
   },
@@ -910,6 +1100,20 @@ export const Request = {
 
           message.restoreDisplayDefaults = reader.bool();
           continue;
+        case 109:
+          if (tag !== 872) {
+            break;
+          }
+
+          message.getLiveStatus = reader.bool();
+          continue;
+        case 110:
+          if (tag !== 880) {
+            break;
+          }
+
+          message.getFirmwareInfo = reader.bool();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -952,6 +1156,8 @@ export const Request = {
       restoreDisplayDefaults: isSet(object.restoreDisplayDefaults)
         ? globalThis.Boolean(object.restoreDisplayDefaults)
         : undefined,
+      getLiveStatus: isSet(object.getLiveStatus) ? globalThis.Boolean(object.getLiveStatus) : undefined,
+      getFirmwareInfo: isSet(object.getFirmwareInfo) ? globalThis.Boolean(object.getFirmwareInfo) : undefined,
     };
   },
 
@@ -1020,6 +1226,12 @@ export const Request = {
     if (message.restoreDisplayDefaults !== undefined) {
       obj.restoreDisplayDefaults = message.restoreDisplayDefaults;
     }
+    if (message.getLiveStatus !== undefined) {
+      obj.getLiveStatus = message.getLiveStatus;
+    }
+    if (message.getFirmwareInfo !== undefined) {
+      obj.getFirmwareInfo = message.getFirmwareInfo;
+    }
     return obj;
   },
 
@@ -1065,6 +1277,8 @@ export const Request = {
       ? SetDisplaySettingRequest.fromPartial(object.setDisplaySetting)
       : undefined;
     message.restoreDisplayDefaults = object.restoreDisplayDefaults ?? undefined;
+    message.getLiveStatus = object.getLiveStatus ?? undefined;
+    message.getFirmwareInfo = object.getFirmwareInfo ?? undefined;
     return message;
   },
 };
@@ -1092,6 +1306,8 @@ function createBaseResponse(): Response {
     getDisplayInfo: undefined,
     setDisplaySetting: undefined,
     restoreDisplayDefaults: undefined,
+    getLiveStatus: undefined,
+    getFirmwareInfo: undefined,
   };
 }
 
@@ -1159,6 +1375,12 @@ export const Response = {
     }
     if (message.restoreDisplayDefaults !== undefined) {
       DisplayInfo.encode(message.restoreDisplayDefaults, writer.uint32(866).fork()).ldelim();
+    }
+    if (message.getLiveStatus !== undefined) {
+      LiveStatus.encode(message.getLiveStatus, writer.uint32(874).fork()).ldelim();
+    }
+    if (message.getFirmwareInfo !== undefined) {
+      FirmwareInfo.encode(message.getFirmwareInfo, writer.uint32(882).fork()).ldelim();
     }
     return writer;
   },
@@ -1317,6 +1539,20 @@ export const Response = {
 
           message.restoreDisplayDefaults = DisplayInfo.decode(reader, reader.uint32());
           continue;
+        case 109:
+          if (tag !== 874) {
+            break;
+          }
+
+          message.getLiveStatus = LiveStatus.decode(reader, reader.uint32());
+          continue;
+        case 110:
+          if (tag !== 882) {
+            break;
+          }
+
+          message.getFirmwareInfo = FirmwareInfo.decode(reader, reader.uint32());
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1361,6 +1597,8 @@ export const Response = {
       restoreDisplayDefaults: isSet(object.restoreDisplayDefaults)
         ? DisplayInfo.fromJSON(object.restoreDisplayDefaults)
         : undefined,
+      getLiveStatus: isSet(object.getLiveStatus) ? LiveStatus.fromJSON(object.getLiveStatus) : undefined,
+      getFirmwareInfo: isSet(object.getFirmwareInfo) ? FirmwareInfo.fromJSON(object.getFirmwareInfo) : undefined,
     };
   },
 
@@ -1429,6 +1667,12 @@ export const Response = {
     if (message.restoreDisplayDefaults !== undefined) {
       obj.restoreDisplayDefaults = DisplayInfo.toJSON(message.restoreDisplayDefaults);
     }
+    if (message.getLiveStatus !== undefined) {
+      obj.getLiveStatus = LiveStatus.toJSON(message.getLiveStatus);
+    }
+    if (message.getFirmwareInfo !== undefined) {
+      obj.getFirmwareInfo = FirmwareInfo.toJSON(message.getFirmwareInfo);
+    }
     return obj;
   },
 
@@ -1488,6 +1732,12 @@ export const Response = {
       (object.restoreDisplayDefaults !== undefined && object.restoreDisplayDefaults !== null)
         ? DisplayInfo.fromPartial(object.restoreDisplayDefaults)
         : undefined;
+    message.getLiveStatus = (object.getLiveStatus !== undefined && object.getLiveStatus !== null)
+      ? LiveStatus.fromPartial(object.getLiveStatus)
+      : undefined;
+    message.getFirmwareInfo = (object.getFirmwareInfo !== undefined && object.getFirmwareInfo !== null)
+      ? FirmwareInfo.fromPartial(object.getFirmwareInfo)
+      : undefined;
     return message;
   },
 };
@@ -3703,6 +3953,448 @@ export const SetDisplaySettingRequest = {
     const message = createBaseSetDisplaySettingRequest();
     message.id = object.id ?? 0;
     message.value = object.value ?? 0;
+    return message;
+  },
+};
+
+function createBaseLiveStatus(): LiveStatus {
+  return {
+    batteryCentral: 0,
+    batteryPeripheral: 0,
+    peripheralConnected: false,
+    layerIndex: 0,
+    layerName: "",
+    wpm: 0,
+    output: 0,
+    bleProfile: 0,
+    bleState: 0,
+    usbState: 0,
+    uptimeS: 0,
+  };
+}
+
+export const LiveStatus = {
+  encode(message: LiveStatus, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.batteryCentral !== 0) {
+      writer.uint32(8).uint32(message.batteryCentral);
+    }
+    if (message.batteryPeripheral !== 0) {
+      writer.uint32(16).uint32(message.batteryPeripheral);
+    }
+    if (message.peripheralConnected !== false) {
+      writer.uint32(24).bool(message.peripheralConnected);
+    }
+    if (message.layerIndex !== 0) {
+      writer.uint32(32).uint32(message.layerIndex);
+    }
+    if (message.layerName !== "") {
+      writer.uint32(42).string(message.layerName);
+    }
+    if (message.wpm !== 0) {
+      writer.uint32(48).uint32(message.wpm);
+    }
+    if (message.output !== 0) {
+      writer.uint32(56).int32(message.output);
+    }
+    if (message.bleProfile !== 0) {
+      writer.uint32(64).uint32(message.bleProfile);
+    }
+    if (message.bleState !== 0) {
+      writer.uint32(72).int32(message.bleState);
+    }
+    if (message.usbState !== 0) {
+      writer.uint32(80).int32(message.usbState);
+    }
+    if (message.uptimeS !== 0) {
+      writer.uint32(88).uint32(message.uptimeS);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): LiveStatus {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseLiveStatus();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 8) {
+            break;
+          }
+
+          message.batteryCentral = reader.uint32();
+          continue;
+        case 2:
+          if (tag !== 16) {
+            break;
+          }
+
+          message.batteryPeripheral = reader.uint32();
+          continue;
+        case 3:
+          if (tag !== 24) {
+            break;
+          }
+
+          message.peripheralConnected = reader.bool();
+          continue;
+        case 4:
+          if (tag !== 32) {
+            break;
+          }
+
+          message.layerIndex = reader.uint32();
+          continue;
+        case 5:
+          if (tag !== 42) {
+            break;
+          }
+
+          message.layerName = reader.string();
+          continue;
+        case 6:
+          if (tag !== 48) {
+            break;
+          }
+
+          message.wpm = reader.uint32();
+          continue;
+        case 7:
+          if (tag !== 56) {
+            break;
+          }
+
+          message.output = reader.int32() as any;
+          continue;
+        case 8:
+          if (tag !== 64) {
+            break;
+          }
+
+          message.bleProfile = reader.uint32();
+          continue;
+        case 9:
+          if (tag !== 72) {
+            break;
+          }
+
+          message.bleState = reader.int32() as any;
+          continue;
+        case 10:
+          if (tag !== 80) {
+            break;
+          }
+
+          message.usbState = reader.int32() as any;
+          continue;
+        case 11:
+          if (tag !== 88) {
+            break;
+          }
+
+          message.uptimeS = reader.uint32();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): LiveStatus {
+    return {
+      batteryCentral: isSet(object.batteryCentral) ? globalThis.Number(object.batteryCentral) : 0,
+      batteryPeripheral: isSet(object.batteryPeripheral) ? globalThis.Number(object.batteryPeripheral) : 0,
+      peripheralConnected: isSet(object.peripheralConnected) ? globalThis.Boolean(object.peripheralConnected) : false,
+      layerIndex: isSet(object.layerIndex) ? globalThis.Number(object.layerIndex) : 0,
+      layerName: isSet(object.layerName) ? globalThis.String(object.layerName) : "",
+      wpm: isSet(object.wpm) ? globalThis.Number(object.wpm) : 0,
+      output: isSet(object.output) ? liveOutputFromJSON(object.output) : 0,
+      bleProfile: isSet(object.bleProfile) ? globalThis.Number(object.bleProfile) : 0,
+      bleState: isSet(object.bleState) ? liveBleStateFromJSON(object.bleState) : 0,
+      usbState: isSet(object.usbState) ? liveUsbStateFromJSON(object.usbState) : 0,
+      uptimeS: isSet(object.uptimeS) ? globalThis.Number(object.uptimeS) : 0,
+    };
+  },
+
+  toJSON(message: LiveStatus): unknown {
+    const obj: any = {};
+    if (message.batteryCentral !== 0) {
+      obj.batteryCentral = Math.round(message.batteryCentral);
+    }
+    if (message.batteryPeripheral !== 0) {
+      obj.batteryPeripheral = Math.round(message.batteryPeripheral);
+    }
+    if (message.peripheralConnected !== false) {
+      obj.peripheralConnected = message.peripheralConnected;
+    }
+    if (message.layerIndex !== 0) {
+      obj.layerIndex = Math.round(message.layerIndex);
+    }
+    if (message.layerName !== "") {
+      obj.layerName = message.layerName;
+    }
+    if (message.wpm !== 0) {
+      obj.wpm = Math.round(message.wpm);
+    }
+    if (message.output !== 0) {
+      obj.output = liveOutputToJSON(message.output);
+    }
+    if (message.bleProfile !== 0) {
+      obj.bleProfile = Math.round(message.bleProfile);
+    }
+    if (message.bleState !== 0) {
+      obj.bleState = liveBleStateToJSON(message.bleState);
+    }
+    if (message.usbState !== 0) {
+      obj.usbState = liveUsbStateToJSON(message.usbState);
+    }
+    if (message.uptimeS !== 0) {
+      obj.uptimeS = Math.round(message.uptimeS);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<LiveStatus>, I>>(base?: I): LiveStatus {
+    return LiveStatus.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<LiveStatus>, I>>(object: I): LiveStatus {
+    const message = createBaseLiveStatus();
+    message.batteryCentral = object.batteryCentral ?? 0;
+    message.batteryPeripheral = object.batteryPeripheral ?? 0;
+    message.peripheralConnected = object.peripheralConnected ?? false;
+    message.layerIndex = object.layerIndex ?? 0;
+    message.layerName = object.layerName ?? "";
+    message.wpm = object.wpm ?? 0;
+    message.output = object.output ?? 0;
+    message.bleProfile = object.bleProfile ?? 0;
+    message.bleState = object.bleState ?? 0;
+    message.usbState = object.usbState ?? 0;
+    message.uptimeS = object.uptimeS ?? 0;
+    return message;
+  },
+};
+
+function createBaseFirmwareInfo(): FirmwareInfo {
+  return {
+    keyboard: "",
+    board: "",
+    zephyr: "",
+    buildId: "",
+    buildBranch: "",
+    buildNumber: 0,
+    buildDate: "",
+    flashTotal: 0,
+    flashUsed: 0,
+    ramTotal: 0,
+    ramUsed: 0,
+  };
+}
+
+export const FirmwareInfo = {
+  encode(message: FirmwareInfo, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.keyboard !== "") {
+      writer.uint32(10).string(message.keyboard);
+    }
+    if (message.board !== "") {
+      writer.uint32(18).string(message.board);
+    }
+    if (message.zephyr !== "") {
+      writer.uint32(26).string(message.zephyr);
+    }
+    if (message.buildId !== "") {
+      writer.uint32(34).string(message.buildId);
+    }
+    if (message.buildBranch !== "") {
+      writer.uint32(42).string(message.buildBranch);
+    }
+    if (message.buildNumber !== 0) {
+      writer.uint32(48).uint32(message.buildNumber);
+    }
+    if (message.buildDate !== "") {
+      writer.uint32(58).string(message.buildDate);
+    }
+    if (message.flashTotal !== 0) {
+      writer.uint32(64).uint32(message.flashTotal);
+    }
+    if (message.flashUsed !== 0) {
+      writer.uint32(72).uint32(message.flashUsed);
+    }
+    if (message.ramTotal !== 0) {
+      writer.uint32(80).uint32(message.ramTotal);
+    }
+    if (message.ramUsed !== 0) {
+      writer.uint32(88).uint32(message.ramUsed);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): FirmwareInfo {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseFirmwareInfo();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.keyboard = reader.string();
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.board = reader.string();
+          continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.zephyr = reader.string();
+          continue;
+        case 4:
+          if (tag !== 34) {
+            break;
+          }
+
+          message.buildId = reader.string();
+          continue;
+        case 5:
+          if (tag !== 42) {
+            break;
+          }
+
+          message.buildBranch = reader.string();
+          continue;
+        case 6:
+          if (tag !== 48) {
+            break;
+          }
+
+          message.buildNumber = reader.uint32();
+          continue;
+        case 7:
+          if (tag !== 58) {
+            break;
+          }
+
+          message.buildDate = reader.string();
+          continue;
+        case 8:
+          if (tag !== 64) {
+            break;
+          }
+
+          message.flashTotal = reader.uint32();
+          continue;
+        case 9:
+          if (tag !== 72) {
+            break;
+          }
+
+          message.flashUsed = reader.uint32();
+          continue;
+        case 10:
+          if (tag !== 80) {
+            break;
+          }
+
+          message.ramTotal = reader.uint32();
+          continue;
+        case 11:
+          if (tag !== 88) {
+            break;
+          }
+
+          message.ramUsed = reader.uint32();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): FirmwareInfo {
+    return {
+      keyboard: isSet(object.keyboard) ? globalThis.String(object.keyboard) : "",
+      board: isSet(object.board) ? globalThis.String(object.board) : "",
+      zephyr: isSet(object.zephyr) ? globalThis.String(object.zephyr) : "",
+      buildId: isSet(object.buildId) ? globalThis.String(object.buildId) : "",
+      buildBranch: isSet(object.buildBranch) ? globalThis.String(object.buildBranch) : "",
+      buildNumber: isSet(object.buildNumber) ? globalThis.Number(object.buildNumber) : 0,
+      buildDate: isSet(object.buildDate) ? globalThis.String(object.buildDate) : "",
+      flashTotal: isSet(object.flashTotal) ? globalThis.Number(object.flashTotal) : 0,
+      flashUsed: isSet(object.flashUsed) ? globalThis.Number(object.flashUsed) : 0,
+      ramTotal: isSet(object.ramTotal) ? globalThis.Number(object.ramTotal) : 0,
+      ramUsed: isSet(object.ramUsed) ? globalThis.Number(object.ramUsed) : 0,
+    };
+  },
+
+  toJSON(message: FirmwareInfo): unknown {
+    const obj: any = {};
+    if (message.keyboard !== "") {
+      obj.keyboard = message.keyboard;
+    }
+    if (message.board !== "") {
+      obj.board = message.board;
+    }
+    if (message.zephyr !== "") {
+      obj.zephyr = message.zephyr;
+    }
+    if (message.buildId !== "") {
+      obj.buildId = message.buildId;
+    }
+    if (message.buildBranch !== "") {
+      obj.buildBranch = message.buildBranch;
+    }
+    if (message.buildNumber !== 0) {
+      obj.buildNumber = Math.round(message.buildNumber);
+    }
+    if (message.buildDate !== "") {
+      obj.buildDate = message.buildDate;
+    }
+    if (message.flashTotal !== 0) {
+      obj.flashTotal = Math.round(message.flashTotal);
+    }
+    if (message.flashUsed !== 0) {
+      obj.flashUsed = Math.round(message.flashUsed);
+    }
+    if (message.ramTotal !== 0) {
+      obj.ramTotal = Math.round(message.ramTotal);
+    }
+    if (message.ramUsed !== 0) {
+      obj.ramUsed = Math.round(message.ramUsed);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<FirmwareInfo>, I>>(base?: I): FirmwareInfo {
+    return FirmwareInfo.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<FirmwareInfo>, I>>(object: I): FirmwareInfo {
+    const message = createBaseFirmwareInfo();
+    message.keyboard = object.keyboard ?? "";
+    message.board = object.board ?? "";
+    message.zephyr = object.zephyr ?? "";
+    message.buildId = object.buildId ?? "";
+    message.buildBranch = object.buildBranch ?? "";
+    message.buildNumber = object.buildNumber ?? 0;
+    message.buildDate = object.buildDate ?? "";
+    message.flashTotal = object.flashTotal ?? 0;
+    message.flashUsed = object.flashUsed ?? 0;
+    message.ramTotal = object.ramTotal ?? 0;
+    message.ramUsed = object.ramUsed ?? 0;
     return message;
   },
 };

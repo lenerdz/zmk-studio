@@ -65,7 +65,9 @@ O que não muda: a edição do keymap e o que o app lê do teclado ou grava nele
 Os ícones afetam apenas como as teclas são desenhadas e como o app é hospedado; arrastar
 teclas (abaixo) grava com a mesma requisição do seletor de binding; as abas Lights e
 Display (mais abaixo) acrescentam requisições próprias, e a aba OLED usa as da aba
-Display. As três abas só são usadas quando o firmware tem o que elas editam.
+Display. A aba Diagnostics, e os valores ao vivo da aba OLED, só leem, com duas
+requisições próprias; a aba Files grava com requisições que as outras abas já usam. As
+abas só são usadas quando o firmware tem o que elas editam ou leem.
 
 ## Mover teclas arrastando (a visão Keys)
 
@@ -157,10 +159,18 @@ edita). Ela define o que as telas OLED do teclado fazem:
   compilado.
 
 Tudo é aplicado pelo teclado na hora e guardado por ele alguns segundos depois da última
-mudança; por isso não há nada para salvar: **Save**, **Discard**, **Undo** e **Redo** não
-agem sobre essas configurações. **Restore Stock Settings** também as devolve aos padrões.
-O que cada tela mostra, e onde, é definido na aba OLED (abaixo) quando o firmware tem o
-layout das telas OLED; o idioma do toast e o que a aba OLED não cobre continuam sendo
+mudança; por isso não há nada para salvar: **Save** e **Discard** não agem sobre essas
+configurações. **Undo** e **Redo** agem, enquanto esta aba ou a aba OLED está aberta: os
+botões do cabeçalho, e Ctrl+Z e Ctrl+Y (Ctrl+Shift+Z também), desfazem e refazem o que
+você mudou nas duas abas, que compartilham um único histórico de até 100 passos. Arrastar
+um controle deslizante é um passo, um widget arrastado por qualquer caminho (ou movido com
+as setas) também, e **Restore defaults** também. O histórico começa vazio a cada vez que o
+app se conecta ou lê o teclado de novo (depois de **Discard** ou de **Restore Stock
+Settings**) e é esquecido quando o teclado recusa uma mudança e o app lê as configurações
+de novo. Com qualquer outra aba aberta, Undo e Redo são os das teclas e das luzes, como
+antes. **Restore Stock Settings** também devolve as configurações aos
+padrões. O que cada tela mostra, e onde, é definido na aba OLED (abaixo) quando o firmware
+tem o layout das telas OLED; o idioma do toast e o que a aba OLED não cobre continuam sendo
 escolhidos quando o firmware é compilado.
 
 Ela precisa do módulo [zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix) de
@@ -192,27 +202,38 @@ só a visão, nada é enviado ao teclado.
   painel mostra.
 - **Esconda um widget** com Delete ou com a chave dele, e **mostre-o de novo** clicando nele
   na bandeja dos widgets escondidos ou arrastando-o para a tela.
-- **Escolha a imagem da tela direita** em uma galeria de 26 imagens, em dois grupos: 16
-  animações (Gem, Cat, Head, Spaceman, Pokemon e mais 11: Equalizer, Radar, Heartbeat,
-  Digital rain, Wire cube, Atom, Helix, Warp, Sonar, Bouncing ball, Flame) e 10 imagens
-  fixas (Vim, VIPs Marcos e mais 8: Mountains, Skyline, Circuit, Alien, Heart, Keyboard,
-  Pulsar, Rocket), cada uma tocando no seu cartão, com o tamanho e o tempo de um ciclo.
-  Clique em uma, ou arraste-a para a tela direita, e ajuste o tempo de um ciclo.
+- **Escolha a imagem da tela direita** em uma galeria de 66 imagens, em dois grupos: 36
+  animações (Gem, Cat, Head, Spaceman, Pokemon e mais 31: Equalizer, Radar, Heartbeat,
+  Digital rain, Wire cube, Atom, Helix, Warp, Sonar, Bouncing ball, Flame, Waterfall, Lava
+  lamp, Storm, Snowfall, Jellyfish, Falling blocks, Pong, Invaders, Chomper, Game of Life,
+  Plasma, Spiral, Newton's cradle, Gears, Hourglass, Windmill, Fireworks, Flying saucer,
+  Eye, Key wave) e 30 imagens fixas (Vim, VIPs Marcos e mais 28: Mountains, Skyline,
+  Circuit, Alien, Heart, Keyboard, Pulsar, Rocket, Coffee, Cactus, Lighthouse, Moon cat,
+  Robot, Planet, Castle, Tree, Skull, Sword, Key, Antenna, Potion, Sailboat, Compass,
+  Crown, Cassette, Floppy disk, Moon phases, Mushroom), cada uma tocando no seu cartão,
+  com o tamanho e o tempo de um ciclo. Clique em uma, ou arraste-a para a tela direita, e
+  ajuste o tempo de um ciclo.
 - **Gire a imagem** um quarto de volta para qualquer lado, **corte-a** em um pedaço que se
   seleciona com uma moldura (arraste-a, redimensione-a ou digite os números dela) e escolha
   **como os widgets se misturam com ela**: mostrados em reverso onde estão sobre uma parte
   acesa da imagem, para continuarem legíveis (o padrão), ou somados a ela. O firmware
   desenha a imagem por cima dos widgets, então qualquer widget, inclusive a bateria da
   metade direita, pode ser movido para cima dela.
+- **Acompanhe as telas com valores ao vivo.** Ligue **Live values** e os desenhos seguem o
+  que o teclado diz agora (a bateria de cada metade, o link com a metade esquerda, a saída
+  e o perfil Bluetooth, a camada, a velocidade de digitação) em vez de serem amostras; veja
+  [O que o teclado está fazendo](#o-que-o-teclado-está-fazendo-live-values-e-a-aba-diagnostics).
 - **Veja o que as telas podem mostrar**, com o tamanho de cada coisa, e quais escolhas só
   um novo build do firmware acrescenta (o cachorro Luna, o gato Bongo, os indicadores de
   modificadores, o Raw HID, ...), cada uma com a opção a ligar.
 
 Tudo é aplicado pelo teclado na hora e guardado por ele alguns segundos depois da última
-mudança; por isso não há nada para salvar: **Save**, **Discard**, **Undo** e **Redo** não
-agem sobre o layout. **Restore Stock Settings**, e **Restore defaults** da aba Display,
-devolvem o layout ao que o firmware tinha ao ser compilado. Os desenhos são amostras, não o
-estado ao vivo das telas.
+mudança; por isso não há nada para salvar: **Save** e **Discard** não agem sobre o layout.
+**Undo** e **Redo** (o cabeçalho, Ctrl+Z e Ctrl+Y) desfazem e refazem o que você mudou aqui
+e na aba Display enquanto uma das duas está aberta (veja a aba Display, acima). **Restore
+Stock Settings**, e **Restore defaults** da aba Display, devolvem o layout ao que o
+firmware tinha ao ser compilado. Sem Live values, os desenhos são amostras (uma bateria de
+85%, a camada `QWERTY`, uma velocidade de digitação de 42), não o estado ao vivo das telas.
 
 Ela precisa do que a aba Display precisa, com `CONFIG_KEYPAW_OLED_LAYOUT=y` no build das
 duas metades, e do fork [zmk-nice-oled](https://github.com/lenerdz/zmk-nice-oled) de
@@ -224,6 +245,105 @@ app funciona como antes.
 Como a geometria funciona (o canvas de 68 x 160 pixels, a faixa de 32 x 128 que o painel
 mostra, a posição da imagem), os ids, os arquivos e como os sprites são gerados:
 [`src/oled/README.md`](src/oled/README.md).
+
+## O que o teclado está fazendo (Live values e a aba Diagnostics)
+
+Com um firmware que responde a duas requisições somente de leitura, o app pode perguntar à
+metade esquerda (a que está conectada a ele) o que ela está fazendo e que firmware ela
+executa. Duas coisas as usam:
+
+- **Live values**, uma chave na aba OLED. Ligada, os desenhos das telas seguem o teclado em
+  vez de serem amostras: a bateria de cada metade (a da direita é o que a metade esquerda
+  sabe dela, e aparece escrita como `--%` enquanto não há leitura), o link com a metade
+  esquerda, a saída (o ícone de USB enquanto as teclas vão para o USB; senão, o estado do
+  perfil Bluetooth selecionado: conectado, pareado sem sinal ou não pareado), as marcas e o
+  número do perfil, o nome da camada e a velocidade de digitação (o ponteiro, o número e o
+  gráfico, ao qual o app acrescenta uma leitura por segundo). O toast das luzes não tem o
+  que ler e continua sendo uma amostra.
+- **Diagnostics**, a sexta visão, depois de **Files**. Tem três grupos: o **firmware**
+  (teclado, placa, Zephyr e o build: branch, commit, número da execução do CI e dia), a
+  **memória da metade esquerda** (a flash e a RAM, uma barra cada, com os bytes usados, os
+  bytes livres e uma palavra: sobra bastante, ficando apertada quando menos de 15% está
+  livre, quase cheia quando menos de 3% está) e **agora** (as baterias das duas metades, se
+  a metade direita está conectada, a camada, a velocidade de digitação, para onde vão as
+  teclas e há quanto tempo o teclado está ligado). **Copy the report** coloca tudo isso na
+  área de transferência como texto simples, para colar em uma mensagem ou em uma issue. A
+  aba só lê: nada nela altera o teclado.
+
+Os números são os da metade **esquerda**. A metade direita executa um firmware próprio, que
+o ZMK Studio não consegue consultar; por isso, pelo app, só a bateria e a conexão dela são
+conhecidas. A flash e a RAM são os números que o build imprime (`FLASH` e `RAM`), lidos pelo
+firmware dos símbolos do linker, então podem ser comparados com o log do CI.
+
+**Como ele pergunta.** O teclado não tem notificação para isso; por isso o app pergunta,
+uma requisição de cada vez (a próxima meio segundo, ou um segundo na aba Diagnostics, depois
+da resposta à anterior). Ele só pergunta enquanto a aba que precisa disso está aberta, o
+teclado está conectado e desbloqueado, e **a página está sendo exibida**: uma aba escondida
+do navegador não pergunta nada. Depois de três falhas seguidas ele para e avisa; com Live
+values, desligar e ligar a chave tenta de novo. Cada requisição reinicia o temporizador de
+inatividade do bloqueio do ZMK Studio (um firmware com `CONFIG_ZMK_STUDIO_LOCKING`); por
+isso, **enquanto Live values está ligado, ou a aba Diagnostics está aberta, o teclado não se
+bloqueia sozinho**.
+
+Ele precisa do módulo [zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix) de
+lenerdz (branch `corne-fixes`) com `CONFIG_KEYPAW_DEVICE_STATUS_STUDIO` (ligada por padrão
+com o RPC do ZMK Studio, então na metade central) e do protocolo do
+[zmk-studio-messages](https://github.com/lenerdz/zmk-studio-messages), que acrescenta as
+requisições `get_live_status` (109) e `get_firmware_info` (110) ao subsistema keymap. Com
+qualquer outro firmware a aba Diagnostics não é oferecida (o teclado responde "RPC not
+found" à primeira requisição) e Live values avisa que o firmware não consegue informar o
+estado dele, deixando os desenhos como amostras. O teclado de demonstração responde às
+duas (os números dele são os da metade esquerda do build do corne-zmk); **Demo keyboard (no
+live status)** não responde.
+
+Como funciona, os arquivos e os testes: [`src/live/README.md`](src/live/README.md) e
+[`src/diagnostics/README.md`](src/diagnostics/README.md).
+
+## Tudo em um arquivo (a aba Files)
+
+A visão **Files**, oferecida enquanto o teclado está desbloqueado, coloca o que o app edita
+em um único arquivo de texto e aplica esse arquivo de novo aqui ou em outro teclado:
+
+- **Save to a file** grava um arquivo JSON (`corne-backup-2026-10-25-1530.json`: o nome que o
+  teclado deu a si mesmo, o dia e a hora em UTC) com as partes marcadas: as **teclas**
+  (cada camada: o nome dela e, para cada tecla, o nome do comportamento e os dois
+  parâmetros), as **luzes** (as cores do mapa de cada camada, como `#rrggbb`) e as **telas**
+  (cada configuração de tela, o layout das telas OLED incluído, cada uma com o id e o
+  nome). Ele tem o que o app mostra agora, **com as mudanças que ainda não foram salvas no
+  teclado**. É texto simples, com uma tecla ou uma lista de cores por linha, para poder ser
+  lido, comparado com outro e guardado em um repositório (o teclado de demonstração inteiro
+  tem cerca de 33 KB e 670 linhas).
+- **Open a file** lê um arquivo desses e mostra um **plano** antes de gravar qualquer
+  coisa: para cada parte, o que mudaria (quantas teclas e em quais camadas, quais camadas
+  são renomeadas, quantas cores em quais mapas, quais configurações, de que valor para que
+  valor) e o que não pode ser aplicado e por quê. Uma parte que já é igual à do teclado diz
+  isso e fica desmarcada. Nada é gravado até **Apply the checked parts**.
+- **Como um arquivo é casado com o teclado.** As teclas pela **posição da camada** no keymap
+  e pela posição da tecla, com o comportamento encontrado pelo nome (uma tecla cujo
+  comportamento o teclado não tem, e uma camada com outro número de teclas, ficam como
+  estão e são informadas; um nome de camada longo demais é cortado); as cores pelo **id da
+  camada**, e só quando o arquivo tem o mesmo número de cores por mapa (54 no Corne), então
+  um arquivo feito para outro layout de LEDs não aplica nenhuma cor; as telas pelo **id da
+  configuração**, e um valor fora da faixa que o teclado informou é mantido no extremo mais
+  próximo dela, e o plano diz isso.
+- **Um arquivo que é recusado.** Um que não é JSON válido, não é um backup deste app, tem uma
+  parte que o app não consegue usar (a mensagem diz qual) ou vem de uma versão mais nova do
+  app (um número de formato maior) é recusado, e um arquivo nunca é aplicado pela metade: as
+  teclas são gravadas todas ou nenhuma (se o teclado recusa uma, as que já foram gravadas
+  são devolvidas).
+- **Um arquivo de outro teclado.** Se o nome no arquivo não é o nome que o teclado tem agora,
+  a aba avisa que o arquivo pode falhar ou parecer errado aqui e manda conferir o plano.
+- **Undo e Save.** As teclas de um arquivo são **um passo**, e as cores de cada camada são
+  um passo, do Undo e Redo do cabeçalho (Ctrl+Z e Ctrl+Y), como qualquer mudança nas abas
+  Keys ou Lights. Elas precisam de **Save** no cabeçalho para serem guardadas pelo teclado:
+  depois de aplicá-las, a aba avisa e tem um botão que faz o mesmo que o Save. As telas são
+  um passo do histórico das abas Display e OLED, que é onde desfazê-las, e o teclado as
+  guarda sozinho.
+
+Ela usa apenas requisições que as outras abas usam (o keymap, os mapas de luzes e as
+configurações de tela); por isso não precisa de nada do firmware além delas: uma parte que o
+teclado não tem (as luzes ou as telas) aparece como indisponível, com o motivo, e fica fora
+do arquivo. O formato, o plano e os arquivos: [`src/backup/README.md`](src/backup/README.md).
 
 ## Situação
 
@@ -259,11 +379,39 @@ metade direita arrastada para cima da imagem em reverso e o botão que gira a vi
 tela; o teclado de demonstração sem configurações de tela não tem a aba OLED. Ela é coberta
 por `npm test`. A primeira versão da aba (mover, mostrar e esconder os widgets, e as sete
 imagens do zmk-nice-oled) foi usada no Corne do dono do teclado, que relatou que
-funcionou, sem detalhar cada operação, então nenhuma delas tem confirmação individual. O
-que foi acrescentado depois dela (girar, cortar e misturar a imagem, o reverso onde um
-widget está sobre ela e as 19 imagens novas) **não foi testado em um teclado real**: a
-prévia disso se baseia no código do firmware e nos testes dele em um computador, não na
-tela. O toque não foi testado em nenhum dispositivo.
+funcionou, sem detalhar cada operação, então nenhuma delas tem confirmação individual. A
+segunda (girar, cortar e misturar a imagem, o reverso onde um widget está sobre ela, a
+prévia em pé e as 19 imagens que vieram com ela) também foi usada no mesmo teclado: o dono
+relatou que funcionou perfeitamente e que gostou das animações e das imagens fixas, de novo
+sem detalhar cada operação. O que foi acrescentado depois disso, as 40 imagens novas (tipos
+26 a 65, 20 animações e 20 imagens fixas), **não foi testado em um teclado real**: como elas
+ficam na tela se baseia no código do firmware, nos testes dele em um computador e nos
+sprites que o app desenha a partir das mesmas imagens, não na tela. O toque não foi testado
+em nenhum dispositivo.
+
+Os valores ao vivo, a aba Diagnostics, a aba Files e o Undo e o Redo das abas Display e OLED
+foram testados com o teclado de demonstração, pela mesma moldura (framing) e codificação de
+mensagens usadas com um teclado real, em dois navegadores: o embutido em um editor e um
+Microsoft Edge sem janela (headless) conduzido pelo protocolo DevTools (os valores ao vivo
+precisaram do segundo: o primeiro informa que a página dele está escondida, e nesse caso,
+como projetado, nada é perguntado). **Live values** desenhou a camada, a velocidade (o
+ponteiro, o número e o gráfico), as baterias, a saída e o perfil a partir do teclado, e eles
+mudaram conforme os valores dele mudavam (a camada de `FN1` para `RAISE`, a velocidade de 60
+para 21 palavras por minuto); a aba Diagnostics mostrou o firmware, as duas barras de memória
+e o estado do teclado; o teclado de demonstração sem estado ao vivo não tem a aba
+Diagnostics, e Live values avisa que o firmware não consegue informar o estado dele. A aba
+**Files** gravou um backup (um download de verdade, de 33.466 bytes), leu-o de volta e disse
+que era igual ao teclado nas três partes, aplicou uma cópia editada (duas teclas trocadas e
+uma camada renomeada, duas cores, duas configurações, uma delas mantida no valor mais
+próximo) e mostrou o botão de Save das teclas; a aba Keys mostrou as teclas novas na hora, e
+Ctrl+Z e Ctrl+Y no cabeçalho desfizeram e refizeram as cores e depois as teclas. Na aba
+Display, Ctrl+Z e Ctrl+Y desfizeram e refizeram um controle deslizante e depois as telas do
+arquivo. Tudo isso é coberto por `npm test` (o plano, a gravação com a reversão, o formato,
+o histórico, o poller, o desenho a partir dos valores ao vivo). **Nada disso foi testado em
+um teclado real**: os números que o firmware informa (a flash e a RAM, que vêm de símbolos
+do linker que o firmware não usava antes, o estado do perfil Bluetooth, a bateria da metade
+direita), o que cada widget ao vivo desenha a partir deles e o teclado guardar as telas que
+um arquivo define não estão confirmados.
 
 As teclas `Steno On` e `Steno Off` e a camada STENO foram conferidas em um navegador com o
 teclado de demonstração e na story `Keyboard/Keymap (Corne)` do Storybook, não em um
@@ -296,7 +444,14 @@ edição de uma tecla pelo seletor depois. As regras são cobertas por `npm test
    editar as cores.
 6. Se o firmware tiver configurações de tela, escolha **Display** para ajustar as telas.
 7. Se o firmware tiver o layout das telas OLED, escolha **OLED** para mover os widgets das
-   duas telas e escolher a animação da tela direita.
+   duas telas e escolher a animação da tela direita; ligue **Live values** para vê-los com o
+   que o teclado diz agora.
+8. Escolha **Files** para salvar as teclas, as cores e as telas em um único arquivo, ou
+   para aplicar um.
+9. Se o firmware informar o estado dele, escolha **Diagnostics** para ver o firmware, a
+   flash e a RAM que sobram e o que o teclado está fazendo.
+10. Nas abas Display e OLED, **Undo** e **Redo** do cabeçalho (Ctrl+Z, Ctrl+Y) desfazem o
+    que você mudou nas telas.
 
 ## Desenvolvimento
 
@@ -313,13 +468,15 @@ requisição). Para ver os rótulos das teclas sem um teclado:
 npm run storybook
 ```
 
-Para experimentar o app, incluindo as abas Lights, Display e OLED, sem um teclado, escolha
-**Demo keyboard** na lista de conexões. Ele está sempre presente com `npm run dev`; no app
-publicado, acrescente `?demo` ao endereço (<https://lenerdz.github.io/zmk-studio/?demo>).
-**Demo keyboard (no light maps)** e **Demo keyboard (no display settings)** respondem como
-um firmware sem os mapas e sem as configurações de tela (o segundo não tem nem a aba
-Display nem a aba OLED, porque o layout das telas é feito de configurações de tela). Veja
-[`src/lights/demo/README.md`](src/lights/demo/README.md).
+Para experimentar o app, incluindo as abas Lights, Display, OLED, Files e Diagnostics, sem
+um teclado, escolha **Demo keyboard** na lista de conexões. Ele está sempre presente com
+`npm run dev`; no app publicado, acrescente `?demo` ao endereço
+(<https://lenerdz.github.io/zmk-studio/?demo>). **Demo keyboard (no light maps)**,
+**Demo keyboard (no display settings)** e **Demo keyboard (no live status)** respondem como
+um firmware sem os mapas, sem as configurações de tela e sem o estado ao vivo (o segundo
+não tem nem a aba Display nem a aba OLED, porque o layout das telas é feito de configurações
+de tela; o terceiro não tem a aba Diagnostics, e o Live values dele avisa que o firmware não
+consegue informar o estado dele). Veja [`src/lights/demo/README.md`](src/lights/demo/README.md).
 
 Para executar os testes:
 
@@ -363,8 +520,11 @@ Adicionados: `src/keyboard/bindingDisplay.tsx`, `src/keyboard/BindingLabel.tsx`,
 `src/keyboard/keyDrag.ts`, `src/keyboard/keyDrag.test.ts`, `src/keyboard/useKeyDrag.ts`,
 `src/keyboard/KeyDragGhost.tsx` (arrastar teclas),
 `src/lights/` (a aba Lights, o teclado de demonstração e seus testes),
-`src/display/` (a aba Display e seus testes; o teclado de demonstração responde às requisições dela),
+`src/display/` (a aba Display, o histórico das mudanças dela e seus testes; o teclado de demonstração responde às requisições dela),
 `src/oled/` (a aba OLED, os sprites dela e seus testes; o teclado de demonstração tem as configurações do layout),
+`src/live/` (as duas requisições somente de leitura, o poller e o estado do teclado de demonstração),
+`src/diagnostics/` (a aba Diagnostics), `src/backup/` (a aba Files),
+`src/undoShortcuts.ts` (Ctrl+Z, Ctrl+Y) e o teste dele,
 `scripts/oled-assets/` (transforma as imagens do zmk-nice-oled nesses sprites),
 `src/vendor/zmk-studio-ts-client/` (o cliente RPC com as mensagens do fork),
 `scripts/generate-led-data.mjs`, `.github/workflows/pages.yml`, `README.pt-BR.md`.

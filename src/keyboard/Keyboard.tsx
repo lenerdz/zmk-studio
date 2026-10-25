@@ -1,5 +1,6 @@
 // Modified by the lenerdz/zmk-studio fork: a key of the layer can be dragged onto another
-// one to swap their bindings, or to copy one onto the other (see keyDrag.ts).
+// one to swap their bindings, or to copy one onto the other (see keyDrag.ts), and the
+// keymap is read again when the Files tab has applied a file ("keys.reload").
 import React, {
   SetStateAction,
   useCallback,
@@ -27,6 +28,7 @@ import { Keymap as KeymapComp } from "./Keymap";
 import { useConnectedDeviceData } from "../rpc/useConnectedDeviceData";
 import { ConnectionContext } from "../rpc/ConnectionContext";
 import { UndoRedoContext } from "../undoRedo";
+import { useSub } from "../usePubSub";
 import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
 import { produce } from "immer";
 import { Move } from "lucide-react";
@@ -190,6 +192,18 @@ export default function Keyboard() {
 
   const conn = useContext(ConnectionContext);
   const undoRedo = useContext(UndoRedoContext);
+
+  // The Files tab wrote keys (or took them back): the keyboard has the new keymap.
+  useSub("keys.reload", async () => {
+    if (!conn.conn) {
+      return;
+    }
+
+    const resp = await call_rpc(conn.conn, { keymap: { getKeymap: true } });
+    if (resp?.keymap?.getKeymap) {
+      setKeymap(resp.keymap.getKeymap);
+    }
+  });
 
   useEffect(() => {
     setSelectedLayerIndex(0);

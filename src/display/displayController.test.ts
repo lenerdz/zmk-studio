@@ -28,7 +28,7 @@ afterEach(() => {
 });
 
 /** A controller on a demo keyboard, with the states it reports recorded. */
-function open(options?: DemoDeviceOptions) {
+function open(options?: DemoDeviceOptions, clock?: () => number) {
   const keyboard = connectDemo(options);
   const states: DisplayState[] = [];
   const controller = new DisplayController(
@@ -37,6 +37,7 @@ function open(options?: DemoDeviceOptions) {
     LOADING_DISPLAY_STATE,
     // A short interval: the tests are about the order, not about the time.
     5,
+    clock,
   );
 
   const value = (id: number) =>
@@ -103,6 +104,8 @@ describe("load", () => {
       status: "ready",
       settings: [...DEMO_DISPLAY_SETTINGS],
       busy: false,
+      canUndo: false,
+      canRedo: false,
     };
 
     const controller = new DisplayController(
@@ -111,7 +114,30 @@ describe("load", () => {
       stateWhileLoading(ready),
     );
 
-    expect(controller.getState()).toBe(ready);
+    expect(controller.getState()).toEqual(ready);
+  });
+
+  it("starts with an empty history, whatever the state it is given had", () => {
+    const keyboard = connectDemo();
+    const before: DisplayState = {
+      status: "ready",
+      settings: [...DEMO_DISPLAY_SETTINGS],
+      busy: false,
+      canUndo: true,
+      canRedo: true,
+    };
+
+    const controller = new DisplayController(
+      keyboard.conn,
+      () => {},
+      stateWhileLoading(before),
+    );
+
+    expect(controller.getState()).toMatchObject({
+      settings: [...DEMO_DISPLAY_SETTINGS],
+      canUndo: false,
+      canRedo: false,
+    });
   });
 });
 
@@ -121,6 +147,8 @@ describe("stateWhileLoading", () => {
       status: "ready",
       settings: [...DEMO_DISPLAY_SETTINGS],
       busy: false,
+      canUndo: false,
+      canRedo: false,
     };
 
     expect(stateWhileLoading(ready)).toBe(ready);
@@ -446,5 +474,300 @@ describe("dispose", () => {
     expect(states).toHaveLength(reported);
     // The second change was waiting and never went out.
     expect(device.displayValue(2)).toBe(128);
+  });
+});
+
+describe("undo and redo", () => {
+  /** A clock the test moves by hand: a step is a second after the one before. */
+  function clockOf() {
+    let now = 1_000_000;
+    return { clock: () => now, tick: (ms = 10_000) => void (now += ms) };
+  }
+
+  it("starts with nothing to undo or redo, and does nothing then", async () => {
+    const { controller, device } = open();
+    await controller.load();
+    const writes = countWrites(device);
+
+    controller.undo();
+    controller.redo();
+    await controller.settled();
+
+    expect(controller.getState()).toMatchObject({ canUndo: false, canRedo: false });
+    expect(writes()).toBe(0);
+  });
+
+  it("takes a change back, in the keyboard and on the screen, and does it again", async () => {
+    const { controller, device, value } = open();
+    await controller.load();
+    controller.setValue(1, 200);
+    await controller.settled();
+    expect(controller.getState()).toMatchObject({ canUndo: true, canRedo: false });
+
+    controller.undo();
+
+    // At once, before the keyboard has answered anything.
+    expect(value(1)).toBe(128);
+    expect(controller.getState()).toMatchObject({ canUndo: false, canRedo: true });
+    await controller.settled();
+    expect(device.displayValue(1)).toBe(128);
+
+    controller.redo();
+
+    expect(value(1)).toBe(200);
+    expect(controller.getState()).toMatchObject({ canUndo: true, canRedo: false });
+    await controller.settled();
+    expect(device.displayValue(1)).toBe(200);
+  });
+
+  it("walks several changes back one at a time", async () => {
+    const { clock, tick } = clockOf();
+    const { controller, device, value } = open(undefined, clock);
+    await controller.load();
+
+    controller.setValue(1, 10);
+    tick();
+    controller.setValue(2, 20);
+    tick();
+    controller.setValue(3, 2);
+    await controller.settled();
+
+    controller.undo();
+    expect(value(3)).toBe(0);
+    expect(value(2)).toBe(20);
+    controller.undo();
+    expect(value(2)).toBe(128);
+    expect(value(1)).toBe(10);
+    controller.undo();
+    expect(value(1)).toBe(128);
+    expect(controller.getState().canUndo).toBe(false);
+    await controller.settled();
+    expect(device.displayValue(1)).toBe(128);
+    expect(device.displayValue(2)).toBe(128);
+    expect(device.displayValue(3)).toBe(0);
+
+    controller.redo();
+    controller.redo();
+    controller.redo();
+    await controller.settled();
+
+    expect(device.displayValue(1)).toBe(10);
+    expect(device.displayValue(2)).toBe(20);
+    expect(device.displayValue(3)).toBe(2);
+    expect(controller.getState().canRedo).toBe(false);
+  });
+
+  it("counts the drag of a slider as one change", async () => {
+    const { clock } = clockOf();
+    const { controller, device, value } = open(undefined, clock);
+    await controller.load();
+
+    for (let v = 129; v <= 200; v++) {
+      controller.setValue(1, v);
+    }
+    await controller.settled();
+    controller.undo();
+    await controller.settled();
+
+    expect(value(1)).toBe(128);
+    expect(device.displayValue(1)).toBe(128);
+    expect(controller.getState().canUndo).toBe(false);
+  });
+
+  it("counts a drag that changes first x, then y, then both as one change", async () => {
+    const { clock } = clockOf();
+    const { controller, device, value } = open(undefined, clock);
+    await controller.load();
+
+    // Settings 1 and 2 stand for the x and the y of a widget that is dragged.
+    const group = "move:widget";
+    controller.setValues([[1, 129], [2, 128]], group); // only x changes
+    controller.setValues([[1, 129], [2, 130]], group); // only y changes
+    controller.setValues([[1, 135], [2, 140]], group); // both change
+    await controller.settled();
+    expect(device.displayValue(1)).toBe(135);
+    expect(device.displayValue(2)).toBe(140);
+
+    controller.undo();
+    await controller.settled();
+
+    expect(value(1)).toBe(128);
+    expect(value(2)).toBe(128);
+    expect(device.displayValue(1)).toBe(128);
+    expect(device.displayValue(2)).toBe(128);
+    expect(controller.getState()).toMatchObject({ canUndo: false, canRedo: true });
+
+    controller.redo();
+    await controller.settled();
+
+    expect(device.displayValue(1)).toBe(135);
+    expect(device.displayValue(2)).toBe(140);
+  });
+
+  it("keeps the drag of one widget apart from the drag of another", async () => {
+    const { clock } = clockOf();
+    const { controller, value } = open(undefined, clock);
+    await controller.load();
+
+    controller.setValues([[1, 129], [2, 129]], "move:a");
+    controller.setValues([[3, 1]], "move:b");
+
+    controller.undo();
+    expect(value(3)).toBe(0);
+    expect(value(1)).toBe(129);
+    controller.undo();
+    expect(value(1)).toBe(128);
+    expect(value(2)).toBe(128);
+  });
+
+  it("gives back what was there when the value was held inside the range", async () => {
+    const { clock } = clockOf();
+    const { controller, value } = open(undefined, clock);
+    await controller.load();
+
+    controller.setValue(1, 9999); // held at 255
+    controller.undo();
+
+    expect(value(1)).toBe(128);
+    controller.redo();
+    expect(value(1)).toBe(255);
+  });
+
+  it("forgets what could be done again when something new is changed", async () => {
+    const { clock, tick } = clockOf();
+    const { controller } = open(undefined, clock);
+    await controller.load();
+    controller.setValue(1, 10);
+    tick();
+    controller.undo();
+    expect(controller.getState().canRedo).toBe(true);
+
+    controller.setValue(2, 20);
+
+    expect(controller.getState()).toMatchObject({ canUndo: true, canRedo: false });
+    await controller.settled();
+  });
+
+  it("changes several settings as one step", async () => {
+    const { controller, device, value } = open();
+    await controller.load();
+
+    controller.setValues([
+      [1, 10],
+      [2, 20],
+      [3, 2],
+      [99, 5], // the keyboard has no such setting
+      [4, 30], // the value it already has
+    ]);
+    await controller.settled();
+    expect(device.displayValue(1)).toBe(10);
+    expect(device.displayValue(2)).toBe(20);
+    expect(device.displayValue(3)).toBe(2);
+
+    controller.undo();
+    await controller.settled();
+
+    expect(value(1)).toBe(128);
+    expect(value(2)).toBe(128);
+    expect(value(3)).toBe(0);
+    expect(device.displayValue(1)).toBe(128);
+    expect(device.displayValue(2)).toBe(128);
+    expect(device.displayValue(3)).toBe(0);
+    expect(controller.getState().canUndo).toBe(false);
+  });
+
+  it("does not record a call that changes nothing", async () => {
+    const { controller } = open();
+    await controller.load();
+
+    controller.setValues([]);
+    controller.setValues([[1, 128]]);
+    controller.setValues([[99, 1]]);
+
+    expect(controller.getState().canUndo).toBe(false);
+  });
+
+  it("takes a restore of the defaults back", async () => {
+    const { clock, tick } = clockOf();
+    const { controller, device, value } = open(undefined, clock);
+    await controller.load();
+    controller.setValue(1, 10);
+    tick();
+    controller.setValue(3, 2);
+    await controller.settled();
+
+    await controller.restoreDefaults();
+    expect(value(1)).toBe(128);
+    expect(controller.getState().canUndo).toBe(true);
+
+    controller.undo();
+    await controller.settled();
+
+    expect(value(1)).toBe(10);
+    expect(value(3)).toBe(2);
+    expect(device.displayValue(1)).toBe(10);
+    expect(device.displayValue(3)).toBe(2);
+
+    controller.redo();
+    await controller.settled();
+
+    expect(value(1)).toBe(128);
+    expect(device.displayValue(1)).toBe(128);
+    expect(device.displayValue(3)).toBe(0);
+  });
+
+  it("does not record a restore that changed nothing", async () => {
+    const { controller } = open();
+    await controller.load();
+
+    await controller.restoreDefaults();
+
+    expect(controller.getState().canUndo).toBe(false);
+  });
+
+  it("waits while a restore is going on", async () => {
+    const { controller, value } = open();
+    await controller.load();
+    controller.setValue(1, 10);
+    await controller.settled();
+
+    const restoring = controller.restoreDefaults();
+    controller.undo();
+    await restoring;
+
+    // The undo did nothing then: the restore is the last step, ready to take back.
+    expect(value(1)).toBe(128);
+    expect(controller.getState().canUndo).toBe(true);
+    controller.undo();
+    expect(value(1)).toBe(10);
+  });
+
+  it("forgets the history when the keyboard refuses a change", async () => {
+    const { clock, tick } = clockOf();
+    const { controller } = open({ refuseDisplayWrites: 1 }, clock);
+    await controller.load();
+    controller.setValue(2, 20);
+    await controller.settled();
+    await vi.waitFor(() => expect(controller.getState().problem).toBeDefined());
+    tick();
+
+    expect(controller.getState()).toMatchObject({ canUndo: false, canRedo: false });
+  });
+
+  it("does nothing before the settings were read, or after dispose", async () => {
+    const early = open();
+    early.controller.undo();
+    early.controller.redo();
+    expect(early.states).toHaveLength(0);
+
+    const { controller, states } = open();
+    await controller.load();
+    controller.setValue(1, 10);
+    controller.dispose();
+    const reported = states.length;
+
+    controller.undo();
+
+    expect(states).toHaveLength(reported);
   });
 });

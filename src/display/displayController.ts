@@ -16,6 +16,7 @@ import {
   sendDisplaySetting,
   type DisplaySettingData,
 } from "./displayProtocol";
+import { ChangeHistory, type SettingChange } from "./changeHistory";
 import { planChange } from "./displaySettings";
 import { DisplayWriter } from "./displayWriter";
 
@@ -25,12 +26,18 @@ export interface DisplayState {
   settings: DisplaySettingData[];
   problem?: string;
   busy: boolean;
+  /** There is a change of this controller to take back. */
+  canUndo: boolean;
+  /** A change was taken back and can be done again. */
+  canRedo: boolean;
 }
 
 export const INITIAL_DISPLAY_STATE: DisplayState = {
   status: "idle",
   settings: [],
   busy: false,
+  canUndo: false,
+  canRedo: false,
 };
 
 export const LOADING_DISPLAY_STATE: DisplayState = {
@@ -54,20 +61,29 @@ export class DisplayController {
   private changeCount = 0;
   private readonly changedAt = new Map<number, number>();
 
+  // What the user changed, to take back and do again. It belongs to this
+  // controller: a new connection (or a discard, or a reset) starts it empty.
+  private readonly history = new ChangeHistory();
+  private readonly clock: () => number;
+
   /**
    * @param initial what the tab shows until the keyboard answers: the settings
    *   of the previous controller when the app only reconnects, so the tab does
    *   not blink away.
+   * @param clock milliseconds, to tell the changes of one drag from separate ones
+   *   (the tests give it a fake)
    */
   constructor(
     conn: RpcConnection,
     onChange: (state: DisplayState) => void,
     initial: DisplayState = LOADING_DISPLAY_STATE,
     intervalMs?: number,
+    clock: () => number = Date.now,
   ) {
     this.conn = conn;
     this.onChange = onChange;
-    this.state = initial;
+    this.state = { ...initial, canUndo: false, canRedo: false };
+    this.clock = clock;
     this.writer = new DisplayWriter({
       send: (id, value) => sendDisplaySetting(conn, id, value),
       onError: (e) => {
@@ -127,18 +143,103 @@ export class DisplayController {
    * have, for the value it already has, or while a restore is going on.
    */
   setValue(id: number, value: number): void {
+    this.setValues([[id, value]]);
+  }
+
+  /**
+   * Changes several settings as one step of the history: one Undo takes them all
+   * back. Each one follows the rules of setValue; the ones that would change
+   * nothing are left out.
+   *
+   * @param group what the change is part of, for a gesture that goes on for a
+   *   while and changes different settings along the way (a widget dragged: its
+   *   x in one move, its y in the next): the changes of the same group that
+   *   come close together are one step. Without it, only changes of the same
+   *   settings are joined.
+   */
+  setValues(
+    changes: ReadonlyArray<readonly [id: number, value: number]>,
+    group?: string,
+  ): void {
     if (this.state.status !== "ready" || this.state.busy) {
       return;
     }
 
-    const plan = planChange(this.state.settings, id, value);
-    if (!plan) {
+    let settings = this.state.settings;
+    const made: SettingChange[] = [];
+    for (const [id, value] of changes) {
+      const before = settings.find((s) => s.id === id)?.value;
+      const plan = planChange(settings, id, value);
+      if (!plan || before === undefined) {
+        continue;
+      }
+
+      settings = plan.settings;
+      made.push({ id, before, after: plan.value });
+    }
+
+    if (made.length === 0) {
       return;
     }
 
-    this.changedAt.set(id, ++this.changeCount);
-    this.update({ settings: plan.settings, problem: undefined });
-    this.writer.set(id, plan.value);
+    this.history.record(made, this.clock(), { group });
+    this.send(settings, made.map((c) => [c.id, c.after] as const));
+  }
+
+  /** Takes back the last change (or group of changes) the user made. */
+  undo(): void {
+    this.walk("undo");
+  }
+
+  /** Does again what was taken back. */
+  redo(): void {
+    this.walk("redo");
+  }
+
+  private walk(direction: "undo" | "redo"): void {
+    // While a restore is going on the step stays where it is, for later.
+    if (this.state.status !== "ready" || this.state.busy) {
+      return;
+    }
+
+    const step =
+      direction === "undo" ? this.history.undo() : this.history.redo();
+    if (!step) {
+      return;
+    }
+
+    const side = direction === "undo" ? "before" : "after";
+    let settings = this.state.settings;
+    const writes: Array<readonly [number, number]> = [];
+    for (const change of step) {
+      const plan = planChange(settings, change.id, change[side]);
+      if (plan) {
+        settings = plan.settings;
+        writes.push([change.id, plan.value]);
+      }
+    }
+
+    this.send(settings, writes);
+  }
+
+  /** Shows the settings and hands the changes to the writer. */
+  private send(
+    settings: DisplaySettingData[],
+    writes: ReadonlyArray<readonly [number, number]>,
+  ): void {
+    for (const [id] of writes) {
+      this.changedAt.set(id, ++this.changeCount);
+    }
+
+    this.update({
+      settings,
+      problem: undefined,
+      canUndo: this.history.canUndo,
+      canRedo: this.history.canRedo,
+    });
+    for (const [id, value] of writes) {
+      this.writer.set(id, value);
+    }
   }
 
   /** Resolves when every change made so far has reached the keyboard. */
@@ -157,7 +258,25 @@ export class DisplayController {
       // What was still waiting would undo the restore.
       await this.writer.cancel();
       const settings = await restoreDisplayDefaults(this.conn);
-      this.update({ settings, busy: false });
+
+      // The restore is a step of the history too: Undo brings back what was there.
+      const wasThere = this.state.settings;
+      this.history.record(
+        settings.flatMap((s) => {
+          const before = wasThere.find((mine) => mine.id === s.id)?.value;
+          return before === undefined || before === s.value
+            ? []
+            : [{ id: s.id, before, after: s.value }];
+        }),
+        this.clock(),
+        { joinable: false },
+      );
+      this.update({
+        settings,
+        busy: false,
+        canUndo: this.history.canUndo,
+        canRedo: this.history.canRedo,
+      });
     } catch (e) {
       console.error("Failed to restore the display settings", e);
       const asked = this.changeCount;
@@ -176,7 +295,9 @@ export class DisplayController {
   private async recover(e: unknown): Promise<void> {
     console.error("Failed to change a display setting", e);
     const asked = this.changeCount;
-    this.update({ problem: errorText(e) });
+    // What the history remembers may no longer be what the keyboard has.
+    this.history.clear();
+    this.update({ problem: errorText(e), canUndo: false, canRedo: false });
     await this.reread(asked);
   }
 

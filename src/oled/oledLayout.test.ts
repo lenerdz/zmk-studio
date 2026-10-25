@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { DEMO_DISPLAY_SETTINGS } from "../display/demo/demoDisplay";
 import type { DisplaySettingData } from "../display/displayProtocol";
 import { withValue } from "../display/displaySettings";
+import type { LiveReading } from "../live/liveStatusPoller";
 import { ANIMATION_KINDS, WIDGETS } from "./oledCatalog";
 import {
   describeStatus,
@@ -127,6 +128,59 @@ describe("widgetStates", () => {
 
     expect(states.every((s) => !s.present)).toBe(true);
   });
+
+  describe("with the live reading of the keyboard", () => {
+    const live: LiveReading = {
+      batteryCentral: 61,
+      batteryPeripheral: 47,
+      peripheralConnected: false,
+      layerIndex: 2,
+      layerName: "Nav",
+      wpm: 7,
+      output: "usb",
+      bleProfile: 3,
+      bleState: "connected",
+      usbState: "hid",
+      uptimeS: 1,
+      wpmHistory: [0, 0, 0, 0, 0, 0, 0, 0, 0, 7],
+    };
+
+    it("draws the widgets from it, and from the sample without it", () => {
+      const withLive = (key: string) =>
+        widgetStates(demo(), live).find((s) => s.def.key === key)!;
+
+      expect(withLive("l_layer").parts[0]).toMatchObject({ text: "NAV" });
+      expect(stateOf(demo(), "l_layer").parts[0]).toMatchObject({
+        text: "QWERTY",
+      });
+      expect(withLive("r_battery").parts[0]).toMatchObject({ text: "47%" });
+      expect(withLive("r_link").parts[0]).toMatchObject({
+        sprite: "bt_no_signal",
+      });
+    });
+
+    it("sizes the widget by what is drawn: the battery of three digits is wider", () => {
+      const narrow = widgetStates(demo(), live).find(
+        (s) => s.def.key === "r_battery",
+      )!;
+      const wide = widgetStates(demo(), {
+        ...live,
+        batteryPeripheral: 100,
+      }).find((s) => s.def.key === "r_battery")!;
+
+      expect(narrow.box.w).toBe(24);
+      expect(wide.box.w).toBe(32);
+    });
+
+    it("keeps the position, the switch and the range the keyboard has", () => {
+      const settings = set(demo(), OLED_ID.L_LAYER_X, 12);
+      const layer = widgetStates(settings, live).find(
+        (s) => s.def.key === "l_layer",
+      )!;
+
+      expect(layer).toMatchObject({ x: 12, y: 146, shown: true, present: true });
+    });
+  });
 });
 
 describe("where the widgets of the build are on the screens", () => {
@@ -176,7 +230,7 @@ describe("where the widgets of the build are on the screens", () => {
     const gauge = stateOf(demo(), "l_wpm_gauge");
 
     // y = 70, the needle reaches 5 pixels above: the box starts at 65
-    expect(gauge.rect).toEqual({ x: 0, y: 65, w: 33, h: 21 });
+    expect(gauge.rect).toEqual({ x: 0, y: 65, w: 33, h: 22 });
   });
 
   it("describes how much of a widget the screen shows", () => {
@@ -344,7 +398,7 @@ describe("the picture", () => {
   });
 
   it("offers the kinds inside the range of the keyboard", () => {
-    expect(selectableKinds(demo(), ANIMATION_KINDS)).toHaveLength(26);
+    expect(selectableKinds(demo(), ANIMATION_KINDS)).toHaveLength(66);
 
     const small = demo().map((s) =>
       s.id === OLED_ID.R_ANIM_KIND ? { ...s, max: 2 } : s,

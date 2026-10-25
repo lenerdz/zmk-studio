@@ -9,7 +9,9 @@
  * config/led_colors.dtsi and follow the rules of studio_rpc.c in the
  * lenerdz/zmk-rgb-matrix module (live, saved and default copies of each map,
  * the unsaved flag and its notification). The display (OLED) settings follow
- * display_settings.c of the same module (src/display/demo/demoDisplay.ts).
+ * display_settings.c of the same module (src/display/demo/demoDisplay.ts), and the
+ * live status and the firmware information follow studio_rpc_status.c
+ * (src/live/demo/demoStatus.ts).
  *
  * This is the logic only; demoTransport.ts connects it to the app.
  */
@@ -35,6 +37,7 @@ import {
   corneLayout,
 } from "../../keyboard/corne.mock";
 import { DemoDisplay } from "../../display/demo/demoDisplay";
+import { DemoStatus } from "../../live/demo/demoStatus";
 import { DEMO_DEFAULT_COLORS } from "./demoColors";
 
 export interface DemoDeviceOptions {
@@ -49,6 +52,14 @@ export interface DemoDeviceOptions {
    * true.
    */
   display?: boolean;
+  /**
+   * With false the keyboard behaves like a firmware without the live status and
+   * the firmware information: the requests for them get the "RPC not found"
+   * answer. Default true.
+   */
+  status?: boolean;
+  /** For tests: the clock of the live status, in ms. Default: the real one. */
+  clock?: () => number;
   /** For tests: answer BUSY to the first n requests that set colors. */
   busyResponses?: number;
   /** For tests: refuse the first n requests that change a display setting. */
@@ -84,6 +95,8 @@ function error(condition: ErrorConditions): RequestResponse {
 export class DemoDevice {
   private readonly lights: boolean;
   private readonly display: boolean;
+  private readonly status: boolean;
+  private readonly demoStatus: DemoStatus;
   private busyLeft: number;
   private refuseDisplayLeft: number;
 
@@ -103,6 +116,8 @@ export class DemoDevice {
   constructor(options: DemoDeviceOptions = {}) {
     this.lights = options.lights ?? true;
     this.display = options.display ?? true;
+    this.status = options.status ?? true;
+    this.demoStatus = new DemoStatus(options.clock);
     this.busyLeft = options.busyResponses ?? 0;
     this.refuseDisplayLeft = options.refuseDisplayWrites ?? 0;
   }
@@ -289,9 +304,33 @@ export class DemoDevice {
       }
     }
 
+    if (this.status) {
+      const status = this.statusRequest(request);
+      if (status) {
+        return status;
+      }
+    }
+
     // What the firmware answers for a request it does not have: the demo has no
     // layer moves, additions or removals (the layer count is fixed).
     return error(ErrorConditions.RPC_NOT_FOUND);
+  }
+
+  /** The live status and the firmware information; undefined when `request` is not one. */
+  private statusRequest(request: KeymapRequest): RequestResponse | undefined {
+    if (request.getLiveStatus !== undefined) {
+      return this.keymapReply({
+        getLiveStatus: this.demoStatus.live(
+          this.keymap.layers.map((layer) => layer.name),
+        ),
+      });
+    }
+
+    if (request.getFirmwareInfo !== undefined) {
+      return this.keymapReply({ getFirmwareInfo: this.demoStatus.firmware() });
+    }
+
+    return undefined;
   }
 
   /** The requests of the display settings; undefined when `request` is not one. */

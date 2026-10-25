@@ -200,7 +200,9 @@ export const DisplayTab = () => {
           <p className="opacity-70">
             Every change is applied by the keyboard at once and kept by it a few
             seconds later, so there is nothing to save here (Save and Discard in
-            the header are for the keys and the lights). A change turns the
+            the header are for the keys and the lights). Undo and Redo in the
+            header (Ctrl+Z and Ctrl+Y) take back and redo what you changed in
+            this tab and in the OLED tab. A change turns the
             screens on for a while, so you can see it. The right screen receives
             its settings from the left half, which can take a few seconds after
             it connects.

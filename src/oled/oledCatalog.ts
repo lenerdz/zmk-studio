@@ -10,9 +10,14 @@
  *
  * Every widget is described by a few parts (a sprite, some text, a rectangle, a
  * line) placed the way the firmware draws them, relative to the position the
- * setting gives. The drawing is a sample reading, not the live state of the
- * keyboard: the app has no way to ask the screen what it shows.
+ * setting gives. The drawing is a sample reading, unless the context carries
+ * the live status of the keyboard (the preview of the OLED tab): then the
+ * widgets that show the battery, the link, the output, the profile, the layer
+ * and the typing speed are drawn from it, the way the firmware draws them from
+ * the same readings. The app cannot ask the screen what it shows; it asks the
+ * keyboard what the screen draws from.
  */
+import type { LiveReading } from "../live/liveStatusPoller";
 import {
   FONTS,
   SPRITES,
@@ -96,6 +101,8 @@ export interface ArtContext {
   kind: number;
   /** The quarter turns clockwise of the picture of the right screen (0 when missing). */
   turn?: number;
+  /** What the keyboard says right now; without it the widgets are drawn from a sample reading. */
+  live?: LiveReading;
 }
 
 export interface WidgetIds {
@@ -377,6 +384,326 @@ export const ANIMATION_KINDS: readonly AnimationKind[] = [
     cycleMs: null,
     option: null,
   },
+  {
+    value: 26,
+    sprite: "waterfall",
+    label: "Waterfall",
+    hint: "Water that falls over a ledge between two cliffs, with mist and a pool that ripples. It is as tall as the screen.",
+    cycleMs: 1600,
+    option: null,
+  },
+  {
+    value: 27,
+    sprite: "lava",
+    label: "Lava lamp",
+    hint: "A lava lamp: blobs of wax that rise, stretch and sink again in a glass with a base. It is as tall as the screen.",
+    cycleMs: 3200,
+    option: null,
+  },
+  {
+    value: 28,
+    sprite: "lightning",
+    label: "Storm",
+    hint: "A storm: a cloud, slanting rain, and two bolts that flash one after the other.",
+    cycleMs: 1600,
+    option: null,
+  },
+  {
+    value: 29,
+    sprite: "snow",
+    label: "Snowfall",
+    hint: "Snow that falls past a pine tree on a hill, under a moon.",
+    cycleMs: 2400,
+    option: null,
+  },
+  {
+    value: 30,
+    sprite: "jellyfish",
+    label: "Jellyfish",
+    hint: "A jellyfish that pulses, with tentacles that wave and a few specks that float up.",
+    cycleMs: 1600,
+    option: null,
+  },
+  {
+    value: 31,
+    sprite: "tetris",
+    label: "Falling blocks",
+    hint: "Pieces that fall down a board of eight columns, turning on the way, like the screen saver of a falling blocks game (they pass each other and leave at the bottom).",
+    cycleMs: 2000,
+    option: null,
+  },
+  {
+    value: 32,
+    sprite: "pong",
+    label: "Pong",
+    hint: "A game of pong played from top to bottom: two paddles that follow the ball, the net and the score.",
+    cycleMs: 1500,
+    option: null,
+  },
+  {
+    value: 33,
+    sprite: "invaders",
+    label: "Invaders",
+    hint: "A formation of aliens that marches from side to side, a cannon that shoots one down and a saucer that crosses the top.",
+    cycleMs: 1600,
+    option: null,
+  },
+  {
+    value: 34,
+    sprite: "pacman",
+    label: "Chomper",
+    hint: "A disc with a mouth eats a row of dots chasing a scared ghost, and a ghost chases it on the next row.",
+    cycleMs: 1600,
+    option: null,
+  },
+  {
+    value: 35,
+    sprite: "life",
+    label: "Game of Life",
+    hint: "Conway's Game of Life on a small field: a pulsar, a pentadecathlon, a toad, a beacon, blinkers and some still lifes; everything is back where it started after 30 generations, which is the loop.",
+    cycleMs: 3000,
+    option: null,
+  },
+  {
+    value: 36,
+    sprite: "plasma",
+    label: "Plasma",
+    hint: "The plasma of the old demos: waves that add up, drawn with an ordered dither.",
+    cycleMs: 2400,
+    option: null,
+  },
+  {
+    value: 37,
+    sprite: "spiral",
+    label: "Spiral",
+    hint: "A spiral with three arms that turns, inside a ring.",
+    cycleMs: 1600,
+    option: null,
+  },
+  {
+    value: 38,
+    sprite: "newton",
+    label: "Newton's cradle",
+    hint: "Newton's cradle: the ball on one side swings in, the one on the other side swings out and back, and the first answers.",
+    cycleMs: 1600,
+    option: null,
+  },
+  {
+    value: 39,
+    sprite: "gears",
+    label: "Gears",
+    hint: "Two gears that mesh and turn.",
+    cycleMs: 1000,
+    option: null,
+  },
+  {
+    value: 40,
+    sprite: "hourglass",
+    label: "Hourglass",
+    hint: "An hourglass: the sand runs down through the neck and, at the end of every cycle, the glass turns over end to end.",
+    cycleMs: 2000,
+    option: null,
+  },
+  {
+    value: 41,
+    sprite: "windmill",
+    label: "Windmill",
+    hint: "A windmill whose sails turn under clouds that drift across and come back around.",
+    cycleMs: 1600,
+    option: null,
+  },
+  {
+    value: 42,
+    sprite: "fireworks",
+    label: "Fireworks",
+    hint: "Rockets that rise and burst into sparks that fall; three bursts take turns, so there is always something going off.",
+    cycleMs: 2400,
+    option: null,
+  },
+  {
+    value: 43,
+    sprite: "ufo",
+    label: "Flying saucer",
+    hint: "A flying saucer that hovers over a field and lifts a cow in its beam, then puts it back.",
+    cycleMs: 1600,
+    option: null,
+  },
+  {
+    value: 44,
+    sprite: "eye",
+    label: "Eye",
+    hint: "An eye that looks around in a figure of eight and blinks once per cycle.",
+    cycleMs: 2400,
+    option: null,
+  },
+  {
+    value: 45,
+    sprite: "keywave",
+    label: "Key wave",
+    hint: "A wave of key presses that sweeps across a field of keycaps.",
+    cycleMs: 2400,
+    option: null,
+  },
+  {
+    value: 46,
+    sprite: "coffee",
+    label: "Coffee",
+    hint: "A cup of coffee that says ZMK, with steam, on its saucer. A still image.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 47,
+    sprite: "cactus",
+    label: "Cactus",
+    hint: "A saguaro cactus in the desert, with the sun low over the dunes. A still image.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 48,
+    sprite: "lighthouse",
+    label: "Lighthouse",
+    hint: "A lighthouse on its rock, sweeping the night with its beam. A still image as tall as the screen.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 49,
+    sprite: "moon_cat",
+    label: "Moon cat",
+    hint: "A cat sitting on a wall in front of the full moon, seen from behind. A still image.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 50,
+    sprite: "robot",
+    label: "Robot",
+    hint: "A friendly robot with an antenna. A still image.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 51,
+    sprite: "planet",
+    label: "Planet",
+    hint: "A ringed planet with a small moon, among the stars. A still image.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 52,
+    sprite: "castle",
+    label: "Castle",
+    hint: "A castle with two towers and a keep, under the moon. A still image.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 53,
+    sprite: "tree",
+    label: "Tree",
+    hint: "A big tree on a hill, with apples, a hollow and a pair of birds. A still image as tall as the screen.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 54,
+    sprite: "skull",
+    label: "Skull",
+    hint: "A skull with crossed bones. A still image.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 55,
+    sprite: "sword",
+    label: "Sword",
+    hint: "A long sword with a gem in the guard. A still image as tall as the screen.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 56,
+    sprite: "key",
+    label: "Key",
+    hint: "An old key with a three-lobed bow. A still image.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 57,
+    sprite: "antenna",
+    label: "Antenna",
+    hint: "A radio tower sending its signal out. A still image as tall as the screen.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 58,
+    sprite: "potion",
+    label: "Potion",
+    hint: "A round flask with a bubbling potion and a heart. A still image.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 59,
+    sprite: "sailboat",
+    label: "Sailboat",
+    hint: "A sailboat on the waves, with the sun and a gull. A still image.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 60,
+    sprite: "compass",
+    label: "Compass",
+    hint: "A compass rose inside two rings. A still image.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 61,
+    sprite: "crown",
+    label: "Crown",
+    hint: "A crown with five points and jewels. A still image.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 62,
+    sprite: "cassette",
+    label: "Cassette",
+    hint: "An audio cassette, with a label that says MIX and its two reels. A still image.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 63,
+    sprite: "floppy",
+    label: "Floppy disk",
+    hint: "A floppy disk, with its metal shutter and a label that says ZMK. A still image.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 64,
+    sprite: "phases",
+    label: "Moon phases",
+    hint: "The eight phases of the moon, one above the other. A still image as tall as the screen.",
+    cycleMs: null,
+    option: null,
+  },
+  {
+    value: 65,
+    sprite: "mushroom",
+    label: "Mushroom",
+    hint: "A mushroom with a spotted cap and a face, as in the old games. A still image.",
+    cycleMs: null,
+    option: null,
+  },
 ];
 
 /** The kind with this value; the first one for a value this app does not know. */
@@ -407,69 +734,197 @@ export function spriteFrame(frames: number, frame: number): number {
   return frames > 1 ? ((frame % frames) + frames) % frames : 0;
 }
 
-/** The output of the left screen is drawn as the USB icon, which is the anchor of its position. */
-const OUTPUT_ART = (): Part[] => [sprite("usb")];
+/**
+ * Where the Bluetooth icons of the left screen are, from the USB icon, which is
+ * the anchor of the position: the options of the build give the USB icon x 0 and
+ * y 34, the Bluetooth icon x 4 and y 32 and the icon of a profile that is not
+ * paired x -1 and y 32 (CONFIG_NICE_OLED_WIDGET_OUTPUT_*_CUSTOM_X and _Y).
+ */
+const BT_FROM_USB = { x: 4, y: -2 };
+const UNBONDED_FROM_USB = { x: -1, y: -2 };
+
+/**
+ * The output of the left screen. The USB icon is the anchor of its position, and
+ * the icon of a Bluetooth profile keeps its distance from it. Like the firmware,
+ * it draws the USB icon while the keys go to USB and, otherwise, the state of the
+ * selected profile: connected, paired but without signal, or not paired.
+ */
+export const OUTPUT_ART = ({ live }: ArtContext): Part[] => {
+  if (!live || live.output === "usb") {
+    return [sprite("usb")];
+  }
+
+  if (live.bleState === "open") {
+    return [sprite("bt_unbonded", UNBONDED_FROM_USB.x, UNBONDED_FROM_USB.y)];
+  }
+
+  return [
+    sprite(
+      live.bleState === "connected" ? "bt" : "bt_no_signal",
+      BT_FROM_USB.x,
+      BT_FROM_USB.y,
+    ),
+  ];
+};
+
+/**
+ * What the screen writes for a battery: a level it has not received yet is 0,
+ * because the screen starts with 0 in every battery.
+ */
+const shownLevel = (level: number | null): number => level ?? 0;
+
+/**
+ * The battery of the right screen. It is the level of that half, which the
+ * left half only knows when the right one has reported it: without it the
+ * preview cannot say, and writes dashes.
+ */
+export const R_BATTERY_ART = ({ live }: ArtContext): Part[] => [
+  text(
+    "pixel16",
+    live
+      ? live.batteryPeripheral === null
+        ? "--%"
+        : `${live.batteryPeripheral}%`
+      : "85%",
+  ),
+];
+
+/** The link of the right screen: filled while the left half is connected, crossed out when it is not. */
+export const R_LINK_ART = ({ live }: ArtContext): Part[] => [
+  sprite(live && !live.peripheralConnected ? "bt_no_signal" : "bt"),
+];
 
 /**
  * The battery of the left screen has two looks. The text with the level of both
  * halves (the build's central battery mode, which puts it at y = 19) and the
  * big percentage of the other builds.
  */
-const L_BATTERY_ART = ({ defaultY }: ArtContext): Part[] =>
-  defaultY === 19 ? [text("unscii8", "85  90")] : [text("pixel16", "85%")];
+export const L_BATTERY_ART = ({ defaultY, live }: ArtContext): Part[] => {
+  const central = live ? shownLevel(live.batteryCentral) : 85;
+  const peripheral = live ? shownLevel(live.batteryPeripheral) : 90;
+
+  return defaultY === 19
+    ? [text("unscii8", `${central}  ${peripheral}`)]
+    : [text("pixel16", `${central}%`)];
+};
+
+/** How many Bluetooth profiles the marks draw (CONFIG_BT_MAX_PAIRED of ZMK). */
+const PROFILE_COUNT = 5;
+
+/** The selected profile, held inside the marks (the first one without a reading). */
+const selectedProfile = (live?: LiveReading): number =>
+  Math.min(Math.max(live?.bleProfile ?? 0, 0), PROFILE_COUNT - 1);
 
 /**
  * The profile marks have two looks, told by the position the build has: small
- * dots (31 x 3, a mark of 3 x 3 on the selected one) or five boxes of 12 x 12
- * (the build's "big" variant, which puts it at y = 129).
+ * dots (31 x 3, a mark of 3 x 3 on the selected one, 7 pixels from the one
+ * before) or five boxes of 12 x 12, 14 pixels apart (the build's "big" variant,
+ * which puts it at y = 129).
  */
-const L_PROFILE_ART = ({ defaultY }: ArtContext): Part[] =>
-  defaultY === 129
-    ? [
-        sprite("profile_active", 0, 0),
-        sprite("profile", 14, 0),
-        sprite("profile", 28, 0),
-        sprite("profile", 42, 0),
-        sprite("profile", 56, 0),
-      ]
-    : [sprite("profiles"), { type: "rect", x: 0, y: 0, w: 3, h: 3 }];
+export const L_PROFILE_ART = ({ defaultY, live }: ArtContext): Part[] => {
+  const selected = selectedProfile(live);
 
-/**
- * The gauge and the needle of a reading in the middle of the range. The needle
- * turns around a point 12 pixels from the left edge of the gauge and 20 pixels
- * under its top, from 5 to 25 pixels away from it.
- */
-const GAUGE_ART = (): Part[] => [
-  sprite("gauge"),
-  {
-    type: "line",
-    points: [
-      [12, 15],
-      [12, -5],
-    ],
-    width: 1,
-  },
+  return defaultY === 129
+    ? Array.from({ length: PROFILE_COUNT }, (_, i) =>
+        sprite(i === selected ? "profile_active" : "profile", i * 14, 0),
+      )
+    : [
+        sprite("profiles"),
+        { type: "rect", x: selected * 7, y: 0, w: 3, h: 3 },
+      ];
+};
+
+/** The number of the selected profile, from 1. */
+export const L_PROFILE_NUM_ART = ({ live }: ArtContext): Part[] => [
+  text("pixel8", String(selectedProfile(live) + 1)),
+];
+
+/** The name of a layer the way the screen writes it: in capitals, cut at nine letters. */
+export function layerLabel(index: number, name: string): string {
+  return name === "" ? `Layer ${index}` : name.slice(0, 9).toUpperCase();
+}
+
+/** The name of the layer of the left screen. */
+export const L_LAYER_ART = ({ live }: ArtContext): Part[] => [
+  text("pixel16", live ? layerLabel(live.layerIndex, live.layerName) : "QWERTY"),
 ];
 
 /**
- * The grid of the graph and the end of the line of the readings. The firmware
- * starts the line 35 pixels left of the grid, so only the last readings are on
- * the grid, and the part of the grid the screen shows is its left half.
+ * The line of the needle for a speed, relative to the gauge: the firmware turns
+ * it around a point 12 pixels from the left edge of the gauge and 20 under its
+ * top, from 5 to 25 pixels away from it, from 225 degrees (the speed 0) to 315
+ * (the maximum, 100 words per minute unless the build changes it). It does the
+ * sums the way wpm.c does them, in single precision for the angles and with
+ * the pixels cut the way a C cast cuts them: at the middle of the range the
+ * needle starts at y 16, because the sine of that angle is a hair short of -1
+ * and 5 times it is cut to -4. Without a reading the needle is in the middle.
  */
-const GRAPH_ART = (): Part[] => [
+export function needlePoints(
+  wpm: number,
+): [[number, number], [number, number]] {
+  const f = Math.fround;
+  const max = 100;
+  const value = Math.min(Math.max(Math.trunc(wpm), 0), max);
+  const degrees = f(225 + f(f(value / max) * 90));
+  const radians = f(degrees * (3.14159 / 180));
+  const radius = f(25.45585);
+  const at = (length: number): [number, number] => [
+    12 + Math.trunc(length * Math.cos(radians)),
+    20 + Math.trunc(length * Math.sin(radians)),
+  ];
+
+  return [at(5), at(radius)];
+}
+
+/** The gauge and the needle, in the middle of the range unless the context has a reading. */
+export const GAUGE_ART = ({ live }: ArtContext): Part[] => [
+  sprite("gauge"),
+  { type: "line", points: needlePoints(live ? live.wpm : 50), width: 1 },
+];
+
+/**
+ * The line of the graph for the last readings of the speed, relative to the
+ * grid. The firmware starts the line 35 pixels left of the grid, so only the
+ * last five readings are on the grid (the part of the grid the screen shows is
+ * its left half), and those are the ones drawn here; the position is the one
+ * the build gives the grid (x -1), where the pixels are cut. Each reading is
+ * held to the range 0 to 100 and scaled to 32 pixels. The sample is the one of
+ * a keyboard that has been used a little.
+ */
+const SAMPLE_WPM = [0, 0, 0, 0, 0, 20, 58, 36, 83, 64];
+
+export function graphPoints(
+  history: readonly number[],
+  gridX = -1,
+): Array<[number, number]> {
+  return history.slice(-5).map((reading, j): [number, number] => {
+    const i = history.length - 5 + j;
+    const x = Math.trunc(gridX - 35 + i * 7.4) - gridX;
+    const value = Math.min(Math.max(reading, 0), 100);
+
+    return [x, 32 - Math.floor((value * 32) / 100)];
+  });
+}
+
+/** The grid of the graph and the end of the line of the readings. */
+export const GRAPH_ART = ({ defaultX, live }: ArtContext): Part[] => [
   sprite("grid"),
   {
     type: "line",
-    points: [
-      [2, 26],
-      [9, 14],
-      [16, 21],
-      [24, 6],
-      [31, 12],
-    ],
+    points: graphPoints(live ? live.wpmHistory : SAMPLE_WPM, defaultX),
     width: 2,
   },
 ];
+
+/** The typing speed as a number, which the screen moves right by the digits it lacks. */
+export const L_WPM_NUMBER_ART = ({ live }: ArtContext): Part[] => {
+  if (!live) {
+    return [text("pixel12", "42", 2, 0)];
+  }
+
+  const dx = live.wpm < 10 ? 5 : live.wpm < 100 ? 2 : 0;
+  return [text("pixel12", String(live.wpm), dx, 0)];
+};
 
 /**
  * The widgets that have a place of their own, in the order the editor lists
@@ -510,7 +965,7 @@ export const WIDGETS: readonly WidgetDef[] = [
       x: OLED_ID.R_BATTERY_X,
       y: OLED_ID.R_BATTERY_Y,
     },
-    art: () => [text("pixel16", "85%")],
+    art: R_BATTERY_ART,
     needs: "always present",
   },
   {
@@ -524,7 +979,7 @@ export const WIDGETS: readonly WidgetDef[] = [
       x: OLED_ID.R_LINK_X,
       y: OLED_ID.R_LINK_Y,
     },
-    art: () => [sprite("bt")],
+    art: R_LINK_ART,
     needs: "always present",
   },
   {
@@ -590,7 +1045,7 @@ export const WIDGETS: readonly WidgetDef[] = [
       x: OLED_ID.L_PROFILE_NUM_X,
       y: OLED_ID.L_PROFILE_NUM_Y,
     },
-    art: () => [text("pixel8", "1")],
+    art: L_PROFILE_NUM_ART,
     needs: "always present",
   },
   {
@@ -604,7 +1059,7 @@ export const WIDGETS: readonly WidgetDef[] = [
       x: OLED_ID.L_LAYER_X,
       y: OLED_ID.L_LAYER_Y,
     },
-    art: () => [text("pixel16", "QWERTY")],
+    art: L_LAYER_ART,
     needs: "CONFIG_NICE_OLED_WIDGET_LAYER=y in corne_left.conf",
   },
   {
@@ -632,7 +1087,7 @@ export const WIDGETS: readonly WidgetDef[] = [
       x: OLED_ID.L_WPM_NUMBER_X,
       y: OLED_ID.L_WPM_NUMBER_Y,
     },
-    art: () => [text("pixel12", "42", 2, 0)],
+    art: L_WPM_NUMBER_ART,
     needs: "CONFIG_NICE_OLED_WIDGET_WPM_NUMBER=y in corne_left.conf",
   },
   {

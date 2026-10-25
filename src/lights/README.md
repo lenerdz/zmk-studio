@@ -33,8 +33,9 @@ offered and the app works like the original ZMK Studio.
 The edits live in the keyboard's memory until you press **Save** (top right), which saves
 the light maps together with the keymap; **Discard** throws away both. Every stroke,
 fill and restore is one step of the **Undo** and **Redo** of the header, mixed in order
-with the key edits. **Restore Stock Settings** (menu of the connected keyboard) also puts
-the colors back to the defaults the firmware was built with.
+with the key edits (the colors that a file applied in the [Files tab](../backup/README.md)
+sets are one step per layer). **Restore Stock Settings** (menu of the connected keyboard)
+also puts the colors back to the defaults the firmware was built with.
 
 ## How the colors travel
 
@@ -79,8 +80,8 @@ ZMK Studio holds 30 and drops the bytes that do not fit.
 | `useKeyboardView.ts` | Loads the physical layout, the keymap and the behaviors to draw the keys |
 | `exportDtsi.ts`, `dtsiTemplate.ts` | The text of `led_colors.dtsi` (the template is generated) |
 | `keyNames.ts`, `text.ts` | The names of the keys for the comments of the exported file, in plain ASCII |
-| `ViewSwitch.tsx` | The Keys, Lights, Display and OLED buttons of the header |
-| `appViews.ts` | Which tabs a keyboard offers (Lights, Display and OLED only when the firmware has what they edit) and which one to show |
+| `ViewSwitch.tsx` | The Keys, Lights, Display, OLED, Files and Diagnostics buttons of the header |
+| `appViews.ts` | Which tabs a keyboard offers (Lights, Display, OLED and Diagnostics only when the firmware has what they edit or read; Files for any keyboard that is connected and unlocked) and which one to show |
 | `stockSettingsText.ts` | The text of the confirmation of Restore Stock Settings (what it puts back) |
 | `demo/` | A keyboard that lives in the browser (see [`demo/README.md`](demo/README.md)) |
 | `testUtils.ts` | A helper of the tests; the app does not use it |
