@@ -369,9 +369,26 @@ describe("the settings of the screens", () => {
   const settings = () => DEMO_DISPLAY_SETTINGS.map((s) => ({ ...s }));
 
   describe("labelOfSetting", () => {
-    it("is the name of the Display tab for ids 1 to 6", () => {
+    it("is the name of the Display tab for ids 1 to 15", () => {
       expect(labelOfSetting(1)).toBe("Left screen contrast");
       expect(labelOfSetting(5)).toBe("Light toast on the right screen");
+      expect(labelOfSetting(7)).toBe("Turn the key lights off");
+      expect(labelOfSetting(11)).toBe("Pixel shift");
+    });
+
+    it("says which part a time or a distance belongs to, because the list mixes the groups", () => {
+      expect(labelOfSetting(4)).toBe("Screen off: time without activity");
+      expect(labelOfSetting(8)).toBe("Key lights off: time without activity");
+      expect(labelOfSetting(10)).toBe("Underglow off: time without activity");
+      expect(labelOfSetting(12)).toBe("Pixel shift: time between two moves");
+      expect(labelOfSetting(13)).toBe("Pixel shift: distance");
+      expect(labelOfSetting(15)).toBe("Dimming: contrast of a dimmed screen");
+    });
+
+    it("gives every setting of the Display tab a label of its own", () => {
+      const labels = Array.from({ length: 15 }, (_, i) => labelOfSetting(i + 1));
+
+      expect(new Set(labels).size).toBe(15);
     });
 
     it("is the widget and the part of it for the OLED ids", () => {
@@ -495,6 +512,40 @@ describe("the settings of the screens", () => {
       expect(plan.problems).toEqual([
         "The keyboard has no settings Something new, Setting 301: left out.",
       ]);
+    });
+
+    it("leaves out a picture that was retired, and says so: the keyboard would refuse it", () => {
+      // A file saved before the still images were taken out: kind 52 was the castle
+      const file = fileOf((f) => (setting(f, OLED_ID.R_ANIM_KIND).value = 52));
+
+      const plan = planScreens(file, settings());
+
+      expect(plan.changes).toEqual([]);
+      expect(plan.compared).toBe(DEMO_DISPLAY_SETTINGS.length - 1);
+      expect(plan.problems).toEqual([
+        "The picture of the file (kind 52) was taken out of the firmware: the keyboard keeps the one it has.",
+      ]);
+    });
+
+    it("still applies the rest of a file that has a retired picture", () => {
+      const file = fileOf((f) => {
+        setting(f, OLED_ID.R_ANIM_KIND).value = 5;
+        setting(f, 1).value = 10;
+      });
+
+      const plan = planScreens(file, settings());
+
+      expect(plan.changes.map((c) => c.id)).toEqual([1]);
+    });
+
+    it("keeps a picture that is still there", () => {
+      // Kind 18 is the mountains, one of the six still images that were kept
+      const file = fileOf((f) => (setting(f, OLED_ID.R_ANIM_KIND).value = 18));
+
+      const plan = planScreens(file, settings());
+
+      expect(plan.changes.map((c) => c.id)).toEqual([OLED_ID.R_ANIM_KIND]);
+      expect(plan.problems).toEqual([]);
     });
 
     it("says one setting in the singular, and cuts a long list", () => {

@@ -12,7 +12,10 @@ import {
   describeRange,
   describeSetting,
   DISPLAY_SETTING,
+  formatDimTime,
   formatMilliseconds,
+  formatPercent,
+  formatPixels,
   formatSeconds,
   formatSetting,
   formatSettingValue,
@@ -49,13 +52,27 @@ describe("the settings the app knows", () => {
     expect(describeSetting(DISPLAY_SETTING.OFF_AFTER_S).kind).toBe("slider");
     expect(describeSetting(DISPLAY_SETTING.TOAST).kind).toBe("toggle");
     expect(describeSetting(DISPLAY_SETTING.TOAST_MS).kind).toBe("slider");
+    expect(describeSetting(DISPLAY_SETTING.KEYS_OFF_MODE).kind).toBe("choice");
+    expect(describeSetting(DISPLAY_SETTING.KEYS_OFF_AFTER_S).kind).toBe(
+      "slider",
+    );
+    expect(describeSetting(DISPLAY_SETTING.GLOW_OFF_MODE).kind).toBe("choice");
+    expect(describeSetting(DISPLAY_SETTING.GLOW_OFF_AFTER_S).kind).toBe(
+      "slider",
+    );
+    expect(describeSetting(DISPLAY_SETTING.SHIFT).kind).toBe("toggle");
+    expect(describeSetting(DISPLAY_SETTING.SHIFT_EVERY_S).kind).toBe("slider");
+    expect(describeSetting(DISPLAY_SETTING.SHIFT_PX).kind).toBe("slider");
+    expect(describeSetting(DISPLAY_SETTING.DIM_AFTER_S).kind).toBe("slider");
+    expect(describeSetting(DISPLAY_SETTING.DIM_LEVEL).kind).toBe("slider");
   });
 
   it("makes up a slider for an id it does not know", () => {
-    expect(isKnownSetting(9)).toBe(false);
-    expect(describeSetting(9)).toMatchObject({
-      id: 9,
-      label: "Setting 9",
+    // Ids 1 to 15 are all known; 0 is the one below them that nothing uses
+    expect(isKnownSetting(0)).toBe(false);
+    expect(describeSetting(0)).toMatchObject({
+      id: 0,
+      label: "Setting 0",
       kind: "slider",
       step: 1,
     });
@@ -69,6 +86,17 @@ describe("the settings the app knows", () => {
       { value: 1, label: "Only on battery" },
       { value: 2, label: "Always" },
     ]);
+  });
+
+  it("offers the same three ways for the key lights and the underglow", () => {
+    const screen = describeSetting(DISPLAY_SETTING.OFF_MODE).choices;
+
+    expect(describeSetting(DISPLAY_SETTING.KEYS_OFF_MODE).choices).toEqual(
+      screen,
+    );
+    expect(describeSetting(DISPLAY_SETTING.GLOW_OFF_MODE).choices).toEqual(
+      screen,
+    );
   });
 
   it("keeps every step inside the range the firmware gives", () => {
@@ -95,6 +123,14 @@ describe("writing values", () => {
     expect(formatSeconds(3661)).toBe("1 h 1 min 1 s");
   });
 
+  it("writes pixels, percent and the time before dimming", () => {
+    expect(formatPixels(1)).toBe("1 px");
+    expect(formatPixels(4)).toBe("4 px");
+    expect(formatPercent(25)).toBe("25 %");
+    expect(formatDimTime(0)).toBe("Never");
+    expect(formatDimTime(120)).toBe("2 min");
+  });
+
   it("writes milliseconds as seconds", () => {
     expect(formatMilliseconds(500)).toBe("0.5 s");
     expect(formatMilliseconds(1500)).toBe("1.5 s");
@@ -119,8 +155,23 @@ describe("writing values", () => {
     expect(formatSettingValue(DISPLAY_SETTING.OFF_MODE, 7)).toBe("7");
   });
 
+  it("writes the settings of the lights and of the burn-in protection", () => {
+    expect(formatSettingValue(DISPLAY_SETTING.KEYS_OFF_MODE, 1)).toBe(
+      "Only on battery",
+    );
+    expect(formatSettingValue(DISPLAY_SETTING.GLOW_OFF_AFTER_S, 300)).toBe(
+      "5 min",
+    );
+    expect(formatSettingValue(DISPLAY_SETTING.SHIFT, 1)).toBe("On");
+    expect(formatSettingValue(DISPLAY_SETTING.SHIFT_EVERY_S, 60)).toBe("1 min");
+    expect(formatSettingValue(DISPLAY_SETTING.SHIFT_PX, 2)).toBe("2 px");
+    expect(formatSettingValue(DISPLAY_SETTING.DIM_AFTER_S, 0)).toBe("Never");
+    expect(formatSettingValue(DISPLAY_SETTING.DIM_AFTER_S, 120)).toBe("2 min");
+    expect(formatSettingValue(DISPLAY_SETTING.DIM_LEVEL, 25)).toBe("25 %");
+  });
+
   it("writes a setting it does not know as the number", () => {
-    expect(formatSettingValue(9, 42)).toBe("42");
+    expect(formatSettingValue(0, 42)).toBe("42");
   });
 
   it("writes the value a setting has now", () => {
@@ -134,7 +185,19 @@ describe("writing values", () => {
       "From 0 to 255. Built with 128.",
     );
     expect(describeRange(setting(DISPLAY_SETTING.OFF_AFTER_S))).toBe(
-      "From 30 s to 1 h. Built with 1 min.",
+      "From 10 s to 1 h. Built with 1 min.",
+    );
+    expect(describeRange(setting(DISPLAY_SETTING.KEYS_OFF_AFTER_S))).toBe(
+      "From 10 s to 1 h. Built with 5 min.",
+    );
+    expect(describeRange(setting(DISPLAY_SETTING.SHIFT_PX))).toBe(
+      "From 1 px to 4 px. Built with 2 px.",
+    );
+    expect(describeRange(setting(DISPLAY_SETTING.DIM_AFTER_S))).toBe(
+      "From Never to 1 h. Built with 2 min.",
+    );
+    expect(describeRange(setting(DISPLAY_SETTING.DIM_LEVEL))).toBe(
+      "From 5 % to 90 %. Built with 25 %.",
     );
     expect(describeRange(setting(DISPLAY_SETTING.TOAST_MS))).toBe(
       "From 0.5 s to 5 s. Built with 1.5 s.",
@@ -150,17 +213,25 @@ describe("writing values", () => {
 });
 
 describe("groupSettings", () => {
-  it("puts the settings of the keyboard in the three groups of the tab", () => {
+  it("puts the settings of the keyboard in the groups of the tab", () => {
     const groups = groupSettings(demo());
 
     expect(groups.map((g) => g.title)).toEqual([
       "Contrast",
       "Screen off",
+      "Key lights off",
+      "Underglow off",
+      "Pixel shift",
+      "Dimming",
       "Light toast",
     ]);
     expect(groups.map((g) => g.settings.map((s) => s.id))).toEqual([
       [1, 2],
       [3, 4],
+      [7, 8],
+      [9, 10],
+      [11, 12, 13],
+      [14, 15],
       [5, 6],
     ]);
   });
@@ -173,7 +244,23 @@ describe("groupSettings", () => {
     ).toEqual([
       [1, 2],
       [3, 4],
+      [7, 8],
+      [9, 10],
+      [11, 12, 13],
+      [14, 15],
       [5, 6],
+    ]);
+  });
+
+  it("leaves out the groups an older firmware has nothing for", () => {
+    // A keyboard with the first six settings only: what the module had before
+    // the lights and the burn-in protection
+    const older = demo().filter((s) => s.id <= 6);
+
+    expect(groupSettings(older).map((g) => g.title)).toEqual([
+      "Contrast",
+      "Screen off",
+      "Light toast",
     ]);
   });
 
@@ -189,17 +276,21 @@ describe("groupSettings", () => {
   it("lists a setting it does not know in a group of its own, at the end", () => {
     const settings = [
       ...demo(),
-      { id: 9, value: 3, min: 0, max: 10, defaultValue: 3 },
+      { id: 0, value: 3, min: 0, max: 10, defaultValue: 3 },
     ];
 
     const groups = groupSettings(settings);
     expect(groups.map((g) => g.title)).toEqual([
       "Contrast",
       "Screen off",
+      "Key lights off",
+      "Underglow off",
+      "Pixel shift",
+      "Dimming",
       "Light toast",
       OTHER_GROUP_TITLE,
     ]);
-    expect(groups[3].settings.map((s) => s.id)).toEqual([9]);
+    expect(groups[7].settings.map((s) => s.id)).toEqual([0]);
   });
 
   it("leaves the OLED layout to the OLED tab", () => {
@@ -207,19 +298,19 @@ describe("groupSettings", () => {
 
     expect(demo().some((s) => isOledLayoutId(s.id))).toBe(true);
     expect(groups.flatMap((g) => g.settings.map((s) => s.id))).toEqual([
-      1, 2, 3, 4, 5, 6,
+      1, 2, 3, 4, 7, 8, 9, 10, 11, 12, 13, 14, 15, 5, 6,
     ]);
     expect(groups.map((g) => g.title)).not.toContain(OTHER_GROUP_TITLE);
   });
 
   it("lists a setting it does not know below the layout's ids", () => {
     const groups = groupSettings([
-      { id: 15, value: 3, min: 0, max: 10, defaultValue: 3 },
+      { id: 0, value: 3, min: 0, max: 10, defaultValue: 3 },
       { id: 16, value: 1, min: 0, max: 1, defaultValue: 1 },
     ]);
 
     expect(groups.map((g) => g.title)).toEqual([OTHER_GROUP_TITLE]);
-    expect(groups[0].settings.map((s) => s.id)).toEqual([15]);
+    expect(groups[0].settings.map((s) => s.id)).toEqual([0]);
   });
 
   it("gives no groups for no settings", () => {
@@ -252,6 +343,43 @@ describe("isSettingEnabled", () => {
     );
   });
 
+  it("waits for the key lights and the underglow to be set to turn off", () => {
+    // Both are "only on battery" by default: the times are in use
+    for (const [mode, time] of [
+      [DISPLAY_SETTING.KEYS_OFF_MODE, DISPLAY_SETTING.KEYS_OFF_AFTER_S],
+      [DISPLAY_SETTING.GLOW_OFF_MODE, DISPLAY_SETTING.GLOW_OFF_AFTER_S],
+    ]) {
+      expect(isSettingEnabled(setting(time), demo())).toBe(true);
+      expect(
+        isSettingEnabled(setting(time), withValue(demo(), mode, 0)),
+      ).toBe(false);
+      expect(
+        isSettingEnabled(setting(time), withValue(demo(), mode, 2)),
+      ).toBe(true);
+    }
+  });
+
+  it("waits for the pixel shift to be on, and for the dimming to be set", () => {
+    const shiftOff = withValue(demo(), DISPLAY_SETTING.SHIFT, 0);
+    expect(isSettingEnabled(setting(DISPLAY_SETTING.SHIFT_EVERY_S), demo())).toBe(
+      true,
+    );
+    expect(
+      isSettingEnabled(setting(DISPLAY_SETTING.SHIFT_EVERY_S), shiftOff),
+    ).toBe(false);
+    expect(isSettingEnabled(setting(DISPLAY_SETTING.SHIFT_PX), shiftOff)).toBe(
+      false,
+    );
+
+    const neverDim = withValue(demo(), DISPLAY_SETTING.DIM_AFTER_S, 0);
+    expect(isSettingEnabled(setting(DISPLAY_SETTING.DIM_LEVEL), demo())).toBe(
+      true,
+    );
+    expect(isSettingEnabled(setting(DISPLAY_SETTING.DIM_LEVEL), neverDim)).toBe(
+      false,
+    );
+  });
+
   it("leaves the other settings always enabled", () => {
     const settings = withValue(
       withValue(demo(), DISPLAY_SETTING.TOAST, 0),
@@ -259,7 +387,7 @@ describe("isSettingEnabled", () => {
       0,
     );
 
-    for (const id of [1, 2, 3, 5]) {
+    for (const id of [1, 2, 3, 5, 7, 9, 11, 14]) {
       expect(isSettingEnabled(setting(id), settings)).toBe(true);
     }
   });
@@ -319,7 +447,10 @@ describe("planChange", () => {
 
   it("holds the value inside the range of the keyboard", () => {
     expect(planChange(demo(), 1, 999)?.value).toBe(255);
-    expect(planChange(demo(), 4, 5)?.value).toBe(30);
+    expect(planChange(demo(), 4, 5)?.value).toBe(10);
+    expect(planChange(demo(), 13, 9)?.value).toBe(4);
+    expect(planChange(demo(), 15, 1)?.value).toBe(5);
+    expect(planChange(demo(), 14, -5)?.value).toBe(0);
   });
 
   it("does nothing for the value the setting already has", () => {

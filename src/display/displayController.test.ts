@@ -186,9 +186,9 @@ describe("setValue", () => {
     await controller.settled();
 
     expect(value(1)).toBe(255);
-    expect(value(4)).toBe(30);
+    expect(value(4)).toBe(10);
     expect(device.displayValue(1)).toBe(255);
-    expect(device.displayValue(4)).toBe(30);
+    expect(device.displayValue(4)).toBe(10);
   });
 
   it("sends no request for the value a setting already has", async () => {

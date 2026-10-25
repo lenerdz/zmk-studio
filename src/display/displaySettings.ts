@@ -23,6 +23,12 @@ export interface SettingChoice {
 export interface KnownSetting {
   id: number;
   label: string;
+  /**
+   * A name that makes sense without the title of its group, for a list that
+   * mixes the groups (the Files tab): "Dimmed contrast" is only clear under
+   * "Dimming". The label when absent.
+   */
+  fullLabel?: string;
   kind: SettingKind;
   /** What the setting does, in a sentence. */
   hint: string;
@@ -54,9 +60,25 @@ export const DISPLAY_SETTING = {
   OFF_AFTER_S: 4,
   TOAST: 5,
   TOAST_MS: 6,
+  KEYS_OFF_MODE: 7,
+  KEYS_OFF_AFTER_S: 8,
+  GLOW_OFF_MODE: 9,
+  GLOW_OFF_AFTER_S: 10,
+  SHIFT: 11,
+  SHIFT_EVERY_S: 12,
+  SHIFT_PX: 13,
+  DIM_AFTER_S: 14,
+  DIM_LEVEL: 15,
 } as const;
 
 export const OFF_MODE_NEVER = 0;
+
+/** The three ways the screen, the key lights and the underglow can go off. */
+const OFF_CHOICES: SettingChoice[] = [
+  { value: 0, label: "Never" },
+  { value: 1, label: "Only on battery" },
+  { value: 2, label: "Always" },
+];
 
 /** "45 s", "1 min 30 s", "1 h". */
 export function formatSeconds(seconds: number): string {
@@ -82,6 +104,21 @@ export function formatMilliseconds(milliseconds: number): string {
   return `${Number((milliseconds / 1000).toFixed(2))} s`;
 }
 
+/** "1 px", "2 px". */
+export function formatPixels(pixels: number): string {
+  return `${pixels} px`;
+}
+
+/** "25 %". */
+export function formatPercent(percent: number): string {
+  return `${percent} %`;
+}
+
+/** The time before the screens dim: "Never" for 0, otherwise seconds as above. */
+export function formatDimTime(seconds: number): string {
+  return seconds === 0 ? "Never" : formatSeconds(seconds);
+}
+
 const KNOWN: Record<number, KnownSetting> = {
   [DISPLAY_SETTING.LEFT_CONTRAST]: {
     id: DISPLAY_SETTING.LEFT_CONTRAST,
@@ -101,18 +138,15 @@ const KNOWN: Record<number, KnownSetting> = {
     id: DISPLAY_SETTING.OFF_MODE,
     label: "Turn the screen off",
     kind: "choice",
-    hint: "When the screen goes off after the keyboard is left alone. Any key turns it back on. Only on battery means while USB is not connected to that half.",
-    choices: [
-      { value: 0, label: "Never" },
-      { value: 1, label: "Only on battery" },
-      { value: 2, label: "Always" },
-    ],
+    hint: "When the screen goes off after the keyboard is left alone. A key on either half turns it back on. Only on battery means while the keyboard has no USB cable.",
+    choices: OFF_CHOICES,
   },
   [DISPLAY_SETTING.OFF_AFTER_S]: {
     id: DISPLAY_SETTING.OFF_AFTER_S,
     label: "Time without activity before it goes off",
+    fullLabel: "Screen off: time without activity",
     kind: "slider",
-    hint: "Not shorter than the idle time the firmware was built with.",
+    hint: "Counted from the last key on either half.",
     step: 10,
     format: formatSeconds,
     dependsOn: {
@@ -140,6 +174,104 @@ const KNOWN: Record<number, KnownSetting> = {
       isOn: (value) => value !== 0,
     },
   },
+  [DISPLAY_SETTING.KEYS_OFF_MODE]: {
+    id: DISPLAY_SETTING.KEYS_OFF_MODE,
+    label: "Turn the key lights off",
+    kind: "choice",
+    hint: "When the LEDs under the keys go off after the keyboard is left alone. A key on either half brings them back. Only on battery means while the keyboard has no USB cable.",
+    choices: OFF_CHOICES,
+  },
+  [DISPLAY_SETTING.KEYS_OFF_AFTER_S]: {
+    id: DISPLAY_SETTING.KEYS_OFF_AFTER_S,
+    label: "Time without activity before they go off",
+    fullLabel: "Key lights off: time without activity",
+    kind: "slider",
+    hint: "Counted from the last key on either half.",
+    step: 10,
+    format: formatSeconds,
+    dependsOn: {
+      id: DISPLAY_SETTING.KEYS_OFF_MODE,
+      note: "Used only while the key lights are set to turn off.",
+      isOn: (value) => value !== OFF_MODE_NEVER,
+    },
+  },
+  [DISPLAY_SETTING.GLOW_OFF_MODE]: {
+    id: DISPLAY_SETTING.GLOW_OFF_MODE,
+    label: "Turn the underglow off",
+    kind: "choice",
+    hint: "When the LEDs that are not under a key go off after the keyboard is left alone. A key on either half brings them back. Only on battery means while the keyboard has no USB cable.",
+    choices: OFF_CHOICES,
+  },
+  [DISPLAY_SETTING.GLOW_OFF_AFTER_S]: {
+    id: DISPLAY_SETTING.GLOW_OFF_AFTER_S,
+    label: "Time without activity before it goes off",
+    fullLabel: "Underglow off: time without activity",
+    kind: "slider",
+    hint: "Counted from the last key on either half.",
+    step: 10,
+    format: formatSeconds,
+    dependsOn: {
+      id: DISPLAY_SETTING.GLOW_OFF_MODE,
+      note: "Used only while the underglow is set to turn off.",
+      isOn: (value) => value !== OFF_MODE_NEVER,
+    },
+  },
+  [DISPLAY_SETTING.SHIFT]: {
+    id: DISPLAY_SETTING.SHIFT,
+    label: "Pixel shift",
+    kind: "toggle",
+    hint: "Moves everything on the screens by one pixel from time to time, along a small path, so that no pixel stays lit or dark for hours (burn-in protection).",
+  },
+  [DISPLAY_SETTING.SHIFT_EVERY_S]: {
+    id: DISPLAY_SETTING.SHIFT_EVERY_S,
+    label: "Time between two moves",
+    fullLabel: "Pixel shift: time between two moves",
+    kind: "slider",
+    hint: "How long the screens wait before they move to the next position.",
+    step: 10,
+    format: formatSeconds,
+    dependsOn: {
+      id: DISPLAY_SETTING.SHIFT,
+      note: "Used only while the pixel shift is on.",
+      isOn: (value) => value !== 0,
+    },
+  },
+  [DISPLAY_SETTING.SHIFT_PX]: {
+    id: DISPLAY_SETTING.SHIFT_PX,
+    label: "Distance",
+    fullLabel: "Pixel shift: distance",
+    kind: "slider",
+    hint: "How far from its place everything goes, in pixels to each side.",
+    step: 1,
+    format: formatPixels,
+    dependsOn: {
+      id: DISPLAY_SETTING.SHIFT,
+      note: "Used only while the pixel shift is on.",
+      isOn: (value) => value !== 0,
+    },
+  },
+  [DISPLAY_SETTING.DIM_AFTER_S]: {
+    id: DISPLAY_SETTING.DIM_AFTER_S,
+    label: "Dim the screens after",
+    kind: "slider",
+    hint: "Lowers the contrast when the keyboard is left alone, before the screens go off (burn-in protection). The lowest value never dims.",
+    step: 10,
+    format: formatDimTime,
+  },
+  [DISPLAY_SETTING.DIM_LEVEL]: {
+    id: DISPLAY_SETTING.DIM_LEVEL,
+    label: "Dimmed contrast",
+    fullLabel: "Dimming: contrast of a dimmed screen",
+    kind: "slider",
+    hint: "How bright a dimmed screen is, as a percentage of its normal contrast.",
+    step: 5,
+    format: formatPercent,
+    dependsOn: {
+      id: DISPLAY_SETTING.DIM_AFTER_S,
+      note: "Used only while the screens are set to dim.",
+      isOn: (value) => value !== 0,
+    },
+  },
 };
 
 /** The groups of the tab, in the order they are drawn. */
@@ -151,6 +283,26 @@ const GROUPS: Array<{ title: string; ids: number[] }> = [
   {
     title: "Screen off",
     ids: [DISPLAY_SETTING.OFF_MODE, DISPLAY_SETTING.OFF_AFTER_S],
+  },
+  {
+    title: "Key lights off",
+    ids: [DISPLAY_SETTING.KEYS_OFF_MODE, DISPLAY_SETTING.KEYS_OFF_AFTER_S],
+  },
+  {
+    title: "Underglow off",
+    ids: [DISPLAY_SETTING.GLOW_OFF_MODE, DISPLAY_SETTING.GLOW_OFF_AFTER_S],
+  },
+  {
+    title: "Pixel shift",
+    ids: [
+      DISPLAY_SETTING.SHIFT,
+      DISPLAY_SETTING.SHIFT_EVERY_S,
+      DISPLAY_SETTING.SHIFT_PX,
+    ],
+  },
+  {
+    title: "Dimming",
+    ids: [DISPLAY_SETTING.DIM_AFTER_S, DISPLAY_SETTING.DIM_LEVEL],
   },
   {
     title: "Light toast",

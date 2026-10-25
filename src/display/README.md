@@ -1,8 +1,10 @@
 # Display tab
 
-An editor for the settings of the OLED screens of the keyboard: the contrast of each
-screen, when the screens turn off, and the notice (the "toast") that the right screen
-shows when the lights change. It needs a firmware with display settings: the
+An editor for the settings of the OLED screens and of the lights of the keyboard: the
+contrast of each screen, when the screens, the LEDs under the keys and the underglow turn
+off, the burn-in protection of the screens (pixel shift and dimming), and the notice (the
+"toast") that the right screen shows when the lights change. It needs a firmware with
+display settings: the
 [zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix) module of lenerdz (branch
 `corne-fixes`, built with `CONFIG_KEYPAW_DISPLAY_SETTINGS=y`), the
 [zmk-nice-oled](https://github.com/lenerdz/zmk-nice-oled) fork (which reads the toast
@@ -20,14 +22,27 @@ uses the same requests as this tab.
 
 The header has a view **Display**, next to **Keys**, **Lights**, **OLED**, **Files** and
 **Diagnostics** (each one only when the firmware has what it edits or reads; **Files**
-needs only a keyboard that is connected and unlocked). It has three groups of controls,
+needs only a keyboard that is connected and unlocked). It has seven groups of controls,
 whose names and ranges come from the keyboard:
 
 - **Contrast**: one slider for the left screen and one for the right screen.
-- **Screen off**: when the screens turn off (**Never**, **Only on battery**, that is,
+- **Screen off**, **Key lights off** and **Underglow off**: three groups with the same
+  controls, one for the screens, one for the LEDs under the keys and one for the LEDs that
+  are not under a key. Each has when it goes off (**Never**, **Only on battery**, that is,
   while USB is not connected to that half, or **Always**) and a slider for how long the
-  keyboard has to be left alone before that happens. The slider is disabled, and says
-  why, while the screens are set to never turn off.
+  keyboard has to be left alone before that happens, a time of its own for each of the
+  three. The time is counted from the last key pressed on either half. The slider is
+  disabled, and says why, while the choice is **Never**. The firmware of corne-zmk is built
+  with the screens never going off, and the key lights and the underglow going off only on
+  battery, after 5 minutes.
+- **Pixel shift** (burn-in protection): a switch, a slider for the time between two moves
+  and a slider for the distance (1 to 4 pixels). From time to time everything the screens
+  show moves by a pixel along a small path, so that no pixel stays lit or dark for hours.
+  The two sliders are disabled while the switch is off.
+- **Dimming** (burn-in protection): a slider for how long the keyboard has to be left alone
+  before the screens dim (the lowest value, **Never**, does not dim) and a slider for the
+  contrast of a dimmed screen, as a percentage of the normal one. The second slider is
+  disabled while the first is at **Never**.
 - **Light toast**: a switch for the notice that the right screen shows when the lights
   change (effect, brightness, on and off), and a slider for how long it stays. The slider
   is disabled while the switch is off.
@@ -65,9 +80,25 @@ of every setting come from the keyboard.
 | 1 | Left screen contrast | Slider | 0 to 255 | 128 | |
 | 2 | Right screen contrast | Slider | 0 to 255 | 128 | |
 | 3 | Turn the screen off | Three buttons | 0 Never, 1 Only on battery, 2 Always | 0 (Never) | Never is how the keyboard behaved before the setting existed |
-| 4 | Time without activity before it goes off | Slider, step 10 s | 30 s to 1 h | 1 min | The minimum is the idle time of ZMK (30 s). Used only while setting 3 is not Never |
+| 4 | Time without activity before it goes off | Slider, step 10 s | 10 s to 1 h | 1 min | Counted from the last key on either half. Used only while setting 3 is not Never |
 | 5 | Light toast on the right screen | Switch | 0 or 1 | 1 (On) | Needs the widget of zmk-nice-oled, which corne-zmk builds |
 | 6 | Toast duration | Slider, step 0.1 s | 0.5 s to 5 s | 1.5 s | Used only while setting 5 is on |
+| 7 | Turn the key lights off | Three buttons | 0 Never, 1 Only on battery, 2 Always | 1 (Only on battery) | The LEDs under the keys |
+| 8 | Time without activity before they go off | Slider, step 10 s | 10 s to 1 h | 5 min | Used only while setting 7 is not Never |
+| 9 | Turn the underglow off | Three buttons | 0 Never, 1 Only on battery, 2 Always | 1 (Only on battery) | The LEDs that are not under a key |
+| 10 | Time without activity before it goes off | Slider, step 10 s | 10 s to 1 h | 5 min | Used only while setting 9 is not Never |
+| 11 | Pixel shift | Switch | 0 or 1 | 1 (On) | Burn-in protection: the drawing of each screen moves by a pixel from time to time. The drawing is done by zmk-nice-oled |
+| 12 | Time between two moves | Slider, step 10 s | 10 s to 1 h | 1 min | Used only while setting 11 is on |
+| 13 | Distance | Slider, step 1 px | 1 to 4 px | 2 px | How far from its place the drawing goes, to each side. Used only while setting 11 is on |
+| 14 | Dim the screens after | Slider, step 10 s | 0 to 1 h | 2 min | Burn-in protection. 0 is Never. A value from 1 to 9 s would count as 10 s in the firmware, and the slider steps by 10 s |
+| 15 | Dimmed contrast | Slider, step 5 % | 5 % to 90 % | 25 % | The contrast of a dimmed screen, as a percentage of its normal contrast. Used only while setting 14 is not 0 |
+
+The firmware counts the time without activity from the last key pressed on either half, a
+change made from the app, and a USB cable plugged in or taken out; the left half tells the
+right one about them, so the halves go off, dim and come back together. How that works,
+and what **Only on battery** looks at, is in the README of the
+[zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix) module ("When the screen and
+the lights go off").
 
 The ids from 16 up are the layout of the OLED screens (41 settings on the Corne of
 corne-zmk, from the animation of the right screen to the graph of the left one; the
@@ -148,7 +179,7 @@ share one history, which the app keeps (`changeHistory.ts` holds the steps and
 | `changeHistory.ts` | The history of [Undo and Redo](#undo-and-redo): the steps, how a drag becomes one step, the limit |
 | `displayController.ts` | What the tab does with the keyboard, without React: reading, changing, undoing and redoing, restoring and recovering from a refusal |
 | `useDisplaySettings.ts`, `DisplayContext.ts` | Carry the state of a controller into React |
-| `demo/demoDisplay.ts` | The settings of the demo keyboard: the six of this tab and the 41 of the OLED layout (see [`../lights/demo/README.md`](../lights/demo/README.md)) |
+| `demo/demoDisplay.ts` | The settings of the demo keyboard: the fifteen of this tab and the 41 of the OLED layout (see [`../lights/demo/README.md`](../lights/demo/README.md)) |
 
 `src/App.tsx`, `src/AppHeader.tsx`, `src/undoShortcuts.ts` and `src/lights/ViewSwitch.tsx`
 connect the tab to the rest of the app (the header switch, Undo and Redo and their
@@ -173,8 +204,8 @@ The tab was tried in a browser against the demo keyboard: reading the settings, 
 slider (72 changes became 13 requests, the last one with the final value), the dependencies
 between the controls, the switch, the three buttons, **Restore defaults**, **Restore Stock
 Settings** from the header while the tab was open, and the demo keyboard without display
-settings, which has no Display tab. With the 47 settings of the demo keyboard (the 41 of
-the OLED layout included), the tab still lists only its six. Undo and Redo were tried
+settings, which has no Display tab. With the 56 settings of the demo keyboard (the 41 of
+the OLED layout included), the tab lists only its fifteen. Undo and Redo were tried
 there too, in a browser that is really shown: a widget dragged along a bent path, ten
 presses of an arrow key and a move after a pause were one step each, Ctrl+Z and Ctrl+Y
 took them back and did them again, and the buttons of the header followed. The firmware
@@ -185,3 +216,14 @@ screen off, what the right half receives and what is still there after a restart
 **not confirmed one by one**. Undo and Redo of these settings are **not tested on the
 keyboard**; the basis is the demo keyboard and the tests, which write and read the same
 requests the controls use.
+
+The seven groups and the nine settings that came with the key lights, the underglow and
+the burn-in protection (ids 7 to 15) were tried in the same way, in a browser against the
+demo keyboard: the groups are drawn in order, with the values the demo keyboard holds, and
+choosing **Never** for the key lights disables the slider of their time and says why, while
+**Always** enables it again. That the key lights and the underglow go off after the times
+set here, that a key of either half brings them back, that the pixel shift moves the
+screens, that the dimming lowers the contrast, and that the right half follows the left
+one are **not tested on the keyboard**: the basis is the unit tests of the module (the idle
+policy and the display settings) and of zmk-nice-oled (the pixel shift), which run on a PC,
+and the compilation of the firmware in the CI of corne-zmk.

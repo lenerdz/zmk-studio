@@ -20,7 +20,12 @@ import {
 } from "../display/displaySettings";
 import type { DisplaySettingData } from "../display/displayProtocol";
 import { bindingsEqual, type BindingEdit } from "../keyboard/keyDrag";
-import { ANIMATION_KINDS, WIDGETS, type WidgetIds } from "../oled/oledCatalog";
+import {
+  ANIMATION_KINDS,
+  isRetiredKind,
+  WIDGETS,
+  type WidgetIds,
+} from "../oled/oledCatalog";
 import { isOledLayoutId } from "../oled/oledIds";
 import type { LedEntry } from "../lights/ledProtocol";
 import type {
@@ -376,7 +381,8 @@ const OLED_PARTS: Array<[keyof WidgetIds, string]> = [
 /** What a setting is called: the Display tab's name, or the widget and the part of it. */
 export function labelOfSetting(id: number): string {
   if (!isOledLayoutId(id)) {
-    return describeSetting(id).label;
+    const known = describeSetting(id);
+    return known.fullLabel ?? known.label;
   }
 
   for (const widget of WIDGETS) {
@@ -441,10 +447,17 @@ export interface ScreensPlan {
   problems: string[];
 }
 
+/** Whether an id is the picture of a screen (the setting that holds the kind). */
+function isPictureKindId(id: number): boolean {
+  return WIDGETS.some((widget) => widget.ids.kind === id);
+}
+
 /**
  * What applying the settings of a file would change. A setting the keyboard does
  * not have is left out; a value outside the range the keyboard gave is held at
- * the nearest end, and the change says so.
+ * the nearest end, and the change says so. A picture that was retired (a still
+ * image taken out of the firmware, see RETIRED_ANIMATION_KINDS) is left out too:
+ * the keyboard would refuse it, and the one it has stays.
  */
 export function planScreens(
   file: BackupScreens,
@@ -453,12 +466,18 @@ export function planScreens(
   const byId = new Map(settings.map((s) => [s.id, s]));
   const changes: ScreenChange[] = [];
   const missing: string[] = [];
+  const retired: number[] = [];
   let compared = 0;
 
   for (const entry of file.settings) {
     const have = byId.get(entry.id);
     if (!have) {
       missing.push(entry.label || `Setting ${entry.id}`);
+      continue;
+    }
+
+    if (isPictureKindId(entry.id) && isRetiredKind(entry.value)) {
+      retired.push(entry.value);
       continue;
     }
 
@@ -481,6 +500,12 @@ export function planScreens(
       : [
           `The keyboard has no ${missing.length === 1 ? "setting" : "settings"} ${missing.slice(0, 6).join(", ")}${missing.length > 6 ? ` and ${missing.length - 6} more` : ""}: left out.`,
         ];
+
+  for (const kind of retired) {
+    problems.push(
+      `The picture of the file (kind ${kind}) was taken out of the firmware: the keyboard keeps the one it has.`,
+    );
+  }
 
   return { changes, compared, problems };
 }

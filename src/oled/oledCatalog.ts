@@ -217,22 +217,6 @@ export const ANIMATION_KINDS: readonly AnimationKind[] = [
     option: "CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_POKEMON",
   },
   {
-    value: 5,
-    sprite: "vim",
-    label: "Vim",
-    hint: "The Vim logo, a still image as tall as the whole canvas (160 pixels).",
-    cycleMs: null,
-    option: "CONFIG_NICE_OLED_WIDGET_STATIC_IMAGE_PERIPHERAL_VIM",
-  },
-  {
-    value: 6,
-    sprite: "vip_marcos",
-    label: "VIPs Marcos",
-    hint: "A still image with the words VIPs and Marcos (140 pixels tall).",
-    cycleMs: null,
-    option: "CONFIG_NICE_OLED_WIDGET_STATIC_IMAGE_PERIPHERAL_VIP_MARCOS",
-  },
-  {
     value: 7,
     sprite: "equalizer",
     label: "Equalizer",
@@ -345,42 +329,10 @@ export const ANIMATION_KINDS: readonly AnimationKind[] = [
     option: null,
   },
   {
-    value: 21,
-    sprite: "alien",
-    label: "Alien",
-    hint: "A small robot alien on a starry floor. A still image.",
-    cycleMs: null,
-    option: null,
-  },
-  {
-    value: 22,
-    sprite: "heart",
-    label: "Heart",
-    hint: "A heart with a shine. A still image.",
-    cycleMs: null,
-    option: null,
-  },
-  {
     value: 23,
     sprite: "keyboard",
     label: "Keyboard",
     hint: "The two halves of a Corne, as seen from above. A still image.",
-    cycleMs: null,
-    option: null,
-  },
-  {
-    value: 24,
-    sprite: "pulsar",
-    label: "Pulsar",
-    hint: "Lines of a signal, one above the other, that hide the ones behind them, like the cover of an old record. A still image as tall as the screen.",
-    cycleMs: null,
-    option: null,
-  },
-  {
-    value: 25,
-    sprite: "rocket",
-    label: "Rocket",
-    hint: "A rocket taking off. A still image.",
     cycleMs: null,
     option: null,
   },
@@ -545,42 +497,10 @@ export const ANIMATION_KINDS: readonly AnimationKind[] = [
     option: null,
   },
   {
-    value: 46,
-    sprite: "coffee",
-    label: "Coffee",
-    hint: "A cup of coffee that says ZMK, with steam, on its saucer. A still image.",
-    cycleMs: null,
-    option: null,
-  },
-  {
-    value: 47,
-    sprite: "cactus",
-    label: "Cactus",
-    hint: "A saguaro cactus in the desert, with the sun low over the dunes. A still image.",
-    cycleMs: null,
-    option: null,
-  },
-  {
-    value: 48,
-    sprite: "lighthouse",
-    label: "Lighthouse",
-    hint: "A lighthouse on its rock, sweeping the night with its beam. A still image as tall as the screen.",
-    cycleMs: null,
-    option: null,
-  },
-  {
     value: 49,
     sprite: "moon_cat",
     label: "Moon cat",
     hint: "A cat sitting on a wall in front of the full moon, seen from behind. A still image.",
-    cycleMs: null,
-    option: null,
-  },
-  {
-    value: 50,
-    sprite: "robot",
-    label: "Robot",
-    hint: "A friendly robot with an antenna. A still image.",
     cycleMs: null,
     option: null,
   },
@@ -592,119 +512,25 @@ export const ANIMATION_KINDS: readonly AnimationKind[] = [
     cycleMs: null,
     option: null,
   },
-  {
-    value: 52,
-    sprite: "castle",
-    label: "Castle",
-    hint: "A castle with two towers and a keep, under the moon. A still image.",
-    cycleMs: null,
-    option: null,
-  },
-  {
-    value: 53,
-    sprite: "tree",
-    label: "Tree",
-    hint: "A big tree on a hill, with apples, a hollow and a pair of birds. A still image as tall as the screen.",
-    cycleMs: null,
-    option: null,
-  },
-  {
-    value: 54,
-    sprite: "skull",
-    label: "Skull",
-    hint: "A skull with crossed bones. A still image.",
-    cycleMs: null,
-    option: null,
-  },
-  {
-    value: 55,
-    sprite: "sword",
-    label: "Sword",
-    hint: "A long sword with a gem in the guard. A still image as tall as the screen.",
-    cycleMs: null,
-    option: null,
-  },
-  {
-    value: 56,
-    sprite: "key",
-    label: "Key",
-    hint: "An old key with a three-lobed bow. A still image.",
-    cycleMs: null,
-    option: null,
-  },
-  {
-    value: 57,
-    sprite: "antenna",
-    label: "Antenna",
-    hint: "A radio tower sending its signal out. A still image as tall as the screen.",
-    cycleMs: null,
-    option: null,
-  },
-  {
-    value: 58,
-    sprite: "potion",
-    label: "Potion",
-    hint: "A round flask with a bubbling potion and a heart. A still image.",
-    cycleMs: null,
-    option: null,
-  },
-  {
-    value: 59,
-    sprite: "sailboat",
-    label: "Sailboat",
-    hint: "A sailboat on the waves, with the sun and a gull. A still image.",
-    cycleMs: null,
-    option: null,
-  },
-  {
-    value: 60,
-    sprite: "compass",
-    label: "Compass",
-    hint: "A compass rose inside two rings. A still image.",
-    cycleMs: null,
-    option: null,
-  },
-  {
-    value: 61,
-    sprite: "crown",
-    label: "Crown",
-    hint: "A crown with five points and jewels. A still image.",
-    cycleMs: null,
-    option: null,
-  },
-  {
-    value: 62,
-    sprite: "cassette",
-    label: "Cassette",
-    hint: "An audio cassette, with a label that says MIX and its two reels. A still image.",
-    cycleMs: null,
-    option: null,
-  },
-  {
-    value: 63,
-    sprite: "floppy",
-    label: "Floppy disk",
-    hint: "A floppy disk, with its metal shutter and a label that says ZMK. A still image.",
-    cycleMs: null,
-    option: null,
-  },
-  {
-    value: 64,
-    sprite: "phases",
-    label: "Moon phases",
-    hint: "The eight phases of the moon, one above the other. A still image as tall as the screen.",
-    cycleMs: null,
-    option: null,
-  },
-  {
-    value: 65,
-    sprite: "mushroom",
-    label: "Mushroom",
-    hint: "A mushroom with a spotted cap and a face, as in the old games. A still image.",
-    cycleMs: null,
-    option: null,
-  },
 ];
+
+/**
+ * The kinds that were taken out of the firmware: still images that nobody used
+ * (the Vim logo, the VIPs Marcos words and 22 of the new ones). A retired kind
+ * keeps its number, so the kinds after it do not move, but it has no picture in
+ * the keyboard, which refuses it as the value of the picture, and the app does
+ * not offer it. The same list as kp_oled_anim_kind_retired() in the
+ * lenerdz/zmk-rgb-matrix module (include/zmk/display_settings.h).
+ */
+export const RETIRED_ANIMATION_KINDS: ReadonlySet<number> = new Set([
+  5, 6, 21, 22, 24, 25, 46, 47, 48, 50, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61,
+  62, 63, 64, 65,
+]);
+
+/** Whether the value is a kind that was retired (see RETIRED_ANIMATION_KINDS). */
+export function isRetiredKind(value: number): boolean {
+  return RETIRED_ANIMATION_KINDS.has(value);
+}
 
 /** The kind with this value; the first one for a value this app does not know. */
 export function animationKind(value: number): AnimationKind {

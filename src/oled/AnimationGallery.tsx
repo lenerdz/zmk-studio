@@ -153,7 +153,7 @@ export const AnimationGallery = ({
       )}
       {group(
         "Still images",
-        "They do not move. Vim and VIPs Marcos are 68 pixels wide, so the screen shows 32 columns of them; the others are 32 wide.",
+        "They do not move. They are 32 pixels wide, as wide as the screen. The other still images of the shield and of the fork were taken out of the firmware.",
         ANIMATION_KINDS.filter((entry) => entry.cycleMs === null),
       )}
     </section>

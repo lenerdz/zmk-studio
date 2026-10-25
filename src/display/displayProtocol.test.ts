@@ -31,14 +31,16 @@ describe("fetchDisplayInfo", () => {
     expect(await fetchDisplayInfo(conn)).toEqual([...DEMO_DISPLAY_SETTINGS]);
   });
 
-  it("gives the six display settings first, then the OLED layout, by id", async () => {
+  it("gives the fifteen display settings first, then the OLED layout, by id", async () => {
     const { conn } = connectDemo();
 
     const ids = (await fetchDisplayInfo(conn))?.map((s) => s.id) ?? [];
-    expect(ids.slice(0, 6)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(ids.slice(0, 15)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+    ]);
     // 17 settings of the right screen (the picture has nine) and 24 of the left one
-    expect(ids.slice(6)).toHaveLength(41);
-    expect(ids.slice(6).every((id) => id >= 16)).toBe(true);
+    expect(ids.slice(15)).toHaveLength(41);
+    expect(ids.slice(15).every((id) => id >= 16)).toBe(true);
   });
 
   it("gives null for a keyboard without the display settings", async () => {

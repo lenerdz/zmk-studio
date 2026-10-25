@@ -30,7 +30,7 @@ Nothing is saved: reloading the page starts again from the stock keymap and colo
 | `demoDevice.ts` | The logic: the answers and the notifications for each request, on plain objects |
 | `demoTransport.ts` | Connects it to the app as a transport. The bytes go through the real framing and the real message encoding, in both directions |
 | `demoColors.ts` | The colors the maps start with (generated) |
-| `../../display/demo/demoDisplay.ts` | The display settings: ids 1 to 6 of the Display tab and the 41 settings of the OLED layout (ids 16 to 115), 47 in all, with the ranges and defaults of `display_settings.c` |
+| `../../display/demo/demoDisplay.ts` | The display settings: ids 1 to 15 of the Display tab (the screens, the key lights, the underglow, the pixel shift and the dimming) and the 41 settings of the OLED layout (ids 16 to 115), 56 in all, with the ranges and defaults of `display_settings.c` |
 | `../../live/demo/demoStatus.ts` | The live status and the firmware information: a keyboard that is in use (the layer changes every 4 seconds among the first three, the typing speed swings between 20 and 80 words per minute, the batteries go down one point a minute) and the memory numbers of the left half of the build of corne-zmk (the FLASH and RAM lines of its CI log) |
 
 - The physical layout, the behaviors and the keymap come from
@@ -43,12 +43,14 @@ Nothing is saved: reloading the page starts again from the stock keymap and colo
   `set_led_colors`, and `INVALID_LAYER`, `INVALID_SLOT` and `BUSY` answers. The limits are
   written in `demoDevice.ts` on purpose, and not taken from the app, so a mistake in the
   app shows up as an error here.
-- The display settings follow `display_settings.c` of the same module: the six settings
-  of the Display tab and the 41 of the OLED layout (the build of the Corne of corne-zmk,
-  with the cat as the animation) with their ranges and defaults, `INVALID_ID` and
-  `INVALID_VALUE` answers, and the restore of the defaults. They are kept as they change
-  (there is no saved copy and no unsaved flag, as in the firmware). The ranges are written
-  in `demoDisplay.ts` on purpose, like the limits of the light maps.
+- The display settings follow `display_settings.c` of the same module: the fifteen
+  settings of the Display tab and the 41 of the OLED layout (the build of the Corne of
+  corne-zmk, with the cat as the animation) with their ranges and defaults, `INVALID_ID`
+  and `INVALID_VALUE` answers (the kinds of picture that were retired, the still images
+  that are no longer in the firmware, are refused too), and the restore of the defaults.
+  They are kept as they change (there is no saved copy and no unsaved flag, as in the
+  firmware). The ranges are written in `demoDisplay.ts` on purpose, like the limits of the
+  light maps.
 - The live status and the firmware information follow a clock, so the values are
   predictable and a test can set the clock (`clock`). The memory numbers are written in
   `demoStatus.ts` on purpose and are not read from the build.

@@ -36,17 +36,36 @@ export const DEMO_DISPLAY_SETTINGS: ReadonlyArray<DisplaySettingData> = [
   { id: 2, value: 128, min: 0, max: 255, defaultValue: 128 },
   // 3: when the screens turn off (0 never, 1 only on battery, 2 always)
   { id: 3, value: 0, min: 0, max: 2, defaultValue: 0 },
-  // 4: seconds without activity before they turn off; the minimum is the idle
-  // time of ZMK (CONFIG_ZMK_IDLE_TIMEOUT, 30 s)
-  { id: 4, value: 60, min: 30, max: 3600, defaultValue: 60 },
+  // 4: seconds without activity before they turn off (the module has its own idle
+  // policy: 10 s to an hour, and not tied to the idle time of ZMK)
+  { id: 4, value: 60, min: 10, max: 3600, defaultValue: 60 },
   // 5 and 6: the toast of the lights on the right screen, and its duration
   { id: 5, value: 1, min: 0, max: 1, defaultValue: 1 },
   { id: 6, value: 1500, min: 500, max: 5000, defaultValue: 1500 },
+  // 7 to 10: when the LEDs under the keys and the underglow turn off, the same
+  // way as the screens (mode, then seconds without activity): only on battery,
+  // after 5 minutes
+  { id: 7, value: 1, min: 0, max: 2, defaultValue: 1 },
+  { id: 8, value: 300, min: 10, max: 3600, defaultValue: 300 },
+  { id: 9, value: 1, min: 0, max: 2, defaultValue: 1 },
+  { id: 10, value: 300, min: 10, max: 3600, defaultValue: 300 },
+  // 11 to 13: the pixel shift of the screens (anti burn-in): on or off, seconds
+  // between two moves, how many pixels to each side
+  { id: 11, value: 1, min: 0, max: 1, defaultValue: 1 },
+  { id: 12, value: 60, min: 10, max: 3600, defaultValue: 60 },
+  { id: 13, value: 2, min: 1, max: 4, defaultValue: 2 },
+  // 14 and 15: dimming the screens (anti burn-in): seconds without activity
+  // before it (0 never; the firmware counts 1 to 9 as 10), and the contrast
+  // that is left as a percentage of the normal one
+  { id: 14, value: 120, min: 0, max: 3600, defaultValue: 120 },
+  { id: 15, value: 25, min: 5, max: 90, defaultValue: 25 },
 
   // The OLED layout (CONFIG_KEYPAW_OLED_LAYOUT), from 16 on, in blocks of eight:
   // +0 whether the widget is drawn, +1 its x, +2 its y; the picture adds +3 the
-  // kind (0 gem, 1 cat, 2 head, 3 spaceman, 4 pokemon, 5 vim, 6 vip marcos, then
-  // the 59 pictures of the lenerdz/zmk-nice-oled fork, 7 to 65) and +4 the time of
+  // kind (0 gem, 1 cat, 2 head, 3 spaceman, 4 pokemon, then the pictures of the
+  // lenerdz/zmk-nice-oled fork, 7 to 65; the kinds RETIRED_KINDS below have no
+  // picture and the keyboard refuses them: 5 and 6 were the Vim logo and the
+  // VIPs Marcos words) and +4 the time of
   // a cycle in ms (0 is the one of the animation), and then, in a block of its
   // own (112 to 115, listed right after the time of a cycle, as the firmware
   // does), the quarter turns clockwise (0 to 3), how it mixes with the widgets
@@ -80,6 +99,19 @@ export const DEMO_DISPLAY_SETTINGS: ReadonlyArray<DisplaySettingData> = [
   ...oledWidget(104, -1, 95),
 ];
 
+/**
+ * The kinds of picture the keyboard refuses as the value of setting 19: the
+ * still images that were retired, as kp_oled_anim_kind_retired() of the module
+ * lists them. Written here on purpose, and not taken from the app.
+ */
+const RETIRED_KINDS: ReadonlySet<number> = new Set([
+  5, 6, 21, 22, 24, 25, 46, 47, 48, 50, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61,
+  62, 63, 64, 65,
+]);
+
+/** The setting that holds the kind of the picture of the right screen. */
+const PICTURE_KIND_ID = 19;
+
 export class DemoDisplay {
   private settings: DisplaySettingData[] = DemoDisplay.fresh();
 
@@ -104,6 +136,10 @@ export class DemoDisplay {
     }
 
     if (value < setting.min || value > setting.max) {
+      return SetDisplaySettingResponse.SET_DISPLAY_SETTING_RESP_INVALID_VALUE;
+    }
+
+    if (id === PICTURE_KIND_ID && RETIRED_KINDS.has(value)) {
       return SetDisplaySettingResponse.SET_DISPLAY_SETTING_RESP_INVALID_VALUE;
     }
 

@@ -26,7 +26,9 @@ What it does to the data, so that the sprites are what the OLED shows:
 * The pictures that scripts/pictures/make_pictures.py of the shield draws (the kinds
   from 7 on) are listed in assets/pictures/pictures.json of the shield: the script
   reads that list, so a new picture needs no change here, and it fails when a
-  picture is not the size the list says.
+  picture is not the size the list says. A retired picture (see "retired" in that file)
+  is not in the list and has no sprite: the PNG files of the output folder that the run
+  does not write are deleted, so the folder is what the list says and nothing else.
 * The fonts become one row of cells, one cell per character from 0x20 to 0x7E, as
   wide as the advance of the font and as tall as its line, so the app draws a text
   by picking a cell for each letter.
@@ -53,10 +55,11 @@ ANIMATIONS = {
     "pokemon": ("pokemon.c", "pokemon_{:02d}", 48, 0),
 }
 
-STILLS = {
-    "vim": ("vim.c", "vim"),
-    "vip_marcos": ("vip_marcos.c", "vip_marcos"),
-}
+# The still images of the original shield (vim and vip_marcos) were retired from the
+# fork (kinds 5 and 6 keep their numbers but have no picture), so there is nothing here
+# any more. Every still image that is left is drawn by make_pictures.py and comes
+# from pictures.json.
+STILLS = {}
 
 # images that are drawn as they are (the canvas is turned after they are drawn)
 ICONS = {
@@ -375,6 +378,14 @@ def main():
     ]
     with open(os.path.join(args.out, "sprites.ts"), "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines))
+
+    # A picture that was retired leaves its PNG behind: the folder has to hold what
+    # this run wrote and nothing else, or the files would depend on the runs before.
+    written = {e[1] for e in entries} | {fonts_entry[1] for fonts_entry in fonts}
+    for name in sorted(os.listdir(args.out)):
+        if name.endswith(".png") and name not in written:
+            os.remove(os.path.join(args.out, name))
+            print(f"removed   {name} (no longer in the pictures of the shield)")
 
     for key, file, w, h, frames, kind in entries:
         print(f"{kind:9} {key:15} {w}x{h} x{frames} -> {file}")

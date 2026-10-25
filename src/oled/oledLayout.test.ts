@@ -59,7 +59,7 @@ describe("hasOledLayout", () => {
     expect(hasOledLayout(demo())).toBe(true);
   });
 
-  it("is false for a keyboard with the six display settings only", () => {
+  it("is false for a keyboard with the display settings below 16 only (no layout)", () => {
     expect(hasOledLayout(demo().filter((s) => s.id < 16))).toBe(false);
     expect(hasOledLayout([])).toBe(false);
   });
@@ -380,10 +380,10 @@ describe("the picture", () => {
     expect(pictureKind(demo())).toBe(1);
     expect(stateOf(demo(), "r_anim").rect.h).toBe(69);
 
-    const vim = stateOf(set(demo(), OLED_ID.R_ANIM_KIND, 5), "r_anim");
+    const mountains = stateOf(set(demo(), OLED_ID.R_ANIM_KIND, 18), "r_anim");
 
-    // Landscape X = 18 and Y = -18 for a picture 160 tall: y = 160 - 18 - 160
-    expect(vim.rect).toEqual({ x: -18, y: -18, w: 68, h: 160 });
+    // Landscape X = 18 and Y = -18 for a picture 128 tall: y = 160 - 18 - 128
+    expect(mountains.rect).toEqual({ x: -18, y: 14, w: 32, h: 128 });
   });
 
   it("plays at the time of the animation, or the one the setting gives", () => {
@@ -394,11 +394,12 @@ describe("the picture", () => {
   });
 
   it("does not play a still image", () => {
-    expect(pictureOf(set(demo(), OLED_ID.R_ANIM_KIND, 6)).cycleMs).toBeNull();
+    expect(pictureOf(set(demo(), OLED_ID.R_ANIM_KIND, 18)).cycleMs).toBeNull();
+    expect(pictureOf(set(demo(), OLED_ID.R_ANIM_KIND, 51)).cycleMs).toBeNull();
   });
 
   it("offers the kinds inside the range of the keyboard", () => {
-    expect(selectableKinds(demo(), ANIMATION_KINDS)).toHaveLength(66);
+    expect(selectableKinds(demo(), ANIMATION_KINDS)).toHaveLength(42);
 
     const small = demo().map((s) =>
       s.id === OLED_ID.R_ANIM_KIND ? { ...s, max: 2 } : s,
@@ -440,19 +441,19 @@ describe("dropping a picture of the gallery on the screen", () => {
   });
 
   it("uses the size of the picture that is dropped, not the one that is playing", () => {
-    // The cat is 69 tall; the Vim logo is 160 tall: they need different positions
+    // The cat is 69 tall; the mountains are 128 tall: they need different positions
     const cat = valuesForPicture(demo(), 1, { x: 34, y: 80 })!;
-    const vim = valuesForPicture(demo(), 5, { x: 34, y: 80 })!;
+    const mountains = valuesForPicture(demo(), 18, { x: 34, y: 80 })!;
 
-    expect(vim.kind).toBe(5);
-    expect(vim.x).not.toBe(cat.x);
+    expect(mountains.kind).toBe(18);
+    expect(mountains.x).not.toBe(cat.x);
 
-    let settings = set(demo(), OLED_ID.R_ANIM_KIND, vim.kind);
-    settings = set(settings, OLED_ID.R_ANIM_X, vim.x);
-    settings = set(settings, OLED_ID.R_ANIM_Y, vim.y);
+    let settings = set(demo(), OLED_ID.R_ANIM_KIND, mountains.kind);
+    settings = set(settings, OLED_ID.R_ANIM_X, mountains.x);
+    settings = set(settings, OLED_ID.R_ANIM_Y, mountains.y);
 
     const { rect } = stateOf(settings, "r_anim");
-    expect(rect.h).toBe(160);
+    expect(rect.h).toBe(128);
     expect(rect.y + rect.h / 2).toBeCloseTo(80, 0);
   });
 
@@ -850,7 +851,7 @@ describe("changing the picture", () => {
   });
 
   it("fits a picture as tall as the screen exactly on it", () => {
-    for (const kind of [10, 13, 18, 19, 20, 24]) {
+    for (const kind of [10, 13, 18, 19, 20, 26, 27]) {
       const after = pictureOn(apply(demo(), valuesForKindChange(demo(), kind)!));
 
       expect(after.rect).toEqual({ ...WINDOW_RECT });
@@ -868,14 +869,16 @@ describe("changing the picture", () => {
     expect(after.visibility).toBe("full");
   });
 
-  it("keeps the center of a picture that is bigger than the screen, and does not fit it", () => {
-    // Vim is 68 x 160: it cannot fit in 32 x 128, so it stays centered on the old center
-    const before = pictureOn(demo());
-    const after = pictureOn(apply(demo(), valuesForKindChange(demo(), 5)!));
+  it("keeps the center on a side where the picture is bigger than the screen, and does not fit it there", () => {
+    // The head is 68 x 69: it is wider than the 32 the panel shows, so it stays
+    // centered on the old center on that side; its height fits, and it stays too
+    const mountains = apply(demo(), valuesForKindChange(demo(), 18)!);
+    const before = pictureOn(mountains);
+    const after = pictureOn(apply(mountains, valuesForKindChange(mountains, 2)!));
     const a = centerOfRect(before.rect);
     const b = centerOfRect(after.rect);
 
-    expect(after.rect).toMatchObject({ w: 68, h: 160 });
+    expect(after.rect).toMatchObject({ w: 68, h: 69 });
     expect(Math.abs(a.x - b.x)).toBeLessThanOrEqual(1);
     expect(Math.abs(a.y - b.y)).toBeLessThanOrEqual(1);
   });

@@ -6,7 +6,7 @@
  * screens are drawn and where, and which animation the right screen plays. They
  * come from CONFIG_KEYPAW_OLED_LAYOUT of the lenerdz/zmk-rgb-matrix module
  * (include/zmk/display_settings.h there is the reference) and travel in the same
- * display requests as the settings of the Display tab (ids 1 to 6).
+ * display requests as the settings of the Display tab (ids 1 to 15).
  *
  * The ids come in blocks of eight, one block per widget, from 16 on: +0 says
  * whether the widget is drawn (0 or 1), +1 and +2 are its x and y, and the

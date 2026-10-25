@@ -19,6 +19,8 @@ import {
   widgetsOf,
   type ArtContext,
   type Part,
+  RETIRED_ANIMATION_KINDS,
+  isRetiredKind,
 } from "./oledCatalog";
 import type { LiveReading } from "../live/liveStatusPoller";
 import { FIRST_OLED_ID, OLED_ID } from "./oledIds";
@@ -242,8 +244,13 @@ describe("how the widgets are drawn", () => {
 
   it("draws the picture as big as the kind says (an animation is 68 x 69)", () => {
     expect(art("r_anim", { kind: 1 })).toEqual({ x: 0, y: 0, w: 68, h: 69 });
-    expect(art("r_anim", { kind: 5 })).toEqual({ x: 0, y: 0, w: 68, h: 160 });
-    expect(art("r_anim", { kind: 6 })).toEqual({ x: 0, y: 0, w: 68, h: 140 });
+    expect(art("r_anim", { kind: 4 })).toEqual({ x: 0, y: 0, w: 68, h: 69 });
+  });
+
+  it("draws a retired kind as the first one, the gem: it has no picture any more", () => {
+    // Kind 5 was the Vim logo (68 x 160): the app does not have it
+    expect(art("r_anim", { kind: 5 })).toEqual({ x: 0, y: 0, w: 68, h: 69 });
+    expect(art("r_anim", { kind: 52 })).toEqual({ x: 0, y: 0, w: 68, h: 69 });
   });
 
   it("draws the pictures of the fork 32 pixels wide, from 32 to 128 tall", () => {
@@ -311,15 +318,13 @@ describe("how the widgets are drawn", () => {
 });
 
 describe("the pictures of the right screen", () => {
-  it("are 66, from 0, in the order of the firmware: the seven of nice!oled, the 19 of the fork and the 40 of its second batch", () => {
+  it("are the 42 of the 66 kinds that were not retired, in the order of the firmware", () => {
     expect(ANIMATION_KINDS.map((k) => [k.value, k.sprite])).toEqual([
       [0, "crystal"],
       [1, "cat"],
       [2, "head"],
       [3, "spaceman"],
       [4, "pokemon"],
-      [5, "vim"],
-      [6, "vip_marcos"],
       [7, "equalizer"],
       [8, "radar"],
       [9, "heartbeat"],
@@ -334,11 +339,7 @@ describe("the pictures of the right screen", () => {
       [18, "mountains"],
       [19, "skyline"],
       [20, "circuit"],
-      [21, "alien"],
-      [22, "heart"],
       [23, "keyboard"],
-      [24, "pulsar"],
-      [25, "rocket"],
       [26, "waterfall"],
       [27, "lava"],
       [28, "lightning"],
@@ -359,27 +360,36 @@ describe("the pictures of the right screen", () => {
       [43, "ufo"],
       [44, "eye"],
       [45, "keywave"],
-      [46, "coffee"],
-      [47, "cactus"],
-      [48, "lighthouse"],
       [49, "moon_cat"],
-      [50, "robot"],
       [51, "planet"],
-      [52, "castle"],
-      [53, "tree"],
-      [54, "skull"],
-      [55, "sword"],
-      [56, "key"],
-      [57, "antenna"],
-      [58, "potion"],
-      [59, "sailboat"],
-      [60, "compass"],
-      [61, "crown"],
-      [62, "cassette"],
-      [63, "floppy"],
-      [64, "phases"],
-      [65, "mushroom"],
     ]);
+  });
+
+  it("leave out the 24 retired kinds, which keep their numbers: no value is listed and retired at once, and none is missing", () => {
+    const listed = ANIMATION_KINDS.map((k) => k.value);
+
+    expect(RETIRED_ANIMATION_KINDS.size).toBe(24);
+    for (const value of RETIRED_ANIMATION_KINDS) {
+      expect(listed).not.toContain(value);
+      expect(isRetiredKind(value)).toBe(true);
+    }
+    expect(
+      [...listed, ...RETIRED_ANIMATION_KINDS].sort((a, b) => a - b),
+    ).toEqual(Array.from({ length: 66 }, (_, i) => i));
+  });
+
+  it("keep the six still images that are left: mountains, skyline, circuit, keyboard, moon cat and planet", () => {
+    const stills = ANIMATION_KINDS.filter((k) => k.cycleMs === null);
+
+    expect(stills.map((k) => [k.value, k.sprite])).toEqual([
+      [18, "mountains"],
+      [19, "skyline"],
+      [20, "circuit"],
+      [23, "keyboard"],
+      [49, "moon_cat"],
+      [51, "planet"],
+    ]);
+    expect(ANIMATION_KINDS.length - stills.length).toBe(36);
   });
 
   it("have a label and a hint of their own", () => {
@@ -417,97 +427,32 @@ describe("the pictures of the right screen", () => {
     const frames = ANIMATION_KINDS.map((k) => SPRITES[k.sprite].frames);
 
     expect(frames).toEqual([
-      16, 8, 16, 20, 48, 1, 1, 16, 24, 16, 32, 16, 24, 16, 24, 16, 24, 16,
-      1, 1, 1, 1, 1, 1, 1, 1,
-      // The 40 of the second batch: the 20 animations, then the 20 still images
-      16, 16, 16, 24, 16, 20, 24, 8, 16, 30, 24, 16, 16, 12, 20, 16, 24, 16, 24,
-      24, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+      16, 8, 16, 20, 48, 16, 24, 16, 32, 16, 24, 16, 24, 16,
+      24, 16, 1, 1, 1, 1, 16, 16, 16, 24, 16, 20, 24, 8,
+      16, 30, 24, 16, 16, 12, 20, 16, 24, 16, 24, 24, 1, 1,
     ]);
   });
 
-  it("have a time of a cycle for the animations only, the ones of nice!oled", () => {
+  it("have a time of a cycle for the animations only, and none for the six still images", () => {
     expect(ANIMATION_KINDS.map((k) => k.cycleMs)).toEqual([
-      960,
-      960,
-      4800,
-      4800,
-      10000,
-      null,
-      null,
-      // The 19 of the fork: the 11 animations, then the 8 still images
-      1200,
-      2400,
-      1600,
-      3200,
-      1600,
-      2400,
-      1600,
-      2400,
-      1600,
-      1200,
-      1200,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      // The 40 of the second batch: the 20 animations, then the 20 still images
-      1600,
-      3200,
-      1600,
-      2400,
-      1600,
-      2000,
-      1500,
-      1600,
-      1600,
-      3000,
-      2400,
-      1600,
-      1600,
-      1000,
-      2000,
-      1600,
-      2400,
-      1600,
-      2400,
-      2400,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
+      960, 960, 4800, 4800, 10000, 1200, 2400, 1600, 3200, 1600,
+      2400, 1600, 2400, 1600, 1200, 1200, null, null, null, null,
+      1600, 3200, 1600, 2400, 1600, 2000, 1500, 1600, 1600, 3000,
+      2400, 1600, 1600, 1000, 2000, 1600, 2400, 1600, 2400, 2400,
+      null, null,
     ]);
   });
 
-  it("name the option of the build that picks each of the first seven", () => {
-    for (const kind of ANIMATION_KINDS.filter((k) => k.value < 7)) {
+  it("name the option of the build that picks each of the first five", () => {
+    for (const kind of ANIMATION_KINDS.filter((k) => k.value < 5)) {
       expect(kind.option).toMatch(
-        /^CONFIG_NICE_OLED_WIDGET_(ANIMATION|STATIC_IMAGE)_PERIPHERAL_/,
+        /^CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_/,
       );
     }
   });
 
-  it("have no option for the ones of the fork: they are picked at run time only", () => {
-    for (const kind of ANIMATION_KINDS.filter((k) => k.value >= 7)) {
+  it("have no option for the others: the fork pictures are picked at run time only, and the two still images of the shield were retired", () => {
+    for (const kind of ANIMATION_KINDS.filter((k) => k.value >= 5)) {
       expect(kind.option).toBeNull();
     }
   });
@@ -515,6 +460,12 @@ describe("the pictures of the right screen", () => {
   it("find a kind by its value, or give the first one for a value nobody knows", () => {
     expect(animationKind(3).sprite).toBe("spaceman");
     expect(animationKind(99).sprite).toBe("crystal");
+  });
+
+  it("gives the first one for a retired kind too: a keyboard with the old firmware can still report one", () => {
+    for (const value of RETIRED_ANIMATION_KINDS) {
+      expect(animationKind(value).sprite).toBe("crystal");
+    }
   });
 });
 
@@ -534,8 +485,8 @@ describe("the time of a cycle", () => {
   });
 
   it("is none for a still image", () => {
-    expect(cycleMsOf(animationKind(5), 0)).toBeNull();
-    expect(cycleMsOf(animationKind(6), 5000)).toBeNull();
+    expect(cycleMsOf(animationKind(18), 0)).toBeNull();
+    expect(cycleMsOf(animationKind(51), 5000)).toBeNull();
   });
 });
 

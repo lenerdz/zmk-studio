@@ -56,8 +56,12 @@ What is applied behaves like a change made by hand in the tab it belongs to:
   applied. A layer the keyboard has no map for is left out.
 - **Screens.** The settings are matched by their id. A setting the keyboard does not have is
   left out, and a value outside the range the keyboard gave is held at the nearest end (the
-  plan says so). The file has every setting, the ones of the OLED layout included (where
-  each widget is, which picture the right screen plays, how it is turned and cut).
+  plan says so). The file has every setting: the ones of the Display tab (the ids 1 to 15:
+  the screens, the key lights, the underglow, the pixel shift and the dimming) and the ones
+  of the OLED layout (where each widget is, which picture the right screen plays, how it is
+  turned and cut). A picture of the file that was taken out of the firmware (one
+  of the still images that were retired, such as the Vim logo of an older file) is left out,
+  and the plan says that the keyboard keeps the one it has.
 
 ## The file
 
@@ -106,7 +110,9 @@ of 42 keys is about 330 lines):
   chosen, and at least one.
 - `version` is 1. A file with a higher number comes from a newer app and is refused.
 - `name` and `label` are there to be read by a person; the app matches by place (keys), by
-  `id` (lights) and by `id` (screens).
+  `id` (lights) and by `id` (screens). The `label` of a setting of the Display tab is its
+  full name (for instance `Underglow off: time without activity`), because several of the
+  short names repeat from one group to the next.
 - Colors are `#rrggbb`, exactly `slotCount` per map (the app keeps them in lowercase).
 - Limits, so that a wrong file cannot hang the tab: from 1 to 64 layers, from 1 to 512 keys
   per layer, from 1 to 256 colors per map, from 1 to 1024 settings and 2 MiB. The parameters,

@@ -2,11 +2,13 @@
  * Added by the lenerdz/zmk-studio fork; this file is not part of upstream ZMK
  * Studio.
  *
- * The Display tab: the settings of the OLED screens of the keyboard (contrast,
- * when they turn off, the toast of the lights on the right screen). Every
- * change is applied by the keyboard at once and kept by it a few seconds later,
- * so there is no Save here. What is on the screens and where (the OLED tab) is
- * kept by the same settings, so "Restore defaults" puts that back too.
+ * The Display tab: the settings of the OLED screens and of the lights of the
+ * keyboard (contrast, when the screens, the key lights and the underglow go
+ * off, the burn-in protection of the screens, the toast of the lights on the
+ * right screen). Every change is applied by the keyboard at once and kept by
+ * it a few seconds later, so there is no Save here. What is on the screens and
+ * where (the OLED tab) is kept by the same settings, so "Restore defaults"
+ * puts that back too.
  */
 import { useContext, type ReactNode } from "react";
 import { RotateCcw } from "lucide-react";
@@ -196,16 +198,24 @@ export const DisplayTab = () => {
     <div className="bg-base-300 min-h-0 min-w-0 overflow-y-auto p-4">
       <div className="mx-auto flex max-w-2xl flex-col gap-4">
         <header className="flex flex-col gap-1">
-          <h2 className="font-semibold">Screens</h2>
+          <h2 className="font-semibold">Screens and lights</h2>
           <p className="opacity-70">
             Every change is applied by the keyboard at once and kept by it a few
             seconds later, so there is nothing to save here (Save and Discard in
             the header are for the keys and the lights). Undo and Redo in the
             header (Ctrl+Z and Ctrl+Y) take back and redo what you changed in
             this tab and in the OLED tab. A change turns the
-            screens on for a while, so you can see it. The right screen receives
+            screens on for a while, so you can see it. The right half receives
             its settings from the left half, which can take a few seconds after
             it connects.
+          </p>
+          <p className="opacity-70">
+            The screens, the key lights and the underglow each go off after a
+            time of their own without activity, counted from the last key
+            pressed on either half. Only on battery keeps them on while the
+            keyboard has a USB cable, as it does at a desk; the right half learns
+            about the cable, and about the keys pressed on the left half, from
+            the left half, so the two halves go off together.
           </p>
         </header>
 
