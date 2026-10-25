@@ -58,10 +58,13 @@ Other changes:
 - Storybook stories with the keymap of a Corne, one per layer (`Keyboard/Keymap (Corne)`).
 - The confirmation of **Restore Stock Settings** lists what it puts back: the keymap, and
   the light colors and the screen settings when the firmware has them.
+- In the Keys view a key can be dragged to another layer (below), and each key can show
+  what it prints with Shift held, in parentheses beside its label (below).
 
 What does not change: the editing of the keymap, and what the app reads from or writes to
-the keyboard for it. The icons only affect how keys are drawn and how the app is hosted;
-dragging keys (below) writes with the same request as the binding picker; the Lights and
+the keyboard for it. The icons and the legend of Shift only affect how keys are drawn, and
+the hosting only how the app is served; dragging keys (below), also from one layer to
+another, writes with the same request as the binding picker; the Lights and
 Display tabs (further below) add requests of their own, and the OLED tab uses the ones of
 the Display tab. The Diagnostics tab, and the live values of the OLED tab, only read, with
 two requests of their own; the Files tab writes with requests the other tabs already use.
@@ -69,33 +72,50 @@ The tabs are used only when the firmware has what they edit or read.
 
 ## Moving keys by dragging (the Keys view)
 
-In the **Keys** view, press a key and drag it onto another key of the same layer:
+In the **Keys** view, press a key and drag it onto another key, of the same layer or of
+another one:
 
 - **Drop** it on another key and the two keys **swap** their bindings (behavior and
   parameters). Hold **Ctrl** or **Alt**, before or during the drag, and the drop
   **copies** instead: the key you dropped on gets the binding of the dragged key, and the
   dragged key stays as it was.
+- **To another layer.** While you drag, move the pointer over a layer of the list at the
+  left of the keyboard and keep it there for a moment (350 ms, `LAYER_HOVER_MS`): that
+  layer opens, the drag goes on over its keys, and the drop works on any of them (the key
+  in the same position as the dragged one included), swapping or copying between the two
+  layers. The layer under the pointer is marked with a ring, and the tag of the copy that
+  follows the pointer reads `Hold to open this layer` while it waits. Once the layer is
+  open the tag says where the key comes from: `Swap with QWERTY` or `Copy from QWERTY`.
+  Passing over the list without stopping opens nothing.
 - While you drag, the key you pressed is dimmed with a dashed outline, a smaller copy of
   it follows the pointer with a tag (`Swap` or `Copy`), and the key under the pointer is
-  highlighted. The tag reads `drop on a key` while the pointer is over no key.
-- **Esc** cancels the drag. Releasing the pointer anywhere that is not a key does nothing.
+  highlighted. The tag reads `drop on a key` while the pointer is over no key. The copy
+  keeps showing the key you picked up when another layer opens.
+- **Esc** cancels the drag. Releasing the pointer anywhere that is not a key does nothing,
+  and so does losing the pointer or leaving the window. If the drag had opened another
+  layer, the layer the key was picked up from comes back to the screen, and nothing is
+  written.
 - The drag starts after the pointer moves 6 pixels, so a plain click still selects a key.
   After a drop, the key you dropped on is selected, which shows its binding in the picker
   below.
-- A drop is **one step** of Undo and Redo, even for a swap, which changes two keys. It is
-  written to the keyboard with the `setLayerBinding` request, the same one the binding
-  picker uses, so **Save** and **Discard** work as before. If the keyboard refuses a
-  write, the keys already written are put back and the app shows an alert.
+- A drop is **one step** of Undo and Redo, even for a swap, which changes two keys, and
+  even when the two keys are on different layers (Undo puts both back). It is written to
+  the keyboard with the `setLayerBinding` request, the same one the binding picker uses
+  (each write says which layer it is for), so **Save** and **Discard** work as before. If
+  the keyboard refuses a write, the keys already written are put back and the app shows an
+  alert.
 - Keys that are rotated (the thumb keys of the Corne) and the keys of the right half work
   like any other. Mouse, pen and touch use the same pointer events.
 
-The rules (what a drop does, how a drag starts, ends and is cancelled) are plain functions
-in [`src/keyboard/keyDrag.ts`](src/keyboard/keyDrag.ts), covered by
+The rules (what a drop does, between two layers too, how a drag starts, ends and is
+cancelled, which layer opens and when the first one comes back) are plain functions in
+[`src/keyboard/keyDrag.ts`](src/keyboard/keyDrag.ts), covered by
 [`src/keyboard/keyDrag.test.ts`](src/keyboard/keyDrag.test.ts).
-[`src/keyboard/useKeyDrag.ts`](src/keyboard/useKeyDrag.ts) listens to the pointer,
-[`src/keyboard/KeyDragGhost.tsx`](src/keyboard/KeyDragGhost.tsx) draws what follows it and
-the edit itself (`doDropKey`, `writeEdits`) is in
-[`src/keyboard/Keyboard.tsx`](src/keyboard/Keyboard.tsx).
+[`src/keyboard/useKeyDrag.ts`](src/keyboard/useKeyDrag.ts) listens to the pointer and finds
+the layer under it, [`src/keyboard/LayerPicker.tsx`](src/keyboard/LayerPicker.tsx) marks
+that layer, [`src/keyboard/KeyDragGhost.tsx`](src/keyboard/KeyDragGhost.tsx) draws what
+follows the pointer, and the timer that opens the layer and the edit itself (`doDropKey`,
+`writeEdits`) are in [`src/keyboard/Keyboard.tsx`](src/keyboard/Keyboard.tsx).
 
 **A change to the binding picker.** Upstream's
 [`src/behaviors/BehaviorBindingPicker.tsx`](src/behaviors/BehaviorBindingPicker.tsx) told
@@ -106,6 +126,36 @@ write it back, and the old and the new value could then replace each other witho
 stopping. This was seen on the demo keyboard after copying a key onto another with Ctrl
 held, and it is gone with this change. In this fork the picker tells the keyboard only when
 the user changes something in its own controls.
+
+## What the keys print with Shift held (the Keys view)
+
+A key can show, in parentheses after its label, what it prints when Shift is held: the `1`
+of the number row is drawn as `1 (!)`. The menu at the top right of the keyboard, next to
+the zoom, chooses the keyboard layout the legend is for, and the browser remembers the
+choice:
+
+| Choice | What the keys show |
+|---|---|
+| **Shift: US** (the default) | What a US layout prints with Shift: `1 (!)`, `2 (@)`, and the same for the rest of the number row, the signs and the brackets |
+| **Shift: ABNT2** | What the Brazilian ABNT2 layout prints. The label of a key that prints something else on this layout changes too: the key of the US `;` is drawn as `Ç`, the one of the US `[` as `´ (`)` and the one of the US `'` as `~ (^)` |
+| **Shift: off** | Only the label of each key, as before |
+
+- The letters have no legend: they are already drawn as capitals.
+- A key that sends Shift with its own code (`LS(N1)`, which types `!`) is drawn as what it
+  prints, `!`, with no parentheses. The other implicit modifiers (Ctrl, Alt, GUI) change
+  what the key does, not what it prints: they add no legend.
+- The legend is drawn for every key of the keyboard that the app draws as a label: a key
+  press, the tap key of a Mod-Tap or a Layer-Tap, and the key of a sticky key or of a key
+  toggle. Layers, Bluetooth, lights, media keys and the other behaviors are drawn as
+  before.
+- It is only a drawing. The keyboard sends the same key code with any layout: the character
+  is chosen by the layout of the computer, and the menu says which one the legend is for.
+  The tables of the two layouts (by HID usage) are in
+  [`src/keyboard/shiftLegend.ts`](src/keyboard/shiftLegend.ts), covered by
+  [`src/keyboard/shiftLegend.test.ts`](src/keyboard/shiftLegend.test.ts);
+  [`src/keyboard/HidUsageLabel.tsx`](src/keyboard/HidUsageLabel.tsx) draws the label with
+  the legend, and [`src/keyboard/ShiftLayoutContext.ts`](src/keyboard/ShiftLayoutContext.ts)
+  brings the choice to it.
 
 ## Light colors (the Lights tab)
 
@@ -141,11 +191,21 @@ How it works, the protocol and the files: [`src/lights/README.md`](src/lights/RE
 
 With a firmware that has display settings, the header has a third view, **Display**, next
 to **Keys** and **Lights** (each one only when the firmware has what it edits). It sets
-what the OLED screens of the keyboard do:
+what the OLED screens and the lights of the keyboard do while nobody is typing:
 
 - The **contrast** of the left and of the right screen, with a slider each.
-- **When the screens turn off**: never, only on battery (while USB is not connected to
-  that half) or always, and after how long without activity.
+- **When the screens turn off**, **when the key lights turn off** (the LEDs under the
+  keys) and **when the underglow turns off** (the other LEDs): each one never, only on
+  battery (while USB is not connected to that half) or always, and after how long without
+  activity (from 10 seconds to an hour), a time of its own for each of the three. The time
+  counts from the last key pressed on either half, and the two halves go off and come
+  back together. The firmware of corne-zmk is built with the screens never turning off,
+  and with the key lights and the underglow turning off only on battery, after 5 minutes.
+- The **burn-in protection** of the screens: the **pixel shift** (from time to time
+  everything the screens show moves by a pixel along a small path; it can be turned off,
+  and set how often it moves and how far, from 1 to 4 pixels) and the **dimming** (after a
+  time without activity the screens lower their contrast, before they turn off; set after
+  how long, or never, and to what percentage of the normal contrast).
 - The **light toast**: whether the right screen shows a notice when the lights change
   (effect, brightness, on and off), and for how long.
 - **Restore defaults** puts every setting back to what the firmware was built with.
@@ -167,7 +227,7 @@ when the firmware is built.
 It needs the [zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix) module of
 lenerdz (branch `corne-fixes`, built with `CONFIG_KEYPAW_DISPLAY_SETTINGS=y`), the
 [zmk-nice-oled](https://github.com/lenerdz/zmk-nice-oled) fork (it reads the toast
-settings) and the protocol of
+settings and draws the pixel shift) and the protocol of
 [zmk-studio-messages](https://github.com/lenerdz/zmk-studio-messages), which adds three
 requests (`get_display_info`, `set_display_setting` and `restore_display_defaults`) to the
 keymap subsystem of ZMK Studio. With any other firmware the Display view is not offered
@@ -192,17 +252,16 @@ view only, nothing is sent to the keyboard.
   the panel shows.
 - **Hide a widget** with Delete or with its switch, and **show it again** by clicking it
   in the tray of hidden widgets or by dragging it onto the screen.
-- **Choose the picture of the right screen** in a gallery of 66 pictures, in two groups:
+- **Choose the picture of the right screen** in a gallery of 42 pictures, in two groups:
   36 animations (Gem, Cat, Head, Spaceman, Pokemon, and 31 more: Equalizer, Radar,
   Heartbeat, Digital rain, Wire cube, Atom, Helix, Warp, Sonar, Bouncing ball, Flame,
   Waterfall, Lava lamp, Storm, Snowfall, Jellyfish, Falling blocks, Pong, Invaders,
   Chomper, Game of Life, Plasma, Spiral, Newton's cradle, Gears, Hourglass, Windmill,
-  Fireworks, Flying saucer, Eye, Key wave) and 30 still images (Vim, VIPs Marcos, and 28
-  more: Mountains, Skyline, Circuit, Alien, Heart, Keyboard, Pulsar, Rocket, Coffee,
-  Cactus, Lighthouse, Moon cat, Robot, Planet, Castle, Tree, Skull, Sword, Key, Antenna,
-  Potion, Sailboat, Compass, Crown, Cassette, Floppy disk, Moon phases, Mushroom), each one
-  playing in its card, with its size and the time of a cycle. Click one, or drag it onto
-  the right screen, and set the time of one cycle.
+  Fireworks, Flying saucer, Eye, Key wave) and 6 still images (Mountains, Skyline,
+  Circuit, Keyboard, Moon cat and Planet), each one playing in its card, with its size and
+  the time of a cycle. The other still images (the Vim logo, VIPs Marcos and 22 of the
+  new ones) were taken out of the firmware. Click one, or drag it onto the right screen,
+  and set the time of one cycle.
 - **Turn the picture** a quarter of a turn to either side, **cut it** to a piece that is
   selected with a frame (drag it, resize it or type its numbers), and choose **how the
   widgets mix with it**: shown in reverse where they are over a lit part of the picture, so
@@ -312,7 +371,8 @@ text file, and applies such a file again here or on another keyboard:
   the layer**, and only when the file has the same number of colors per map (54 on the
   Corne), so a file made for another LED layout applies no color; the screens by the **id of
   the setting**, a value out of the range the keyboard gave being held at the nearest end,
-  and said so.
+  and said so, and a picture that was taken out of the firmware (one of the retired still
+  images) being left out, with the keyboard keeping the one it has, and said so too.
 - **A file that is refused.** One that is not valid JSON, is not a backup of this app, has a
   part the app cannot use (the message says which one) or comes from a newer version of the
   app (a higher format number) is refused, and a file is never applied halfway: the keys
@@ -352,8 +412,15 @@ and message encoding as with a real keyboard: reading the settings, dragging a s
 changes became 13 requests, the last one with the final value), the controls that wait for
 another (the time to turn off, the duration of the toast), the three ways of turning the
 screen off, **Restore defaults** and **Restore Stock Settings** with the tab open; the
-demo keyboard without display settings has no Display tab. It is covered by `npm test`.
-It has **not been tried on a real keyboard**.
+demo keyboard without display settings has no Display tab. The seven groups that exist
+now (the key lights, the underglow, the pixel shift and the dimming came after the first
+ones) were drawn in order with the values of the demo keyboard, and choosing **Never** for
+the key lights disabled the slider of their time, with the reason, and **Always** enabled
+it again. It is covered by `npm test`. It has **not been tried on a real keyboard**, so
+whether the LEDs go off after the time that is set and come back with a key of either half,
+whether the pixel shift moves the screens and whether the dimming lowers their contrast
+are not confirmed: the basis is the tests of the module and of zmk-nice-oled on a computer
+and the compilation of the firmware in the CI of corne-zmk.
 
 The OLED tab was tried in a browser against the demo keyboard, through the same framing and
 message encoding as with a real keyboard: the two screens, dragging each widget with the
@@ -370,10 +437,13 @@ second one (turning, cutting and mixing the picture, the reverse where a widget 
 the preview standing up and the 19 pictures that came with it) was used on the same
 keyboard too: the owner reported that it worked perfectly and that he liked the animations
 and the still images, again without detail about each operation. What was added after that,
-the 40 new pictures (kinds 26 to 65, 20 animations and 20 still images), has **not been
-tried on a real keyboard**: how they look on the screen rests on the code of the firmware,
+the 20 animations of the second batch (kinds 26 to 45) and the removal of 24 still images
+(the kinds that were retired, so that the gallery has 42 pictures), has **not been tried on
+a real keyboard**: how the pictures look on the screen rests on the code of the firmware,
 on its tests on a computer and on the sprites the app draws from the same pictures, not on
-the screen. Touch input has not been tried on any device.
+the screen. In the browser the gallery showed 42 pictures, the six still images (Mountains,
+Skyline, Circuit, Keyboard, Moon cat and Planet) and none of the retired ones. Touch input
+has not been tried on any device.
 
 The live values, the Diagnostics tab, the Files tab and the Undo and Redo of the Display and
 OLED tabs were tried against the demo keyboard, through the same framing and message
@@ -413,8 +483,20 @@ corne-zmk. None of this was tried on a real keyboard.
 Dragging keys was tried in a browser against the demo keyboard: swap, copy with Ctrl and
 with Alt, switching between them during the drag, Esc, dropping outside the keys, the
 rotated thumb keys, a layer other than the first, Undo and Redo, and editing a key with the
-picker afterwards. The rules are covered by `npm test`. It has **not been tried on a real
-keyboard**, and touch input has not been tried on any device.
+picker afterwards. Dragging **to another layer** was tried there too, with the pointer
+events a mouse sends: holding the key over a layer of the list opened it after the delay (a
+crossing without stopping opened nothing), a swap and a copy onto a key of the other layer
+(the one in the same position included) wrote both layers, one step of Undo put them back,
+and Esc, and releasing the button off the keys, brought the first layer back with nothing
+written. The rules are covered by `npm test`. It has **not been tried on a real keyboard**,
+and touch input has not been tried on any device.
+
+The legend of Shift was tried in a browser against the demo keyboard with the three
+choices: `1 (!)` and the rest of the number row with **US**, the keys that print something
+else with **ABNT2** (the label of the keys of the US `;`, `[` and `'` changed) and the
+labels as before with **off**; the choice was kept when the page was loaded again. The
+tables of the two layouts were written from the layouts and the names of the HID usages,
+and they were **not compared with a physical keyboard**, nor tried on a real one.
 
 ## Using it
 
@@ -425,10 +507,13 @@ keyboard**, and touch input has not been tried on any device.
 3. Connect the keyboard over USB (on a split keyboard, the half that runs Studio, the
    central one), choose **USB**, and unlock it with the key bound to `&studio_unlock`.
 4. In **Keys**, click a key to edit it, or drag it onto another key to swap the two
-   (hold Ctrl or Alt to copy).
+   (hold Ctrl or Alt to copy). To drop it on another layer, hold it over that layer in the
+   list for a moment: the layer opens. The menu at the top right chooses whether the keys
+   show what they print with Shift held (US, ABNT2 or off).
 5. If the firmware has editable light maps, choose **Lights** in the header to edit the
    colors.
-6. If the firmware has display settings, choose **Display** to set the screens.
+6. If the firmware has display settings, choose **Display** to set the screens, when the
+   screens, the key lights and the underglow turn off, and the burn-in protection.
 7. If the firmware has the OLED layout, choose **OLED** to move the widgets of the two
    screens and to pick the animation of the right screen; turn on **Live values** to see
    them with what the keyboard says now.
@@ -503,7 +588,9 @@ be ported by hand (see [`src/vendor/zmk-studio-ts-client`](src/vendor/zmk-studio
 Added: `src/keyboard/bindingDisplay.tsx`, `src/keyboard/BindingLabel.tsx`,
 `src/keyboard/Keymap.stories.tsx`, `src/keyboard/corne.mock.ts`,
 `src/keyboard/keyDrag.ts`, `src/keyboard/keyDrag.test.ts`, `src/keyboard/useKeyDrag.ts`,
-`src/keyboard/KeyDragGhost.tsx` (dragging keys),
+`src/keyboard/KeyDragGhost.tsx` (dragging keys, between layers too),
+`src/keyboard/shiftLegend.ts`, `src/keyboard/shiftLegend.test.ts`,
+`src/keyboard/ShiftLayoutContext.ts` (what the keys print with Shift held),
 `src/lights/` (the Lights tab, the demo keyboard and their tests),
 `src/display/` (the Display tab, the history of its changes and their tests; the demo keyboard answers its requests),
 `src/oled/` (the OLED tab, its sprites and its tests; the demo keyboard has the settings of the layout),
@@ -517,7 +604,8 @@ Added: `src/keyboard/bindingDisplay.tsx`, `src/keyboard/BindingLabel.tsx`,
 Modified: `README.md` (replaced), `NOTICE`, `.gitignore`, `.prettierignore`, `index.html`, `download.html`,
 `package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.ts`,
 `src/keyboard/Keymap.tsx`, `src/keyboard/Key.tsx`, `src/keyboard/Keyboard.tsx`,
-`src/keyboard/PhysicalLayout.tsx`, `src/behaviors/BehaviorBindingPicker.tsx`,
+`src/keyboard/PhysicalLayout.tsx`, `src/keyboard/LayerPicker.tsx`,
+`src/keyboard/HidUsageLabel.tsx`, `src/behaviors/BehaviorBindingPicker.tsx`,
 `src/hid-usage-name-overrides.json`, `src/App.tsx`,
 `src/AppFooter.tsx`, `src/AppHeader.tsx`, `src/ConnectModal.tsx`, `src/DownloadPage.tsx`,
 `src/rpc/logging.ts`, `src/undoRedo.ts`.

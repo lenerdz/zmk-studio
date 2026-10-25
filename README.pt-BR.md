@@ -60,10 +60,13 @@ Outras mudanças:
 - Stories do Storybook com o keymap de um Corne, uma por camada (`Keyboard/Keymap (Corne)`).
 - A confirmação de **Restore Stock Settings** lista o que ela devolve: o keymap e, quando o
   firmware os tem, as cores das luzes e as configurações das telas.
+- Na visão Keys, uma tecla pode ser arrastada para outra camada (abaixo), e cada tecla pode
+  mostrar o que imprime com Shift pressionado, entre parênteses ao lado do rótulo (abaixo).
 
 O que não muda: a edição do keymap e o que o app lê do teclado ou grava nele para isso.
-Os ícones afetam apenas como as teclas são desenhadas e como o app é hospedado; arrastar
-teclas (abaixo) grava com a mesma requisição do seletor de binding; as abas Lights e
+Os ícones e a legenda do Shift afetam apenas como as teclas são desenhadas, e a hospedagem
+apenas como o app é servido; arrastar teclas (abaixo), inclusive de uma camada para outra,
+grava com a mesma requisição do seletor de binding; as abas Lights e
 Display (mais abaixo) acrescentam requisições próprias, e a aba OLED usa as da aba
 Display. A aba Diagnostics, e os valores ao vivo da aba OLED, só leem, com duas
 requisições próprias; a aba Files grava com requisições que as outras abas já usam. As
@@ -71,35 +74,50 @@ abas só são usadas quando o firmware tem o que elas editam ou leem.
 
 ## Mover teclas arrastando (a visão Keys)
 
-Na visão **Keys**, pressione uma tecla e arraste-a sobre outra tecla da mesma camada:
+Na visão **Keys**, pressione uma tecla e arraste-a sobre outra tecla, da mesma camada ou de
+outra:
 
 - **Solte** sobre outra tecla e as duas teclas **trocam** de binding (comportamento e
   parâmetros). Segure **Ctrl** ou **Alt**, antes ou durante o arraste, e o drop
   **copia**: a tecla sobre a qual você soltou recebe o binding da tecla arrastada, e a
   tecla arrastada continua como estava.
+- **Para outra camada.** Durante o arraste, leve o ponteiro até uma camada da lista à
+  esquerda do teclado e mantenha-o ali por um instante (350 ms, `LAYER_HOVER_MS`): essa
+  camada abre, o arraste continua sobre as teclas dela, e o drop funciona em qualquer uma
+  delas (inclusive a tecla na mesma posição da arrastada), trocando ou copiando entre as
+  duas camadas. A camada sob o ponteiro é marcada com um anel, e a etiqueta da cópia que
+  segue o ponteiro mostra `Hold to open this layer` enquanto ele espera. Com a camada
+  aberta, a etiqueta diz de onde a tecla vem: `Swap with QWERTY` ou `Copy from QWERTY`.
+  Passar pela lista sem parar não abre nada.
 - Durante o arraste, a tecla pressionada fica esmaecida com um contorno tracejado, uma
   cópia menor dela segue o ponteiro com uma etiqueta (`Swap` ou `Copy`) e a tecla sob o
   ponteiro é destacada. A etiqueta mostra `drop on a key` enquanto o ponteiro não está
-  sobre nenhuma tecla.
+  sobre nenhuma tecla. A cópia continua mostrando a tecla que você pegou quando outra
+  camada abre.
 - **Esc** cancela o arraste. Soltar o ponteiro em qualquer lugar que não seja uma tecla
-  não faz nada.
+  não faz nada, e perder o ponteiro ou sair da janela também não. Se o arraste tinha aberto
+  outra camada, a camada de onde a tecla foi pega volta para a tela, e nada é gravado.
 - O arraste começa depois que o ponteiro se move 6 pixels; por isso um clique simples
   continua selecionando a tecla. Depois de um drop, a tecla sobre a qual você soltou fica
   selecionada, o que mostra o binding dela no seletor logo abaixo.
-- Um drop é **um passo** de Undo e de Redo, mesmo numa troca, que altera duas teclas. Ele
+- Um drop é **um passo** de Undo e de Redo, mesmo numa troca, que altera duas teclas, e
+  mesmo quando as duas teclas estão em camadas diferentes (o Undo devolve as duas). Ele
   é gravado no teclado com a requisição `setLayerBinding`, a mesma que o seletor de binding
-  usa; por isso **Save** e **Discard** funcionam como antes. Se o teclado recusar uma
-  gravação, as teclas já gravadas voltam ao que eram e o app mostra um alerta.
+  usa (cada gravação diz para qual camada é); por isso **Save** e **Discard** funcionam
+  como antes. Se o teclado recusar uma gravação, as teclas já gravadas voltam ao que eram e
+  o app mostra um alerta.
 - Teclas giradas (as teclas do polegar do Corne) e as teclas da metade direita funcionam
   como qualquer outra. Mouse, caneta e toque usam os mesmos eventos de ponteiro.
 
-As regras (o que um drop faz, como um arraste começa, termina e é cancelado) são funções
-puras em [`src/keyboard/keyDrag.ts`](src/keyboard/keyDrag.ts), cobertas por
+As regras (o que um drop faz, também entre duas camadas, como um arraste começa, termina e
+é cancelado, qual camada abre e quando a primeira volta) são funções puras em
+[`src/keyboard/keyDrag.ts`](src/keyboard/keyDrag.ts), cobertas por
 [`src/keyboard/keyDrag.test.ts`](src/keyboard/keyDrag.test.ts).
-[`src/keyboard/useKeyDrag.ts`](src/keyboard/useKeyDrag.ts) escuta o ponteiro,
-[`src/keyboard/KeyDragGhost.tsx`](src/keyboard/KeyDragGhost.tsx) desenha o que o segue e a
-edição em si (`doDropKey`, `writeEdits`) está em
-[`src/keyboard/Keyboard.tsx`](src/keyboard/Keyboard.tsx).
+[`src/keyboard/useKeyDrag.ts`](src/keyboard/useKeyDrag.ts) escuta o ponteiro e acha a camada
+sob ele, [`src/keyboard/LayerPicker.tsx`](src/keyboard/LayerPicker.tsx) marca essa camada,
+[`src/keyboard/KeyDragGhost.tsx`](src/keyboard/KeyDragGhost.tsx) desenha o que segue o
+ponteiro, e o temporizador que abre a camada e a edição em si (`doDropKey`, `writeEdits`)
+estão em [`src/keyboard/Keyboard.tsx`](src/keyboard/Keyboard.tsx).
 
 **Uma mudança no seletor de binding.** O
 [`src/behaviors/BehaviorBindingPicker.tsx`](src/behaviors/BehaviorBindingPicker.tsx) do
@@ -111,6 +129,36 @@ podiam então se substituir sem parar. Isso foi visto no teclado de demonstraç�
 copiar uma tecla sobre outra com Ctrl pressionado, e deixou de acontecer com esta mudança.
 Neste fork o seletor só avisa o teclado quando o usuário muda algo nos seus próprios
 controles.
+
+## O que as teclas imprimem com Shift pressionado (a visão Keys)
+
+Uma tecla pode mostrar, entre parênteses depois do rótulo, o que ela imprime com Shift
+pressionado: o `1` da fileira de números é desenhado como `1 (!)`. O menu no canto
+superior direito do teclado, ao lado do zoom, escolhe para qual layout de teclado é a
+legenda, e o navegador lembra da escolha:
+
+| Escolha | O que as teclas mostram |
+|---|---|
+| **Shift: US** (o padrão) | O que um layout US imprime com Shift: `1 (!)`, `2 (@)`, e o mesmo para o resto da fileira de números, os sinais e os colchetes |
+| **Shift: ABNT2** | O que o layout brasileiro ABNT2 imprime. O rótulo de uma tecla que imprime outra coisa nesse layout também muda: a tecla do `;` US é desenhada como `Ç`, a do `[` US como `´ (`)` e a do `'` US como `~ (^)` |
+| **Shift: off** | Apenas o rótulo de cada tecla, como antes |
+
+- As letras não têm legenda: já são desenhadas como maiúsculas.
+- Uma tecla que envia Shift no próprio código (`LS(N1)`, que digita `!`) é desenhada como o
+  que ela imprime, `!`, sem parênteses. Os outros modificadores implícitos (Ctrl, Alt, GUI)
+  mudam o que a tecla faz, não o que ela imprime: não acrescentam legenda.
+- A legenda é desenhada para toda tecla do teclado que o app desenha como rótulo: um key
+  press, a tecla de toque de um Mod-Tap ou de um Layer-Tap, e a tecla de um sticky key ou
+  de um key toggle. Camadas, Bluetooth, luzes, teclas de mídia e os demais comportamentos
+  são desenhados como antes.
+- É apenas um desenho. O teclado envia o mesmo código de tecla com qualquer layout: o
+  caractere é escolhido pelo layout do computador, e o menu diz para qual deles é a
+  legenda. As tabelas dos dois layouts (por HID usage) estão em
+  [`src/keyboard/shiftLegend.ts`](src/keyboard/shiftLegend.ts), cobertas por
+  [`src/keyboard/shiftLegend.test.ts`](src/keyboard/shiftLegend.test.ts);
+  [`src/keyboard/HidUsageLabel.tsx`](src/keyboard/HidUsageLabel.tsx) desenha o rótulo com a
+  legenda, e [`src/keyboard/ShiftLayoutContext.ts`](src/keyboard/ShiftLayoutContext.ts)
+  leva a escolha até ele.
 
 ## Cores das luzes (a aba Lights)
 
@@ -147,12 +195,23 @@ Para experimentar sem um teclado, use o **Demo keyboard** (veja
 
 Com um firmware que tem configurações de tela, o cabeçalho ganha uma terceira visão,
 **Display**, ao lado de **Keys** e **Lights** (cada uma só quando o firmware tem o que ela
-edita). Ela define o que as telas OLED do teclado fazem:
+edita). Ela define o que as telas OLED e as luzes do teclado fazem enquanto ninguém digita:
 
 - O **contraste** da tela esquerda e da tela direita, com um controle deslizante (slider)
   para cada uma.
-- **Quando as telas apagam**: nunca, só na bateria (enquanto o USB não está conectado
-  àquela metade) ou sempre, e depois de quanto tempo sem atividade.
+- **Quando as telas apagam**, **quando as luzes das teclas apagam** (os LEDs sob as teclas)
+  e **quando o underglow apaga** (os outros LEDs): cada um nunca, só na bateria (enquanto o
+  USB não está conectado àquela metade) ou sempre, e depois de quanto tempo sem atividade
+  (de 10 segundos a uma hora), um tempo próprio para cada um dos três. O tempo conta a
+  partir da última tecla pressionada em qualquer metade, e as duas metades apagam e voltam
+  juntas. O firmware do corne-zmk é compilado com as telas nunca apagando, e com as luzes
+  das teclas e o underglow apagando só na bateria, depois de 5 minutos.
+- A **proteção contra burn-in** das telas: o **deslocamento de pixel** (de tempos em
+  tempos tudo o que as telas mostram se move um pixel ao longo de um caminho pequeno; dá
+  para desligá-lo e definir de quanto em quanto tempo ele se move e a que distância, de 1 a
+  4 pixels) e o **escurecimento** (depois de um tempo sem atividade as telas baixam o
+  contraste, antes de apagar; define-se depois de quanto tempo, ou nunca, e para qual
+  porcentagem do contraste normal).
 - O **toast das luzes**: se a tela direita mostra um aviso quando as luzes mudam (efeito,
   brilho, ligar e desligar) e por quanto tempo.
 - **Restore defaults** devolve todas as configurações ao que o firmware tinha ao ser
@@ -176,7 +235,7 @@ escolhidos quando o firmware é compilado.
 Ela precisa do módulo [zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix) de
 lenerdz (branch `corne-fixes`, compilado com `CONFIG_KEYPAW_DISPLAY_SETTINGS=y`), do fork
 [zmk-nice-oled](https://github.com/lenerdz/zmk-nice-oled) (que lê as configurações do
-toast) e do protocolo do
+toast e desenha o deslocamento de pixel) e do protocolo do
 [zmk-studio-messages](https://github.com/lenerdz/zmk-studio-messages), que acrescenta
 três requisições (`get_display_info`, `set_display_setting` e
 `restore_display_defaults`) ao subsistema keymap do ZMK Studio. Com qualquer outro
@@ -202,17 +261,15 @@ só a visão, nada é enviado ao teclado.
   painel mostra.
 - **Esconda um widget** com Delete ou com a chave dele, e **mostre-o de novo** clicando nele
   na bandeja dos widgets escondidos ou arrastando-o para a tela.
-- **Escolha a imagem da tela direita** em uma galeria de 66 imagens, em dois grupos: 36
+- **Escolha a imagem da tela direita** em uma galeria de 42 imagens, em dois grupos: 36
   animações (Gem, Cat, Head, Spaceman, Pokemon e mais 31: Equalizer, Radar, Heartbeat,
   Digital rain, Wire cube, Atom, Helix, Warp, Sonar, Bouncing ball, Flame, Waterfall, Lava
   lamp, Storm, Snowfall, Jellyfish, Falling blocks, Pong, Invaders, Chomper, Game of Life,
   Plasma, Spiral, Newton's cradle, Gears, Hourglass, Windmill, Fireworks, Flying saucer,
-  Eye, Key wave) e 30 imagens fixas (Vim, VIPs Marcos e mais 28: Mountains, Skyline,
-  Circuit, Alien, Heart, Keyboard, Pulsar, Rocket, Coffee, Cactus, Lighthouse, Moon cat,
-  Robot, Planet, Castle, Tree, Skull, Sword, Key, Antenna, Potion, Sailboat, Compass,
-  Crown, Cassette, Floppy disk, Moon phases, Mushroom), cada uma tocando no seu cartão,
-  com o tamanho e o tempo de um ciclo. Clique em uma, ou arraste-a para a tela direita, e
-  ajuste o tempo de um ciclo.
+  Eye, Key wave) e 6 imagens fixas (Mountains, Skyline, Circuit, Keyboard, Moon cat e
+  Planet), cada uma tocando no seu cartão, com o tamanho e o tempo de um ciclo. As outras
+  imagens fixas (o logo do Vim, VIPs Marcos e 22 das novas) foram tiradas do firmware.
+  Clique em uma, ou arraste-a para a tela direita, e ajuste o tempo de um ciclo.
 - **Gire a imagem** um quarto de volta para qualquer lado, **corte-a** em um pedaço que se
   seleciona com uma moldura (arraste-a, redimensione-a ou digite os números dela) e escolha
   **como os widgets se misturam com ela**: mostrados em reverso onde estão sobre uma parte
@@ -325,7 +382,9 @@ em um único arquivo de texto e aplica esse arquivo de novo aqui ou em outro tec
   camada**, e só quando o arquivo tem o mesmo número de cores por mapa (54 no Corne), então
   um arquivo feito para outro layout de LEDs não aplica nenhuma cor; as telas pelo **id da
   configuração**, e um valor fora da faixa que o teclado informou é mantido no extremo mais
-  próximo dela, e o plano diz isso.
+  próximo dela, e o plano diz isso, e uma imagem que foi tirada do firmware (uma das imagens
+  fixas aposentadas) é deixada de fora, com o teclado mantendo a que tem, e o plano diz
+  isso também.
 - **Um arquivo que é recusado.** Um que não é JSON válido, não é um backup deste app, tem uma
   parte que o app não consegue usar (a mensagem diz qual) ou vem de uma versão mais nova do
   app (um número de formato maior) é recusado, e um arquivo nunca é aplicado pela metade: as
@@ -366,8 +425,15 @@ configurações, arrastar um controle deslizante (72 mudanças viraram 13 requis
 última com o valor final), os controles que esperam por outro (o tempo para apagar, a
 duração do toast), as três formas de apagar a tela, **Restore defaults** e **Restore
 Stock Settings** com a aba aberta; o teclado de demonstração sem configurações de tela
-não tem a aba Display. Ela é coberta por `npm test`. **Não foi testada em um teclado
-real**.
+não tem a aba Display. Os sete grupos que existem agora (as luzes das teclas, o underglow,
+o deslocamento de pixel e o escurecimento vieram depois dos primeiros) foram desenhados na
+ordem, com os valores do teclado de demonstração, e escolher **Never** para as luzes das
+teclas desabilitou o controle deslizante do tempo delas, com o motivo, e **Always** o
+habilitou de novo. Ela é coberta por `npm test`. **Não foi testada em um teclado real**;
+portanto, se os LEDs apagam depois do tempo definido e voltam com uma tecla de qualquer
+metade, se o deslocamento de pixel move as telas e se o escurecimento baixa o contraste
+delas não está confirmado: a base são os testes do módulo e do zmk-nice-oled em um
+computador e a compilação do firmware no CI do corne-zmk.
 
 A aba OLED foi testada em um navegador com o teclado de demonstração, pela mesma moldura
 (framing) e codificação de mensagens usadas com um teclado real: as duas telas, arrastar
@@ -383,11 +449,13 @@ funcionou, sem detalhar cada operação, então nenhuma delas tem confirmação 
 segunda (girar, cortar e misturar a imagem, o reverso onde um widget está sobre ela, a
 prévia em pé e as 19 imagens que vieram com ela) também foi usada no mesmo teclado: o dono
 relatou que funcionou perfeitamente e que gostou das animações e das imagens fixas, de novo
-sem detalhar cada operação. O que foi acrescentado depois disso, as 40 imagens novas (tipos
-26 a 65, 20 animações e 20 imagens fixas), **não foi testado em um teclado real**: como elas
+sem detalhar cada operação. O que foi acrescentado depois disso, as 20 animações do segundo
+lote (tipos 26 a 45) e a retirada de 24 imagens fixas (os tipos que foram aposentados, de
+modo que a galeria tem 42 imagens), **não foi testado em um teclado real**: como as imagens
 ficam na tela se baseia no código do firmware, nos testes dele em um computador e nos
-sprites que o app desenha a partir das mesmas imagens, não na tela. O toque não foi testado
-em nenhum dispositivo.
+sprites que o app desenha a partir das mesmas imagens, não na tela. No navegador a galeria
+mostrou 42 imagens, as seis imagens fixas (Mountains, Skyline, Circuit, Keyboard, Moon cat
+e Planet) e nenhuma das aposentadas. O toque não foi testado em nenhum dispositivo.
 
 Os valores ao vivo, a aba Diagnostics, a aba Files e o Undo e o Redo das abas Display e OLED
 foram testados com o teclado de demonstração, pela mesma moldura (framing) e codificação de
@@ -427,8 +495,20 @@ que o `config/led_colors.dtsi` do corne-zmk. Nada disso foi testado em um teclad
 O arraste de teclas foi testado em um navegador com o teclado de demonstração: troca,
 cópia com Ctrl e com Alt, alternância entre elas durante o arraste, Esc, soltar fora das
 teclas, as teclas giradas do polegar, uma camada que não a primeira, Undo e Redo, e a
-edição de uma tecla pelo seletor depois. As regras são cobertas por `npm test`. Ele
-**não foi testado em um teclado real**, e o toque não foi testado em nenhum dispositivo.
+edição de uma tecla pelo seletor depois. O arraste **para outra camada** também foi testado
+ali, com os eventos de ponteiro que um mouse envia: manter a tecla sobre uma camada da
+lista a abriu depois do atraso (passar sem parar não abriu nada), uma troca e uma cópia
+sobre uma tecla da outra camada (inclusive a da mesma posição) gravaram as duas camadas,
+um passo de Undo as devolveu, e Esc, e soltar o botão fora das teclas, trouxeram a primeira
+camada de volta sem gravar nada. As regras são cobertas por `npm test`. Ele **não foi
+testado em um teclado real**, e o toque não foi testado em nenhum dispositivo.
+
+A legenda do Shift foi testada em um navegador com o teclado de demonstração, com as três
+escolhas: `1 (!)` e o resto da fileira de números com **US**, as teclas que imprimem outra
+coisa com **ABNT2** (o rótulo das teclas do `;`, do `[` e do `'` US mudou) e os rótulos
+como antes com **off**; a escolha foi mantida quando a página foi carregada de novo. As
+tabelas dos dois layouts foram escritas a partir dos layouts e dos nomes das HID usages, e
+**não foram comparadas com um teclado físico**, nem testadas em um real.
 
 ## Como usar
 
@@ -439,10 +519,14 @@ edição de uma tecla pelo seletor depois. As regras são cobertas por `npm test
 3. Conecte o teclado por USB (em um teclado dividido, a metade que executa o Studio, a
    central), escolha **USB** e desbloqueie com a tecla associada a `&studio_unlock`.
 4. Em **Keys**, clique em uma tecla para editá-la, ou arraste-a sobre outra tecla para
-   trocar as duas (segure Ctrl ou Alt para copiar).
+   trocar as duas (segure Ctrl ou Alt para copiar). Para soltá-la em outra camada, mantenha-a
+   sobre essa camada na lista por um instante: a camada abre. O menu no canto superior
+   direito escolhe se as teclas mostram o que imprimem com Shift pressionado (US, ABNT2 ou
+   off).
 5. Se o firmware tiver mapas de luzes editáveis, escolha **Lights** no cabeçalho para
    editar as cores.
-6. Se o firmware tiver configurações de tela, escolha **Display** para ajustar as telas.
+6. Se o firmware tiver configurações de tela, escolha **Display** para ajustar as telas,
+   quando as telas, as luzes das teclas e o underglow apagam, e a proteção contra burn-in.
 7. Se o firmware tiver o layout das telas OLED, escolha **OLED** para mover os widgets das
    duas telas e escolher a animação da tela direita; ligue **Live values** para vê-los com o
    que o teclado diz agora.
@@ -518,7 +602,9 @@ upstream, precisam ser portadas à mão (veja
 Adicionados: `src/keyboard/bindingDisplay.tsx`, `src/keyboard/BindingLabel.tsx`,
 `src/keyboard/Keymap.stories.tsx`, `src/keyboard/corne.mock.ts`,
 `src/keyboard/keyDrag.ts`, `src/keyboard/keyDrag.test.ts`, `src/keyboard/useKeyDrag.ts`,
-`src/keyboard/KeyDragGhost.tsx` (arrastar teclas),
+`src/keyboard/KeyDragGhost.tsx` (arrastar teclas, também entre camadas),
+`src/keyboard/shiftLegend.ts`, `src/keyboard/shiftLegend.test.ts`,
+`src/keyboard/ShiftLayoutContext.ts` (o que as teclas imprimem com Shift pressionado),
 `src/lights/` (a aba Lights, o teclado de demonstração e seus testes),
 `src/display/` (a aba Display, o histórico das mudanças dela e seus testes; o teclado de demonstração responde às requisições dela),
 `src/oled/` (a aba OLED, os sprites dela e seus testes; o teclado de demonstração tem as configurações do layout),
@@ -532,7 +618,8 @@ Adicionados: `src/keyboard/bindingDisplay.tsx`, `src/keyboard/BindingLabel.tsx`,
 Modificados: `README.md` (substituído), `NOTICE`, `.gitignore`, `.prettierignore`, `index.html`, `download.html`,
 `package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.ts`,
 `src/keyboard/Keymap.tsx`, `src/keyboard/Key.tsx`, `src/keyboard/Keyboard.tsx`,
-`src/keyboard/PhysicalLayout.tsx`, `src/behaviors/BehaviorBindingPicker.tsx`,
+`src/keyboard/PhysicalLayout.tsx`, `src/keyboard/LayerPicker.tsx`,
+`src/keyboard/HidUsageLabel.tsx`, `src/behaviors/BehaviorBindingPicker.tsx`,
 `src/hid-usage-name-overrides.json`, `src/App.tsx`,
 `src/AppFooter.tsx`, `src/AppHeader.tsx`, `src/ConnectModal.tsx`, `src/DownloadPage.tsx`,
 `src/rpc/logging.ts`, `src/undoRedo.ts`.
