@@ -479,7 +479,7 @@ function App() {
                   tab is open, so it keeps its selection and does not ask the
                   keyboard again. */}
               <div className={view === "keys" ? "contents" : "hidden"}>
-                <Keyboard />
+                <Keyboard active={view === "keys"} />
               </div>
               {view === "lights" && <LightsTab />}
               {view === "display" && (

@@ -2,11 +2,11 @@
  * Added by the lenerdz/zmk-studio fork; this file is not part of upstream ZMK
  * Studio.
  *
- * What a key prints with Shift held, drawn in parentheses beside its label
- * ("1 (!)"). A HID usage names a place on the keyboard, not a character: what the
- * computer prints depends on the keyboard layout it is set to. So the legend
- * follows a layout chosen in the app, the US one (the one the names of the usages
- * assume) or the Brazilian ABNT2, or none.
+ * What a key prints with Shift held, drawn above its label, dimmed, the way a
+ * keycap has it (the `!` above the `1`). A HID usage names a place on the
+ * keyboard, not a character: what the computer prints depends on the keyboard
+ * layout it is set to. So the legend follows a layout chosen in the app, the US
+ * one (the one the names of the usages assume) or the Brazilian ABNT2, or none.
  *
  * Nothing here touches the page, so the tables run in the tests.
  */
@@ -29,13 +29,13 @@ export const SHIFT_LAYOUTS: ReadonlyArray<{
     value: "us",
     label: "Shift: US",
     title:
-      "Beside each key, in parentheses, what it prints with Shift held on a US keyboard layout",
+      "Above each key, dimmed, what it prints with Shift held on a US keyboard layout",
   },
   {
     value: "abnt2",
     label: "Shift: ABNT2",
     title:
-      "Beside each key, in parentheses, what it prints with Shift held on a Brazilian ABNT2 keyboard layout (the labels of the keys that print something else on it change too)",
+      "Above each key, dimmed, what it prints with Shift held on a Brazilian ABNT2 keyboard layout (the labels of the keys that print something else on it change too)",
   },
 ];
 
@@ -73,7 +73,10 @@ interface Printed {
  */
 
 // US layout: the label of the usage (a number, a sign) is what the key prints
-// without Shift, so only the shifted character is listed.
+// without Shift, so only the shifted character is listed. The exception is the two
+// bracket keys: the labels of the app write them as the signs they print with Shift
+// ({ and }, see hid-usage-name-overrides.json), so they are drawn as what they
+// print, [ and ], with { and } above.
 const US: Readonly<Record<number, Printed>> = {
   0x1e: { shifted: "!" }, // 1
   0x1f: { shifted: "@" }, // 2
@@ -87,8 +90,8 @@ const US: Readonly<Record<number, Printed>> = {
   0x27: { shifted: ")" }, // 0
   0x2d: { shifted: "_" }, // -
   0x2e: { shifted: "+" }, // =
-  0x2f: { shifted: "{" }, // [
-  0x30: { shifted: "}" }, // ]
+  0x2f: { main: "[", shifted: "{" }, // [
+  0x30: { main: "]", shifted: "}" }, // ]
   0x31: { shifted: "|" }, // \
   0x32: { shifted: "|" }, // Non-US # (the scan code of \ on a US layout)
   0x33: { shifted: ":" }, // ;
@@ -139,15 +142,15 @@ const TABLES: Readonly<Record<Exclude<ShiftLayout, "off">, Readonly<Record<numbe
 export interface KeyLegend {
   /** Replaces the label of the usage: what the key prints on this layout. */
   main?: string;
-  /** What the key prints with Shift, to draw in parentheses. */
+  /** What the key prints with Shift, to draw above the label. */
   shifted?: string;
 }
 
 /**
- * What to add to the label of a usage. With the Shift of the usage itself (a key
- * that sends `LS(N1)`), the key prints the shifted character, so that is its
- * label and there is nothing to put in parentheses. Other implicit modifiers
- * (Ctrl, Alt, GUI) change what the key does, not what it prints: no legend.
+ * What to change in the face of a usage. With the Shift of the usage itself (a
+ * key that sends `LS(N1)`), the key prints the shifted character, so that is its
+ * label and there is nothing to draw above it. Other implicit modifiers (Ctrl,
+ * Alt, GUI) change what the key does, not what it prints: no legend.
  */
 export function keyLegend(usage: number, layout: ShiftLayout): KeyLegend {
   if (layout === "off" || ((usage >>> 16) & 0xff) !== KEYBOARD_PAGE) {
@@ -174,14 +177,15 @@ export function keyLegend(usage: number, layout: ShiftLayout): KeyLegend {
   return shiftOnly && text !== undefined ? { main: text } : {};
 }
 
-/** The label with the legend after it: `1` and `!` give `1 (!)`. */
-export function withShiftLegend(
+/**
+ * The label of the key itself: what it prints on the layout when that is not
+ * what the name of the usage says (the ABNT2 `'` key prints `~`), else the label
+ * it already has. What it prints with Shift is not part of it: it is drawn above
+ * (`!` above `1`).
+ */
+export function printedLabel(
   label: string | undefined,
   legend: KeyLegend,
 ): string | undefined {
-  const main = legend.main ?? label;
-
-  return legend.shifted !== undefined && main !== undefined
-    ? `${main} (${legend.shifted})`
-    : main;
+  return legend.main ?? label;
 }

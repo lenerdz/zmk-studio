@@ -1,14 +1,17 @@
 // Modified by the lenerdz/zmk-studio fork: a key can be dragged onto another one, on the
 // same layer or on another (holding it over a layer of the list opens that layer), to swap
 // their bindings or to copy one onto the other (see keyDrag.ts); the keys can show what
-// they print with Shift held (see shiftLegend.ts); and the keymap is read again when the
-// Files tab has applied a file ("keys.reload").
+// they print with Shift held (see shiftLegend.ts); the screen can follow the layer that is
+// active on the keyboard, so a layer key pressed on it shows that layer here, also while a
+// key is being dragged (see followLayer.ts); and the keymap is read again when the Files
+// tab has applied a file ("keys.reload").
 import React, {
   SetStateAction,
   useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -33,7 +36,7 @@ import { UndoRedoContext } from "../undoRedo";
 import { useSub } from "../usePubSub";
 import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
 import { produce } from "immer";
-import { Move } from "lucide-react";
+import { Keyboard as KeyboardIcon, Move } from "lucide-react";
 import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { deserializeLayoutZoom, LayoutZoom } from "./PhysicalLayout";
@@ -53,6 +56,8 @@ import {
   ShiftLayout,
   parseShiftLayout,
 } from "./shiftLegend";
+import { layerToFollow, parseFollowLayer } from "./followLayer";
+import { useActiveLayer } from "./useActiveLayer";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -180,7 +185,15 @@ function useLayouts(): [
   ];
 }
 
-export default function Keyboard() {
+export interface KeyboardProps {
+  /**
+   * Whether this view is the one on the screen. It stays mounted when another tab
+   * is open, and then it must not ask the keyboard anything (see useActiveLayer).
+   */
+  active?: boolean;
+}
+
+export default function Keyboard({ active = true }: KeyboardProps) {
   const [
     layouts,
     _setLayouts,
@@ -204,6 +217,13 @@ export default function Keyboard() {
     "shiftLayout",
     DEFAULT_SHIFT_LAYOUT,
     { deserialize: parseShiftLayout },
+  );
+
+  // Whether the screen follows the layer that is active on the keyboard.
+  const [followKeyboard, setFollowKeyboard] = useLocalStorageState<boolean>(
+    "followKeyboardLayer",
+    true,
+    { deserialize: parseFollowLayer },
   );
 
   const [selectedLayerIndex, setSelectedLayerIndex] = useState<number>(0);
@@ -231,10 +251,59 @@ export default function Keyboard() {
     }
   });
 
+  // The layer the keyboard was on when it last answered, among the ones the screen
+  // could go to (undefined before that): the screen goes to a layer when the
+  // keyboard changes to it, not at every answer, so choosing another layer in the
+  // list stays until the keyboard changes layer again.
+  const keyboardLayerSeen = useRef<number | undefined>(undefined);
+
   useEffect(() => {
     setSelectedLayerIndex(0);
     setSelectedKeyPosition(undefined);
+    keyboardLayerSeen.current = undefined;
   }, [conn]);
+
+  // Asked only while this view is the one on the screen and the choice is on.
+  const keyboardLayer = useActiveLayer(active && followKeyboard);
+  const layerCount = keymap?.layers.length ?? 0;
+
+  // A layer key pressed on the keyboard: the keys on the screen are the ones of
+  // that layer. A key being dragged goes on being dragged: hold the layer key on
+  // the keyboard and let go of the mouse over a key to drop it on that layer.
+  useEffect(() => {
+    const target = layerToFollow(
+      keyboardLayerSeen.current,
+      keyboardLayer.layer,
+      layerCount,
+    );
+
+    if (target !== undefined) {
+      keyboardLayerSeen.current = target;
+      setSelectedLayerIndex(target);
+    }
+  }, [keyboardLayer.layer, layerCount]);
+
+  const changeFollowKeyboard = useCallback(
+    (on: boolean) => {
+      // Switched on, the answer that comes next is followed even when it is the
+      // layer the keyboard was on before.
+      keyboardLayerSeen.current = undefined;
+      setFollowKeyboard(on);
+    },
+    [setFollowKeyboard],
+  );
+
+  const followUnsupported = keyboardLayer.status === "unsupported";
+  const followReady = followKeyboard && keyboardLayer.status === "ready";
+  const keyboardLayerId =
+    followReady && keyboardLayer.layer !== undefined
+      ? keymap?.layers[keyboardLayer.layer]?.id
+      : undefined;
+  const followTitle = followUnsupported
+    ? "This firmware cannot tell which layer is active (it needs the live status request of the zmk-rgb-matrix module)"
+    : keyboardLayer.status === "error"
+      ? "The keyboard stopped answering which layer is active. Switch this off and on to try again"
+      : "The keys on the screen follow the layer that is active on the keyboard: press or hold a layer key on it and that layer is shown here, also while you drag a key";
 
   useEffect(() => {
     async function performSetRequest() {
@@ -713,6 +782,7 @@ export default function Keyboard() {
               layers={keymap.layers}
               selectedLayerIndex={selectedLayerIndex}
               dropLayerId={dragOverLayer}
+              keyboardLayerId={keyboardLayerId}
               onLayerClicked={setSelectedLayerIndex}
               onLayerMoved={moveLayer}
               canAdd={(keymap.availableLayers || 0) > 0}
@@ -742,9 +812,27 @@ export default function Keyboard() {
           </ShiftLayoutContext.Provider>
           <p className="absolute bottom-2 left-2 flex select-none items-center gap-1 text-[0.7rem] opacity-70">
             <Move size={12} aria-hidden="true" />
-            Drag a key onto another to swap them, or hold it over a layer of the list to drop it there. Hold Ctrl or Alt to copy. Esc cancels.
+            Drag a key onto another to swap them. To drop it on another layer, hold it over that layer in the list
+            {followReady ? ", or hold the key of that layer on the keyboard" : ""}
+            . Hold Ctrl or Alt to copy. Esc cancels.
           </p>
           <div className="absolute top-2 right-2 flex gap-2">
+            <label
+              className={`flex h-8 items-center gap-1.5 rounded bg-base-100 px-2 ${
+                followUnsupported ? "opacity-50" : ""
+              }`}
+              title={followTitle}
+            >
+              <input
+                type="checkbox"
+                className="size-4 accent-primary"
+                checked={followKeyboard && !followUnsupported}
+                disabled={followUnsupported}
+                onChange={(e) => changeFollowKeyboard(e.currentTarget.checked)}
+              />
+              <KeyboardIcon size={14} aria-hidden="true" />
+              Follow keyboard
+            </label>
             <select
               className="h-8 rounded px-2"
               aria-label="What the keys print with Shift held"

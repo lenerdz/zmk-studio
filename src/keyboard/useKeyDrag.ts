@@ -6,7 +6,9 @@
  * press on a key until the button is let go, and reports what was dropped on
  * which key, which layer of the list the key is held over (the keyboard opens it)
  * and a drag that ended without a drop. A press that does not move is left alone,
- * so a click selects the key as before.
+ * so a click selects the key as before. When the layer on the screen changes while
+ * the key is held (the list opened one, or a layer key was pressed on the keyboard)
+ * it looks again at what is under a pointer that stays still.
  */
 import {
   PointerEvent as ReactPointerEvent,
@@ -98,6 +100,8 @@ export function useKeyDrag(options: KeyDragOptions): KeyDrag {
   const [state, setState] = useState<DragState>(IDLE);
   const handlers = useRef(options);
   const stopListening = useRef<(() => void) | null>(null);
+  // Looks again at what is under the pointer of the gesture that is going on.
+  const lookAgain = useRef<(() => void) | null>(null);
   const swallowClick = useRef(false);
 
   handlers.current = options;
@@ -183,6 +187,28 @@ export function useKeyDrag(options: KeyDragOptions): KeyDrag {
         });
       };
 
+      // The layer on the screen changed while the key is held (a layer key was
+      // pressed on the keyboard): under a pointer that does not move there are
+      // other keys now, so what is under it is looked at again, as at a move.
+      const lookUnderPointer = () => {
+        const was = current.current;
+
+        if (was.phase !== "dragging" || was.pointerId !== pointerId) return;
+
+        const over = keyPositionAt(was.x, was.y);
+        const itself = over === position && handlers.current.layerId === fromLayer;
+
+        send({
+          type: "move",
+          pointerId,
+          x: was.x,
+          y: was.y,
+          over: itself ? undefined : over,
+          overLayer: layerIdAt(was.x, was.y),
+          mode: was.mode,
+        });
+      };
+
       const onUp = (ev: PointerEvent) => {
         if (ev.pointerId !== pointerId) return;
 
@@ -235,6 +261,7 @@ export function useKeyDrag(options: KeyDragOptions): KeyDrag {
         window.removeEventListener("keyup", onKey);
         window.removeEventListener("blur", onBlur);
         stopListening.current = null;
+        lookAgain.current = null;
       };
 
       // Registered here and not in an effect: a press and release in the same
@@ -247,6 +274,7 @@ export function useKeyDrag(options: KeyDragOptions): KeyDrag {
       window.addEventListener("keyup", onKey);
       window.addEventListener("blur", onBlur);
       stopListening.current = stop;
+      lookAgain.current = lookUnderPointer;
     },
     [send],
   );
@@ -279,6 +307,13 @@ export function useKeyDrag(options: KeyDragOptions): KeyDrag {
   useEffect(() => {
     handlers.current.onLayerOver?.(overLayer);
   }, [overLayer]);
+
+  // Another layer is on the screen (opened by the list, or by a layer key pressed
+  // on the keyboard): the key under a pointer that stays still is another one.
+  const layerOnScreen = options.layerId;
+  useEffect(() => {
+    lookAgain.current?.();
+  }, [layerOnScreen]);
 
   // A drag cannot outlive the keyboard view.
   useEffect(() => () => stopListening.current?.(), []);

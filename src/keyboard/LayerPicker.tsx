@@ -1,6 +1,7 @@
-// Modified by the lenerdz/zmk-studio fork: the layer a key is dragged over is marked, and
-// the list can be found under the pointer by useKeyDrag (see keyDrag.ts).
-import { Pencil, Minus, Plus } from "lucide-react";
+// Modified by the lenerdz/zmk-studio fork: the layer a key is dragged over is marked, the
+// list can be found under the pointer by useKeyDrag (see keyDrag.ts), and the layer that
+// is active on the keyboard carries a small keyboard icon (see followLayer.ts).
+import { Keyboard, Pencil, Minus, Plus } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import {
   DropIndicator,
@@ -29,6 +30,11 @@ interface LayerPickerProps {
    * keyboard opens it if the key stays there.
    */
   dropLayerId?: number;
+  /**
+   * The layer that is active on the keyboard right now (its id), when the app
+   * knows it: it carries a keyboard icon, whichever layer is shown.
+   */
+  keyboardLayerId?: number;
   canAdd?: boolean;
   canRemove?: boolean;
 
@@ -113,6 +119,7 @@ export const LayerPicker = ({
   layers,
   selectedLayerIndex,
   dropLayerId,
+  keyboardLayerId,
   canAdd,
   canRemove,
   onLayerClicked,
@@ -132,8 +139,13 @@ export const LayerPicker = ({
       id: l.id,
       index: i,
       selected: i === selectedLayerIndex,
+      // The two marks are part of the items, and not only read by the function
+      // that draws an item: the list keeps what it drew for an item until the
+      // item itself changes, so a mark that only came from a prop stayed stale.
+      dropTarget: l.id === dropLayerId,
+      onKeyboard: l.id === keyboardLayerId,
     }));
-  }, [layers, selectedLayerIndex]);
+  }, [layers, selectedLayerIndex, dropLayerId, keyboardLayerId]);
 
   const selectionChanged = useCallback(
     (s: Selection) => {
@@ -228,10 +240,22 @@ export const LayerPicker = ({
           <ListBoxItem
             textValue={layer_item.name}
             className={`p-1 b-1 my-1 group grid grid-cols-[1fr_auto] items-center aria-selected:bg-primary aria-selected:text-primary-content border rounded border-transparent border-solid hover:bg-base-300 ${
-              layer_item.id === dropLayerId ? "outline outline-2 outline-accent" : ""
+              layer_item.dropTarget ? "outline outline-2 outline-accent" : ""
             }`}
           >
-            <span>{layer_item.name}</span>
+            <span className="flex items-center gap-1.5">
+              {layer_item.name}
+              {layer_item.onKeyboard && (
+                <span
+                  data-keyboard-layer=""
+                  role="img"
+                  aria-label="Active on the keyboard"
+                  title="Active on the keyboard"
+                >
+                  <Keyboard size={13} aria-hidden="true" />
+                </span>
+              )}
+            </span>
             <Pencil
               className="h-4 w-4 mx-1 invisible group-hover:visible"
               onClick={() =>

@@ -9,7 +9,7 @@ import {
   SHIFT_LAYOUTS,
   keyLegend,
   parseShiftLayout,
-  withShiftLegend,
+  printedLabel,
 } from "./shiftLegend";
 
 const KEYBOARD = 0x07;
@@ -79,6 +79,30 @@ describe("keyLegend on the US layout", () => {
   it("leaves the label of the usage as it is", () => {
     for (const id of [N1, 0x2d, 0x33, 0x38]) {
       expect(keyLegend(usage(id), "us").main).toBeUndefined();
+    }
+  });
+
+  it("draws the two bracket keys as what they print: the labels of the app say { and }", () => {
+    // hid-usage-name-overrides.json labels usage 0x2f "{" and 0x30 "}", the signs they
+    // print with Shift, so with the legend above they would read { over {
+    expect(hid_usage_get_labels(KEYBOARD, 0x2f).short).toBe("{");
+    expect(hid_usage_get_labels(KEYBOARD, 0x30).short).toBe("}");
+    expect(keyLegend(usage(0x2f), "us")).toEqual({ main: "[", shifted: "{" });
+    expect(keyLegend(usage(0x30), "us")).toEqual({ main: "]", shifted: "}" });
+  });
+
+  it("never draws the same sign as the label and as the legend", () => {
+    for (const layout of ["us", "abnt2"] as const) {
+      for (let id = 0; id <= 0xff; id++) {
+        const legend = keyLegend(usage(id), layout);
+
+        if (legend.shifted === undefined) {
+          continue;
+        }
+
+        const label = printedLabel(hid_usage_get_labels(KEYBOARD, id).short, legend);
+        expect(label, `${layout} usage ${id}`).not.toBe(legend.shifted);
+      }
     }
   });
 
@@ -205,33 +229,47 @@ describe("keyLegend on the ABNT2 layout", () => {
   });
 });
 
-describe("withShiftLegend", () => {
-  it("puts the sign in parentheses after the label", () => {
-    expect(withShiftLegend("1", { shifted: "!" })).toBe("1 (!)");
-    expect(withShiftLegend(";", { shifted: ":" })).toBe("; (:)");
-    expect(withShiftLegend("[", { shifted: "{" })).toBe("[ ({)");
+describe("printedLabel", () => {
+  it("keeps the label: what the key prints with Shift is drawn above it, not in it", () => {
+    expect(printedLabel("1", { shifted: "!" })).toBe("1");
+    expect(printedLabel(";", { shifted: ":" })).toBe(";");
+    expect(printedLabel("[", { shifted: "{" })).toBe("[");
   });
 
   it("replaces the label when the key prints something else", () => {
-    expect(withShiftLegend("'", { main: "~", shifted: "^" })).toBe("~ (^)");
-    expect(withShiftLegend("NUBS", { main: "\\" })).toBe("\\");
-    expect(withShiftLegend("1", { main: "!" })).toBe("!");
+    expect(printedLabel("'", { main: "~", shifted: "^" })).toBe("~");
+    expect(printedLabel("NUBS", { main: "\\" })).toBe("\\");
+    expect(printedLabel("1", { main: "!" })).toBe("!");
   });
 
   it("leaves the label as it is without a legend", () => {
-    expect(withShiftLegend("Esc", {})).toBe("Esc");
-    expect(withShiftLegend(undefined, {})).toBeUndefined();
-    expect(withShiftLegend(undefined, { shifted: "!" })).toBeUndefined();
+    expect(printedLabel("Esc", {})).toBe("Esc");
+    expect(printedLabel(undefined, {})).toBeUndefined();
+    expect(printedLabel(undefined, { shifted: "!" })).toBeUndefined();
   });
 
   it("goes with the labels the app has for the usages", () => {
     const label = (id: number) => hid_usage_get_labels(KEYBOARD, id).short;
 
-    expect(withShiftLegend(label(N1), keyLegend(usage(N1), "us"))).toBe("1 (!)");
-    expect(withShiftLegend(label(0x2d), keyLegend(usage(0x2d), "us"))).toBe("- (_)");
-    expect(withShiftLegend(label(0x34), keyLegend(usage(0x34), "us"))).toBe("' (\")");
-    expect(withShiftLegend(label(0x34), keyLegend(usage(0x34), "abnt2"))).toBe("~ (^)");
+    expect(printedLabel(label(N1), keyLegend(usage(N1), "us"))).toBe("1");
+    expect(keyLegend(usage(N1), "us").shifted).toBe("!");
+    expect(printedLabel(label(0x2d), keyLegend(usage(0x2d), "us"))).toBe("-");
+    expect(keyLegend(usage(0x2d), "us").shifted).toBe("_");
+    expect(printedLabel(label(0x34), keyLegend(usage(0x34), "us"))).toBe("'");
+    expect(keyLegend(usage(0x34), "us").shifted).toBe('"');
+    // on ABNT2 that key prints ~ and ^ with Shift
+    expect(printedLabel(label(0x34), keyLegend(usage(0x34), "abnt2"))).toBe("~");
+    expect(keyLegend(usage(0x34), "abnt2").shifted).toBe("^");
     // a letter keeps the label upstream draws
-    expect(withShiftLegend(label(A), keyLegend(usage(A), "us"))).toBe(label(A));
+    expect(printedLabel(label(A), keyLegend(usage(A), "us"))).toBe(label(A));
+  });
+});
+
+describe("the descriptions of the layouts", () => {
+  it("say the legend is above the key, not beside it in parentheses", () => {
+    for (const layout of SHIFT_LAYOUTS.filter((l) => l.value !== "off")) {
+      expect(layout.title).toContain("Above each key");
+      expect(layout.title).not.toContain("parentheses");
+    }
   });
 });
