@@ -4,7 +4,9 @@ What the keyboard is doing right now, read by the app while somebody looks at it
 the **Live values** of the [OLED tab](../oled/README.md), which draw the widgets from the
 real battery, layer, typing speed and connection instead of from samples, and the
 [Diagnostics tab](../diagnostics/README.md), which shows the same readings next to the
-firmware information.
+firmware information, and the **Follow keyboard** of the Keys view, which reads only the
+layer, to show the keys of the layer that is active on the keyboard (see [the main
+README](../../README.md#following-the-layer-of-the-keyboard-the-keys-view)).
 
 It needs a firmware with the status requests: the
 [zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix) module of lenerdz (branch
@@ -53,11 +55,16 @@ React and `useLiveStatus.ts` carries it into React.
 
 - **Only while it is looked at.** `useLiveStatus(enabled, intervalMs)` asks only while
   `enabled` is true (the **Live values** switch of the OLED tab, or the Diagnostics tab
-  being open), the keyboard is connected and it is unlocked. Asking restarts the idle timer
+  being open), the keyboard is connected and it is unlocked. The Keys view does the same
+  with `useActiveLayer(enabled)` (`src/keyboard/useActiveLayer.ts`), which makes a poller
+  of its own and keeps only the layer: its `enabled` is true while the Keys view is the one
+  on the screen and the **Follow keyboard** box is checked. Asking restarts the idle timer
   of the lock of ZMK Studio, so a keyboard whose firmware has `CONFIG_ZMK_STUDIO_LOCKING`
-  would never lock while the app polled it for nothing.
+  would never lock while the app polled it for nothing (and it does not lock while the
+  Keys view follows it).
 - **One question at a time.** The next question is asked after the answer, so a slow link
-  is not flooded: 500 ms after an answer in the OLED tab, 1000 ms in the Diagnostics tab.
+  is not flooded: 500 ms after an answer in the OLED tab, 1000 ms in the Diagnostics tab,
+  200 ms in the Keys view (`FOLLOW_POLL_MS` in `src/keyboard/followLayer.ts`).
 - **Nothing while the page is hidden.** While `document.visibilityState` is `hidden` (the
   tab of the browser is in the background) it asks nothing and looks again every second.
 - **The history of the typing speed.** The screen keeps the last ten readings of the speed
@@ -79,6 +86,7 @@ The states are `idle` (nobody looks, or the keyboard is not there), `loading`, `
 | `liveProtocol.ts` | The two requests (`fetchLiveStatus`, `fetchFirmwareInfo`), `null` when the firmware does not have them, and the conversion of the messages: 255 to `null` for a battery, the names of the states |
 | `liveStatusPoller.ts` | The poller described above, without React, and the history of the speed |
 | `useLiveStatus.ts` | Carries the state of a poller into React |
+| `../keyboard/useActiveLayer.ts` | The same for the Keys view: a poller that keeps only the layer (`layer_index`), every 200 ms |
 | `demo/demoStatus.ts` | The answers of the [demo keyboard](../lights/demo/README.md): a keyboard in use, which follows a clock |
 | `*.test.ts` | The tests |
 
@@ -101,3 +109,8 @@ widgets followed them. The firmware side compiles in the CI of corne-zmk. **It h
 tried on a real keyboard**: whether the battery, the layer, the typing speed, the output,
 the Bluetooth state and the connection of the right half match what the keyboard does, and
 what the polling does to the lock timer of a firmware that has it, are unconfirmed.
+
+The Keys view follows the layer with the same poller (every 200 ms, `useActiveLayer`): in
+the same browser the view went through the layers as the demo keyboard changed them, and it
+asked about ten times in two seconds with the Keys view open and not at all with another
+tab open. How quickly it follows a layer key on a real keyboard is unconfirmed too.

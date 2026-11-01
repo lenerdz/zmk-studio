@@ -25,7 +25,7 @@ tecla mostra a descrição completa (por exemplo, `Bluetooth: Select Profile 2`)
 
 | Comportamento (behavior), com o nome que o firmware informa | O que é desenhado |
 |---|---|
-| `Key Press` | Sem mudança: o rótulo da tecla. As teclas de mídia (volume, mudo, brilho, play/pause) são desenhadas como ícones |
+| `Key Press` | O rótulo da tecla, como o upstream o desenha, com algumas diferenças (abaixo): o que ela imprime com Shift pressionado acima dele, `Enter` para o Return, `Space` para a barra de espaço e uma seta para o `Shift`. As teclas de mídia (volume, mudo, brilho, play/pause) são desenhadas como ícones |
 | `Momentary Layer`, `Toggle Layer`, `To Layer`, `Sticky Layer` | Um ícone e o nome da camada |
 | `Layer-Tap` | O ícone de camada, o nome da camada e a tecla de toque |
 | `Mod-Tap` | A tecla de toque e, depois, o modificador de segurar |
@@ -60,17 +60,21 @@ Outras mudanças:
 - Stories do Storybook com o keymap de um Corne, uma por camada (`Keyboard/Keymap (Corne)`).
 - A confirmação de **Restore Stock Settings** lista o que ela devolve: o keymap e, quando o
   firmware os tem, as cores das luzes e as configurações das telas.
-- Na visão Keys, uma tecla pode ser arrastada para outra camada (abaixo), e cada tecla pode
-  mostrar o que imprime com Shift pressionado, entre parênteses ao lado do rótulo (abaixo).
+- Na visão Keys, uma tecla pode ser arrastada para outra camada (abaixo), a tela pode
+  acompanhar a camada que está ativa no teclado (abaixo), cada tecla pode mostrar o que
+  imprime com Shift pressionado, acima do rótulo e esmaecido (abaixo), e as teclas Shift, o
+  Return e a barra de espaço são desenhados como `Shift` sob uma seta para cima, `Enter` e
+  `Space` (abaixo).
 
 O que não muda: a edição do keymap e o que o app lê do teclado ou grava nele para isso.
-Os ícones e a legenda do Shift afetam apenas como as teclas são desenhadas, e a hospedagem
-apenas como o app é servido; arrastar teclas (abaixo), inclusive de uma camada para outra,
-grava com a mesma requisição do seletor de binding; as abas Lights e
-Display (mais abaixo) acrescentam requisições próprias, e a aba OLED usa as da aba
-Display. A aba Diagnostics, e os valores ao vivo da aba OLED, só leem, com duas
-requisições próprias; a aba Files grava com requisições que as outras abas já usam. As
-abas só são usadas quando o firmware tem o que elas editam ou leem.
+Os ícones, a legenda do Shift e as faces de Shift, Enter e Space afetam apenas como as
+teclas são desenhadas, e a hospedagem apenas como o app é servido; arrastar teclas
+(abaixo), inclusive de uma camada para outra, grava com a mesma requisição do seletor de
+binding; as abas Lights e Display (mais abaixo) acrescentam requisições próprias, e a aba
+OLED usa as da aba Display. A aba Diagnostics, os valores ao vivo da aba OLED e o
+acompanhamento da camada do teclado na visão Keys só leem, com duas requisições próprias;
+a aba Files grava com requisições que as outras abas já usam. As abas só são usadas quando
+o firmware tem o que elas editam ou leem.
 
 ## Mover teclas arrastando (a visão Keys)
 
@@ -89,6 +93,12 @@ outra:
   segue o ponteiro mostra `Hold to open this layer` enquanto ele espera. Com a camada
   aberta, a etiqueta diz de onde a tecla vem: `Swap with QWERTY` ou `Copy from QWERTY`.
   Passar pela lista sem parar não abre nada.
+- **Para outra camada, com o teclado.** Com **Follow keyboard** ligado (veja [Acompanhar a
+  camada do teclado](#acompanhar-a-camada-do-teclado-a-visão-keys)), segure no teclado a
+  tecla de outra camada durante o arraste: a tela mostra as teclas dessa camada, o arraste
+  continua sobre elas e soltar o botão do mouse sobre uma tecla faz o drop ali, como
+  acima. O ponteiro não precisa se mover: as teclas sob ele são olhadas de novo quando a
+  camada muda. A dica no pé da visão diz isso enquanto o teclado responde.
 - Durante o arraste, a tecla pressionada fica esmaecida com um contorno tracejado, uma
   cópia menor dela segue o ponteiro com uma etiqueta (`Swap` ou `Copy`) e a tecla sob o
   ponteiro é destacada. A etiqueta mostra `drop on a key` enquanto o ponteiro não está
@@ -113,8 +123,9 @@ As regras (o que um drop faz, também entre duas camadas, como um arraste começ
 é cancelado, qual camada abre e quando a primeira volta) são funções puras em
 [`src/keyboard/keyDrag.ts`](src/keyboard/keyDrag.ts), cobertas por
 [`src/keyboard/keyDrag.test.ts`](src/keyboard/keyDrag.test.ts).
-[`src/keyboard/useKeyDrag.ts`](src/keyboard/useKeyDrag.ts) escuta o ponteiro e acha a camada
-sob ele, [`src/keyboard/LayerPicker.tsx`](src/keyboard/LayerPicker.tsx) marca essa camada,
+[`src/keyboard/useKeyDrag.ts`](src/keyboard/useKeyDrag.ts) escuta o ponteiro, acha a camada
+sob ele e olha de novo o que está sob um ponteiro parado quando outra camada vem para a
+tela, [`src/keyboard/LayerPicker.tsx`](src/keyboard/LayerPicker.tsx) marca essa camada,
 [`src/keyboard/KeyDragGhost.tsx`](src/keyboard/KeyDragGhost.tsx) desenha o que segue o
 ponteiro, e o temporizador que abre a camada e a edição em si (`doDropKey`, `writeEdits`)
 estão em [`src/keyboard/Keyboard.tsx`](src/keyboard/Keyboard.tsx).
@@ -130,27 +141,77 @@ copiar uma tecla sobre outra com Ctrl pressionado, e deixou de acontecer com est
 Neste fork o seletor só avisa o teclado quando o usuário muda algo nos seus próprios
 controles.
 
+## Acompanhar a camada do teclado (a visão Keys)
+
+Aperte no teclado a tecla de uma camada (um `&mo`, um `&lt`, um `&to`, ...) e a visão
+**Keys** mostra as teclas dessa camada; solte-a e a visão volta para a camada em que o
+teclado está. Ela acompanha a camada mais alta que está ativa, a que o `get_live_status`
+informa. A caixa **Follow keyboard**, no canto superior direito da visão, desliga isso; ela
+vem ligada por padrão e o navegador lembra da escolha (`followKeyboardLayer`).
+
+- **A camada do teclado é marcada** na lista à esquerda com um pequeno ícone de teclado
+  (`Active on the keyboard`), qualquer que seja a camada que a visão mostra.
+- **A visão vai para uma camada quando o teclado muda para ela**, e não a cada resposta:
+  uma camada escolhida na lista continua na tela até o teclado mudar de camada de novo
+  (uma visita a outra aba não muda isso). Desligar e ligar a caixa de novo vai na hora para
+  a camada em que o teclado está.
+- **Uma tecla que está sendo arrastada continua sendo arrastada.** Segure a tecla de camada
+  no teclado e o arraste continua sobre as teclas dessa camada, também com o ponteiro
+  parado (as teclas sob ele são olhadas de novo quando a camada muda); solte o botão do
+  mouse sobre uma tecla e o drop é ali, uma troca ou uma cópia entre as duas camadas, como
+  com uma camada aberta pela lista (veja [Mover teclas
+  arrastando](#mover-teclas-arrastando-a-visão-keys)). A dica no pé da visão diz isso
+  enquanto o teclado responde.
+- **Como ele pergunta.** Usa a requisição `get_live_status` (veja [O que o teclado está
+  fazendo](#o-que-o-teclado-está-fazendo-live-values-e-a-aba-diagnostics)) e lê só a
+  camada, a cada 200 ms (`FOLLOW_POLL_MS`), uma requisição de cada vez, e só enquanto a
+  visão Keys é a que está na tela, a caixa está marcada, o teclado está conectado e
+  desbloqueado e a página está sendo exibida. Essas requisições reiniciam o temporizador de
+  inatividade do bloqueio do ZMK Studio; por isso, **enquanto a visão Keys acompanha o
+  teclado, o teclado não se bloqueia sozinho** (um firmware com
+  `CONFIG_ZMK_STUDIO_LOCKING`); desmarque a caixa para deixá-lo bloquear. Depois de três
+  falhas seguidas ele para de perguntar e a dica da caixa avisa; desligar e ligar a caixa
+  tenta de novo.
+- **Sem a requisição.** Com um firmware que não tem `get_live_status`, a caixa fica
+  desabilitada e esmaecida, a dica dela diz que o firmware não consegue informar qual
+  camada está ativa, e a visão funciona como antes. O teclado de demonstração muda de
+  camada por um relógio (a cada quatro segundos, entre as três primeiras camadas); **Demo
+  keyboard (no live status)** não responde.
+
+As regras (para qual resposta a visão vai e como a escolha salva é lida) são funções puras
+em [`src/keyboard/followLayer.ts`](src/keyboard/followLayer.ts), cobertas por
+[`src/keyboard/followLayer.test.ts`](src/keyboard/followLayer.test.ts).
+[`src/keyboard/useActiveLayer.ts`](src/keyboard/useActiveLayer.ts) leva um
+`LiveStatusPoller` (veja [`src/live/README.md`](src/live/README.md)) para dentro do React,
+[`src/keyboard/Keyboard.tsx`](src/keyboard/Keyboard.tsx) guarda a caixa e escolhe a
+camada, e [`src/keyboard/LayerPicker.tsx`](src/keyboard/LayerPicker.tsx) desenha a marca.
+
 ## O que as teclas imprimem com Shift pressionado (a visão Keys)
 
-Uma tecla pode mostrar, entre parênteses depois do rótulo, o que ela imprime com Shift
-pressionado: o `1` da fileira de números é desenhado como `1 (!)`. O menu no canto
-superior direito do teclado, ao lado do zoom, escolhe para qual layout de teclado é a
-legenda, e o navegador lembra da escolha:
+Uma tecla pode mostrar, acima do rótulo, menor e mais apagado, o que ela imprime com Shift
+pressionado, como uma tecla de verdade: o `1` da fileira de números é desenhado com um `!`
+acima dele. O menu no canto superior direito do teclado, ao lado do zoom, escolhe para
+qual layout de teclado é a legenda, e o navegador lembra da escolha:
 
 | Escolha | O que as teclas mostram |
 |---|---|
-| **Shift: US** (o padrão) | O que um layout US imprime com Shift: `1 (!)`, `2 (@)`, e o mesmo para o resto da fileira de números, os sinais e os colchetes |
-| **Shift: ABNT2** | O que o layout brasileiro ABNT2 imprime. O rótulo de uma tecla que imprime outra coisa nesse layout também muda: a tecla do `;` US é desenhada como `Ç`, a do `[` US como `´ (`)` e a do `'` US como `~ (^)` |
+| **Shift: US** (o padrão) | O que um layout US imprime com Shift, acima do rótulo: `!` acima do `1`, `@` acima do `2`, e o mesmo para o resto da fileira de números, os sinais e os colchetes |
+| **Shift: ABNT2** | O que o layout brasileiro ABNT2 imprime. O rótulo de uma tecla que imprime outra coisa nesse layout também muda: a tecla do `;` US é desenhada como `Ç`, a do `[` US como `´` com um `` ` `` acima, e a do `'` US como `~` com um `^` acima |
 | **Shift: off** | Apenas o rótulo de cada tecla, como antes |
 
 - As letras não têm legenda: já são desenhadas como maiúsculas.
 - Uma tecla que envia Shift no próprio código (`LS(N1)`, que digita `!`) é desenhada como o
-  que ela imprime, `!`, sem parênteses. Os outros modificadores implícitos (Ctrl, Alt, GUI)
+  que ela imprime, `!`, sem nada acima. Os outros modificadores implícitos (Ctrl, Alt, GUI)
   mudam o que a tecla faz, não o que ela imprime: não acrescentam legenda.
-- A legenda é desenhada para toda tecla do teclado que o app desenha como rótulo: um key
-  press, a tecla de toque de um Mod-Tap ou de um Layer-Tap, e a tecla de um sticky key ou
-  de um key toggle. Camadas, Bluetooth, luzes, teclas de mídia e os demais comportamentos
-  são desenhados como antes.
+- A legenda é desenhada acima do rótulo de um key press que está sozinho na tecla. A tecla
+  de toque de um Mod-Tap ou de um Layer-Tap, e a tecla de um sticky key ou de um key
+  toggle, dividem a face com um ícone ou outra palavra; por isso não há espaço acima
+  delas: elas mostram só o rótulo (que o ABNT2 pode mudar, como acima). Camadas,
+  Bluetooth, luzes, teclas de mídia e os demais comportamentos são desenhados como antes.
+- As teclas de colchete: o rótulo que o app dá às HID usages do `[` e do `]` é `{` e `}`
+  (`src/hid-usage-name-overrides.json`); por isso a tabela US desenha essas duas teclas
+  como o que elas imprimem, `[` e `]`, com `{` e `}` acima, e nenhuma tecla mostra o mesmo
+  sinal duas vezes.
 - É apenas um desenho. O teclado envia o mesmo código de tecla com qualquer layout: o
   caractere é escolhido pelo layout do computador, e o menu diz para qual deles é a
   legenda. As tabelas dos dois layouts (por HID usage) estão em
@@ -159,6 +220,28 @@ legenda, e o navegador lembra da escolha:
   [`src/keyboard/HidUsageLabel.tsx`](src/keyboard/HidUsageLabel.tsx) desenha o rótulo com a
   legenda, e [`src/keyboard/ShiftLayoutContext.ts`](src/keyboard/ShiftLayoutContext.ts)
   leva a escolha até ele.
+
+## As faces de Shift, Enter e Space (a visão Keys)
+
+Três teclas são desenhadas com palavras próprias. Isso só muda como elas aparecem: o
+teclado envia os mesmos códigos, e os nomes que **Export led_colors.dtsi** grava como
+comentários (`RET`, `SPACE`, `SHFT`) são os de sempre, porque vêm dos rótulos
+compartilhados de `src/hid-usage-name-overrides.json`, que esta mudança não toca.
+
+| Tecla | Desenhada antes | Desenhada agora |
+|---|---|---|
+| Shift esquerdo e Shift direito | `Shft` | Uma seta para cima (um ícone) com `Shift` embaixo; a dica da face diz `Left Shift` ou `Right Shift` |
+| Return | `Ret` | `Enter` |
+| Barra de espaço | `␣`, um símbolo de caixa | `Space` |
+
+- Só uma tecla Shift que está sozinha na tecla recebe a seta. Um Shift que divide a face
+  com outra coisa (um sticky key, o segurar de um Mod-Tap) é escrito `Shift`, sem seta.
+- O Enter do teclado numérico é outra tecla que não o Return e mantém o rótulo dele.
+- As palavras, e o que conta como uma tecla Shift, estão em
+  [`src/keyboard/keyFace.ts`](src/keyboard/keyFace.ts), cobertas por
+  [`src/keyboard/keyFace.test.ts`](src/keyboard/keyFace.test.ts);
+  [`src/keyboard/BindingLabel.tsx`](src/keyboard/BindingLabel.tsx) desenha a seta e
+  [`src/keyboard/HidUsageLabel.tsx`](src/keyboard/HidUsageLabel.tsx) as outras palavras.
 
 ## Cores das luzes (a aba Lights)
 
@@ -307,7 +390,7 @@ mostra, a posição da imagem), os ids, os arquivos e como os sprites são gerad
 
 Com um firmware que responde a duas requisições somente de leitura, o app pode perguntar à
 metade esquerda (a que está conectada a ele) o que ela está fazendo e que firmware ela
-executa. Duas coisas as usam:
+executa. Três coisas as usam:
 
 - **Live values**, uma chave na aba OLED. Ligada, os desenhos das telas seguem o teclado em
   vez de serem amostras: a bateria de cada metade (a da direita é o que a metade esquerda
@@ -326,6 +409,9 @@ executa. Duas coisas as usam:
   teclas e há quanto tempo o teclado está ligado). **Copy the report** coloca tudo isso na
   área de transferência como texto simples, para colar em uma mensagem ou em uma issue. A
   aba só lê: nada nela altera o teclado.
+- **Follow keyboard**, na visão Keys, que lê só a camada, para mostrar as teclas da camada
+  que está ativa no teclado (veja [Acompanhar a camada do
+  teclado](#acompanhar-a-camada-do-teclado-a-visão-keys)).
 
 Os números são os da metade **esquerda**. A metade direita executa um firmware próprio, que
 o ZMK Studio não consegue consultar; por isso, pelo app, só a bateria e a conexão dela são
@@ -333,14 +419,15 @@ conhecidas. A flash e a RAM são os números que o build imprime (`FLASH` e `RAM
 firmware dos símbolos do linker, então podem ser comparados com o log do CI.
 
 **Como ele pergunta.** O teclado não tem notificação para isso; por isso o app pergunta,
-uma requisição de cada vez (a próxima meio segundo, ou um segundo na aba Diagnostics, depois
-da resposta à anterior). Ele só pergunta enquanto a aba que precisa disso está aberta, o
-teclado está conectado e desbloqueado, e **a página está sendo exibida**: uma aba escondida
-do navegador não pergunta nada. Depois de três falhas seguidas ele para e avisa; com Live
-values, desligar e ligar a chave tenta de novo. Cada requisição reinicia o temporizador de
-inatividade do bloqueio do ZMK Studio (um firmware com `CONFIG_ZMK_STUDIO_LOCKING`); por
-isso, **enquanto Live values está ligado, ou a aba Diagnostics está aberta, o teclado não se
-bloqueia sozinho**.
+uma requisição de cada vez (a próxima meio segundo, ou um segundo na aba Diagnostics, ou
+200 ms na visão Keys, depois da resposta à anterior). Ele só pergunta enquanto a aba que
+precisa disso está aberta, o teclado está conectado e desbloqueado, e **a página está
+sendo exibida**: uma aba escondida do navegador não pergunta nada. Depois de três falhas
+seguidas ele para e avisa; com Live values, desligar e ligar a chave tenta de novo. Cada
+requisição reinicia o temporizador de inatividade do bloqueio do ZMK Studio (um firmware
+com `CONFIG_ZMK_STUDIO_LOCKING`); por isso, **enquanto Live values está ligado, a aba
+Diagnostics está aberta, ou a visão Keys acompanha o teclado, o teclado não se bloqueia
+sozinho**.
 
 Ele precisa do módulo [zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix) de
 lenerdz (branch `corne-fixes`) com `CONFIG_KEYPAW_DEVICE_STATUS_STUDIO` (ligada por padrão
@@ -504,11 +591,35 @@ camada de volta sem gravar nada. As regras são cobertas por `npm test`. Ele **n
 testado em um teclado real**, e o toque não foi testado em nenhum dispositivo.
 
 A legenda do Shift foi testada em um navegador com o teclado de demonstração, com as três
-escolhas: `1 (!)` e o resto da fileira de números com **US**, as teclas que imprimem outra
-coisa com **ABNT2** (o rótulo das teclas do `;`, do `[` e do `'` US mudou) e os rótulos
-como antes com **off**; a escolha foi mantida quando a página foi carregada de novo. As
-tabelas dos dois layouts foram escritas a partir dos layouts e dos nomes das HID usages, e
-**não foram comparadas com um teclado físico**, nem testadas em um real.
+escolhas: com **US**, o `!` acima do `1` e o mesmo para o resto da fileira de números, os
+sinais e os colchetes (`{` acima do `[` e `}` acima do `]`, sem nenhuma tecla mostrando o
+mesmo sinal duas vezes), com **ABNT2** as teclas que imprimem outra coisa (o rótulo das
+teclas do `;`, do `[` e do `'` US mudou) e com **off** os rótulos como antes; a escolha foi
+mantida quando a página foi carregada de novo. As tabelas dos dois layouts foram escritas a
+partir dos layouts e dos nomes das HID usages, e **não foram comparadas com um teclado
+físico**, nem testadas em um real.
+
+As faces do Shift (a seta com o nome embaixo), do Enter e do Space foram conferidas no
+mesmo navegador, nas camadas QWERTY e FN1 do teclado de demonstração; os testes conferem
+que os nomes que a exportação grava em `led_colors.dtsi` continuam sendo `RET`, `SPACE` e
+`SHFT`.
+
+O acompanhamento da camada do teclado foi testado em um navegador com o teclado de
+demonstração, pelo mesmo enquadramento (framing) e codificação de mensagens que com um
+teclado real (um Microsoft Edge headless dirigido pelo protocolo DevTools, como nos
+valores ao vivo). Com a caixa marcada, a visão percorreu as camadas conforme o teclado de
+demonstração as mudava (QWERTY, FN1, RAISE e de volta) e a lista marcou a camada do
+teclado a cada vez; desmarcada, ela ficou onde estava e a marca sumiu, e a escolha foi
+mantida quando a página foi carregada de novo; marcada outra vez, foi para a camada do
+teclado na hora. Ele perguntou cerca de dez vezes em dois segundos (a cada 200 ms) com a
+visão Keys aberta e nenhuma com a visão Lights aberta, e com **Demo keyboard (no live
+status)** a caixa ficou desabilitada e esmaecida. Uma tecla pega em uma camada e mantida
+enquanto o teclado de demonstração mudava de camada foi solta na nova camada, e os dois
+bindings foram trocados entre as camadas. As regras são cobertas por `npm test`. Ele **não
+foi testado em um teclado real**: a rapidez com que a visão acompanha uma tecla de camada
+por USB, o que as perguntas fazem ao temporizador de bloqueio de um firmware que o tem, e
+se a camada que o `get_live_status` informa é a que o teclado realmente tem ativa não
+estão confirmados.
 
 ## Como usar
 
@@ -520,9 +631,10 @@ tabelas dos dois layouts foram escritas a partir dos layouts e dos nomes das HID
    central), escolha **USB** e desbloqueie com a tecla associada a `&studio_unlock`.
 4. Em **Keys**, clique em uma tecla para editá-la, ou arraste-a sobre outra tecla para
    trocar as duas (segure Ctrl ou Alt para copiar). Para soltá-la em outra camada, mantenha-a
-   sobre essa camada na lista por um instante: a camada abre. O menu no canto superior
-   direito escolhe se as teclas mostram o que imprimem com Shift pressionado (US, ABNT2 ou
-   off).
+   sobre essa camada na lista por um instante: a camada abre. Com **Follow keyboard**
+   marcado, apertar no teclado a tecla de uma camada também mostra essa camada, inclusive
+   durante o arraste. O menu no canto superior direito escolhe se as teclas mostram, acima
+   do rótulo, o que imprimem com Shift pressionado (US, ABNT2 ou off).
 5. Se o firmware tiver mapas de luzes editáveis, escolha **Lights** no cabeçalho para
    editar as cores.
 6. Se o firmware tiver configurações de tela, escolha **Display** para ajustar as telas,
@@ -560,7 +672,8 @@ um teclado, escolha **Demo keyboard** na lista de conexões. Ele está sempre pr
 um firmware sem os mapas, sem as configurações de tela e sem o estado ao vivo (o segundo
 não tem nem a aba Display nem a aba OLED, porque o layout das telas é feito de configurações
 de tela; o terceiro não tem a aba Diagnostics, e o Live values dele avisa que o firmware não
-consegue informar o estado dele). Veja [`src/lights/demo/README.md`](src/lights/demo/README.md).
+consegue informar o estado dele, e a caixa **Follow keyboard** dele fica desabilitada).
+Veja [`src/lights/demo/README.md`](src/lights/demo/README.md).
 
 Para executar os testes:
 
@@ -605,6 +718,9 @@ Adicionados: `src/keyboard/bindingDisplay.tsx`, `src/keyboard/BindingLabel.tsx`,
 `src/keyboard/KeyDragGhost.tsx` (arrastar teclas, também entre camadas),
 `src/keyboard/shiftLegend.ts`, `src/keyboard/shiftLegend.test.ts`,
 `src/keyboard/ShiftLayoutContext.ts` (o que as teclas imprimem com Shift pressionado),
+`src/keyboard/keyFace.ts`, `src/keyboard/keyFace.test.ts` (as faces de Shift, Enter e Space),
+`src/keyboard/followLayer.ts`, `src/keyboard/followLayer.test.ts`,
+`src/keyboard/useActiveLayer.ts` (acompanhar a camada do teclado),
 `src/lights/` (a aba Lights, o teclado de demonstração e seus testes),
 `src/display/` (a aba Display, o histórico das mudanças dela e seus testes; o teclado de demonstração responde às requisições dela),
 `src/oled/` (a aba OLED, os sprites dela e seus testes; o teclado de demonstração tem as configurações do layout),

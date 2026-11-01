@@ -24,7 +24,7 @@ shows the full description (for example `Bluetooth: Select Profile 2`).
 
 | Behavior, as named by the firmware | What is drawn |
 |---|---|
-| `Key Press` | Unchanged: the key label. Media keys (volume, mute, brightness, play/pause) are drawn as icons |
+| `Key Press` | The key label, as upstream draws it, with a few differences (below): what it prints with Shift held above it, `Enter` for Return, `Space` for the spacebar and an arrow for `Shift`. Media keys (volume, mute, brightness, play/pause) are drawn as icons |
 | `Momentary Layer`, `Toggle Layer`, `To Layer`, `Sticky Layer` | An icon and the layer name |
 | `Layer-Tap` | The layer icon, the layer name and the tap key |
 | `Mod-Tap` | The tap key, then the hold modifier |
@@ -58,17 +58,20 @@ Other changes:
 - Storybook stories with the keymap of a Corne, one per layer (`Keyboard/Keymap (Corne)`).
 - The confirmation of **Restore Stock Settings** lists what it puts back: the keymap, and
   the light colors and the screen settings when the firmware has them.
-- In the Keys view a key can be dragged to another layer (below), and each key can show
-  what it prints with Shift held, in parentheses beside its label (below).
+- In the Keys view a key can be dragged to another layer (below), the screen can follow the
+  layer that is active on the keyboard (below), each key can show what it prints with Shift
+  held, above its label and dimmed (below), and the Shift keys, Return and the spacebar are
+  drawn as `Shift` under an up arrow, `Enter` and `Space` (below).
 
 What does not change: the editing of the keymap, and what the app reads from or writes to
-the keyboard for it. The icons and the legend of Shift only affect how keys are drawn, and
-the hosting only how the app is served; dragging keys (below), also from one layer to
-another, writes with the same request as the binding picker; the Lights and
-Display tabs (further below) add requests of their own, and the OLED tab uses the ones of
-the Display tab. The Diagnostics tab, and the live values of the OLED tab, only read, with
-two requests of their own; the Files tab writes with requests the other tabs already use.
-The tabs are used only when the firmware has what they edit or read.
+the keyboard for it. The icons, the legend of Shift and the faces of Shift, Enter and Space
+only affect how keys are drawn, and the hosting only how the app is served; dragging keys
+(below), also from one layer to another, writes with the same request as the binding
+picker; the Lights and Display tabs (further below) add requests of their own, and the OLED
+tab uses the ones of the Display tab. The Diagnostics tab, the live values of the OLED tab
+and the following of the keyboard's layer in the Keys view only read, with two requests of
+their own; the Files tab writes with requests the other tabs already use. The tabs are used
+only when the firmware has what they edit or read.
 
 ## Moving keys by dragging (the Keys view)
 
@@ -87,6 +90,12 @@ another one:
   follows the pointer reads `Hold to open this layer` while it waits. Once the layer is
   open the tag says where the key comes from: `Swap with QWERTY` or `Copy from QWERTY`.
   Passing over the list without stopping opens nothing.
+- **To another layer, with the keyboard.** With **Follow keyboard** on (see [Following the
+  layer of the keyboard](#following-the-layer-of-the-keyboard-the-keys-view)), hold the key
+  of another layer on the keyboard while you drag: the screen shows the keys of that layer,
+  the drag goes on over them and letting go of the mouse button over a key drops it there,
+  as above. The pointer need not move: the keys under it are looked at again when the layer
+  changes. The hint at the bottom of the view says so while the keyboard answers.
 - While you drag, the key you pressed is dimmed with a dashed outline, a smaller copy of
   it follows the pointer with a tag (`Swap` or `Copy`), and the key under the pointer is
   highlighted. The tag reads `drop on a key` while the pointer is over no key. The copy
@@ -111,8 +120,9 @@ The rules (what a drop does, between two layers too, how a drag starts, ends and
 cancelled, which layer opens and when the first one comes back) are plain functions in
 [`src/keyboard/keyDrag.ts`](src/keyboard/keyDrag.ts), covered by
 [`src/keyboard/keyDrag.test.ts`](src/keyboard/keyDrag.test.ts).
-[`src/keyboard/useKeyDrag.ts`](src/keyboard/useKeyDrag.ts) listens to the pointer and finds
-the layer under it, [`src/keyboard/LayerPicker.tsx`](src/keyboard/LayerPicker.tsx) marks
+[`src/keyboard/useKeyDrag.ts`](src/keyboard/useKeyDrag.ts) listens to the pointer, finds
+the layer under it and looks again at what is under a pointer that stays still when
+another layer comes to the screen, [`src/keyboard/LayerPicker.tsx`](src/keyboard/LayerPicker.tsx) marks
 that layer, [`src/keyboard/KeyDragGhost.tsx`](src/keyboard/KeyDragGhost.tsx) draws what
 follows the pointer, and the timer that opens the layer and the edit itself (`doDropKey`,
 `writeEdits`) are in [`src/keyboard/Keyboard.tsx`](src/keyboard/Keyboard.tsx).
@@ -127,27 +137,75 @@ stopping. This was seen on the demo keyboard after copying a key onto another wi
 held, and it is gone with this change. In this fork the picker tells the keyboard only when
 the user changes something in its own controls.
 
+## Following the layer of the keyboard (the Keys view)
+
+Press the key of a layer on the keyboard (a `&mo`, a `&lt`, a `&to`, ...) and the **Keys**
+view shows the keys of that layer; let go of it and the view goes back to the layer the
+keyboard is on. It follows the highest layer that is active, the one `get_live_status`
+reports. The checkbox **Follow keyboard**, at the top right of the view, turns it off; it
+is on by default and the browser remembers the choice (`followKeyboardLayer`).
+
+- **The layer of the keyboard is marked** in the list at the left with a small keyboard
+  icon (`Active on the keyboard`), whichever layer the view shows.
+- **The view goes to a layer when the keyboard changes to it**, not at every answer: a
+  layer you choose in the list stays on the screen until the keyboard changes layer again
+  (a visit to another tab does not change that). Turning the box off and on again goes to
+  the layer the keyboard is on at once.
+- **A key being dragged goes on being dragged.** Hold the layer key on the keyboard and the
+  drag goes on over the keys of that layer, also with the pointer standing still (the keys
+  under it are looked at again when the layer changes); let go of the mouse button over a
+  key and the drop is there, a swap or a copy between the two layers, as with a layer
+  opened from the list (see [Moving keys by
+  dragging](#moving-keys-by-dragging-the-keys-view)). The hint at the bottom of the view
+  says so while the keyboard answers.
+- **How it asks.** It uses the request `get_live_status` (see [What the keyboard is
+  doing](#what-the-keyboard-is-doing-live-values-and-the-diagnostics-tab)) and reads only
+  the layer, every 200 ms (`FOLLOW_POLL_MS`), one request at a time, and only while the
+  Keys view is the one on the screen, the box is checked, the keyboard is connected and
+  unlocked and the page is shown. Those requests restart the idle timer of the lock of ZMK
+  Studio, so **while the Keys view follows the keyboard, the keyboard does not lock
+  itself** (a firmware with `CONFIG_ZMK_STUDIO_LOCKING`); uncheck the box to let it. After
+  three failures in a row it stops asking and the tooltip of the box says so; turning the
+  box off and on tries again.
+- **Without the request.** With a firmware that has no `get_live_status` the box is
+  disabled and faded, its tooltip says that the firmware cannot tell which layer is
+  active, and the view works as before. The demo keyboard changes layer by a clock (every
+  four seconds, among the first three layers); **Demo keyboard (no live status)** does not
+  answer.
+
+The rules (which answer the view goes to, and how the saved choice is read) are plain
+functions in [`src/keyboard/followLayer.ts`](src/keyboard/followLayer.ts), covered by
+[`src/keyboard/followLayer.test.ts`](src/keyboard/followLayer.test.ts).
+[`src/keyboard/useActiveLayer.ts`](src/keyboard/useActiveLayer.ts) carries a
+`LiveStatusPoller` (see [`src/live/README.md`](src/live/README.md)) into React,
+[`src/keyboard/Keyboard.tsx`](src/keyboard/Keyboard.tsx) holds the box and chooses the
+layer, and [`src/keyboard/LayerPicker.tsx`](src/keyboard/LayerPicker.tsx) draws the mark.
+
 ## What the keys print with Shift held (the Keys view)
 
-A key can show, in parentheses after its label, what it prints when Shift is held: the `1`
-of the number row is drawn as `1 (!)`. The menu at the top right of the keyboard, next to
-the zoom, chooses the keyboard layout the legend is for, and the browser remembers the
-choice:
+A key can show, above its label, smaller and dimmer, what it prints when Shift is held, as
+a keycap does: the `1` of the number row is drawn with a `!` above it. The menu at the top
+right of the keyboard, next to the zoom, chooses the keyboard layout the legend is for, and
+the browser remembers the choice:
 
 | Choice | What the keys show |
 |---|---|
-| **Shift: US** (the default) | What a US layout prints with Shift: `1 (!)`, `2 (@)`, and the same for the rest of the number row, the signs and the brackets |
-| **Shift: ABNT2** | What the Brazilian ABNT2 layout prints. The label of a key that prints something else on this layout changes too: the key of the US `;` is drawn as `Ç`, the one of the US `[` as `´ (`)` and the one of the US `'` as `~ (^)` |
+| **Shift: US** (the default) | What a US layout prints with Shift, above the label: `!` above `1`, `@` above `2`, and the same for the rest of the number row, the signs and the brackets |
+| **Shift: ABNT2** | What the Brazilian ABNT2 layout prints. The label of a key that prints something else on this layout changes too: the key of the US `;` is drawn as `Ç`, the one of the US `[` as `´` with a `` ` `` above, and the one of the US `'` as `~` with a `^` above |
 | **Shift: off** | Only the label of each key, as before |
 
 - The letters have no legend: they are already drawn as capitals.
 - A key that sends Shift with its own code (`LS(N1)`, which types `!`) is drawn as what it
-  prints, `!`, with no parentheses. The other implicit modifiers (Ctrl, Alt, GUI) change
+  prints, `!`, with nothing above it. The other implicit modifiers (Ctrl, Alt, GUI) change
   what the key does, not what it prints: they add no legend.
-- The legend is drawn for every key of the keyboard that the app draws as a label: a key
-  press, the tap key of a Mod-Tap or a Layer-Tap, and the key of a sticky key or of a key
-  toggle. Layers, Bluetooth, lights, media keys and the other behaviors are drawn as
-  before.
+- The legend is drawn above the label of a key press that stands alone on its key. The tap
+  key of a Mod-Tap or a Layer-Tap, and the key of a sticky key or of a key toggle, share
+  their face with an icon or another word, so there is no room above them: they show the
+  label only (which ABNT2 can change, as above). Layers, Bluetooth, lights, media keys and
+  the other behaviors are drawn as before.
+- The bracket keys: the label the app gives to the usages of `[` and `]` is `{` and `}`
+  (`src/hid-usage-name-overrides.json`), so the US table draws those two keys as what they
+  print, `[` and `]`, with `{` and `}` above, and no key shows the same sign twice.
 - It is only a drawing. The keyboard sends the same key code with any layout: the character
   is chosen by the layout of the computer, and the menu says which one the legend is for.
   The tables of the two layouts (by HID usage) are in
@@ -156,6 +214,29 @@ choice:
   [`src/keyboard/HidUsageLabel.tsx`](src/keyboard/HidUsageLabel.tsx) draws the label with
   the legend, and [`src/keyboard/ShiftLayoutContext.ts`](src/keyboard/ShiftLayoutContext.ts)
   brings the choice to it.
+
+## The faces of Shift, Enter and Space (the Keys view)
+
+Three keys are drawn with words of their own. It only changes how they look: the keyboard
+sends the same codes, and the names that **Export led_colors.dtsi** writes as comments
+(`RET`, `SPACE`, `SHFT`) are the ones they always were, because they come from the shared
+labels of `src/hid-usage-name-overrides.json`, which this change does not touch.
+
+| Key | Drawn before | Drawn now |
+|---|---|---|
+| Left Shift and Right Shift | `Shft` | An up arrow (an icon) with `Shift` under it; the tooltip of the face says `Left Shift` or `Right Shift` |
+| Return | `Ret` | `Enter` |
+| Spacebar | `␣`, a box symbol | `Space` |
+
+- Only a Shift key that stands alone on its key gets the arrow. A Shift that shares its
+  face with something else (a sticky key, the hold of a Mod-Tap) is written `Shift`, with
+  no arrow.
+- The keypad Enter is another key than Return and keeps its label.
+- The words, and what counts as a Shift key, are in
+  [`src/keyboard/keyFace.ts`](src/keyboard/keyFace.ts), covered by
+  [`src/keyboard/keyFace.test.ts`](src/keyboard/keyFace.test.ts);
+  [`src/keyboard/BindingLabel.tsx`](src/keyboard/BindingLabel.tsx) draws the arrow and
+  [`src/keyboard/HidUsageLabel.tsx`](src/keyboard/HidUsageLabel.tsx) the other words.
 
 ## Light colors (the Lights tab)
 
@@ -298,7 +379,7 @@ shows, the position of the picture), the ids, the files and how the sprites are 
 ## What the keyboard is doing (Live values and the Diagnostics tab)
 
 With a firmware that answers two read-only requests, the app can ask the left half (the
-one connected to it) what it is doing and what firmware it runs. Two things use them:
+one connected to it) what it is doing and what firmware it runs. Three things use them:
 
 - **Live values**, a switch in the OLED tab. With it on, the drawings of the screens follow
   the keyboard instead of being samples: the battery of each half (the right one is what
@@ -317,6 +398,9 @@ one connected to it) what it is doing and what firmware it runs. Two things use 
   keyboard has been on). **Copy the report** puts all of it in the clipboard as plain
   text, to paste into a message or an issue. The tab only reads: nothing in it changes the
   keyboard.
+- **Follow keyboard**, in the Keys view, which reads only the layer, to show the keys of
+  the layer that is active on the keyboard (see [Following the layer of the
+  keyboard](#following-the-layer-of-the-keyboard-the-keys-view)).
 
 The numbers are the **left** half's. The right half runs a firmware of its own, which ZMK
 Studio cannot ask, so from the app only its battery and its connection are known. The flash
@@ -324,13 +408,14 @@ and the RAM are the figures the build prints (`FLASH` and `RAM`), read by the fi
 the symbols of the linker, so they can be compared with the log of the CI.
 
 **How it asks.** The keyboard has no notification for this, so the app asks, one request at
-a time (the next one half a second, or a second in the Diagnostics tab, after the answer
-to the one before). It asks only while the tab that needs it is open, the
-keyboard is connected and unlocked, and **the page is shown**: a hidden browser tab asks
-nothing. After three failures in a row it stops and says so; with Live values, turning the
-switch off and on tries again. Every request restarts the idle timer of the lock of ZMK
-Studio (a firmware with `CONFIG_ZMK_STUDIO_LOCKING`), so **while Live values is on, or the
-Diagnostics tab is open, the keyboard does not lock itself**.
+a time (the next one half a second, or a second in the Diagnostics tab, or 200 ms in the
+Keys view, after the answer to the one before). It asks only while the tab that needs it
+is open, the keyboard is connected and unlocked, and **the page is shown**: a hidden
+browser tab asks nothing. After three failures in a row it stops and says so; with Live
+values, turning the switch off and on tries again. Every request restarts the idle timer
+of the lock of ZMK Studio (a firmware with `CONFIG_ZMK_STUDIO_LOCKING`), so **while Live
+values is on, the Diagnostics tab is open, or the Keys view follows the keyboard, the
+keyboard does not lock itself**.
 
 It needs the [zmk-rgb-matrix](https://github.com/lenerdz/zmk-rgb-matrix) module of
 lenerdz (branch `corne-fixes`) with `CONFIG_KEYPAW_DEVICE_STATUS_STUDIO` (on by default
@@ -492,11 +577,33 @@ written. The rules are covered by `npm test`. It has **not been tried on a real 
 and touch input has not been tried on any device.
 
 The legend of Shift was tried in a browser against the demo keyboard with the three
-choices: `1 (!)` and the rest of the number row with **US**, the keys that print something
-else with **ABNT2** (the label of the keys of the US `;`, `[` and `'` changed) and the
-labels as before with **off**; the choice was kept when the page was loaded again. The
-tables of the two layouts were written from the layouts and the names of the HID usages,
-and they were **not compared with a physical keyboard**, nor tried on a real one.
+choices: with **US**, the `!` above the `1` and the same for the rest of the number row,
+the signs and the brackets (`{` above `[` and `}` above `]`, with no key showing the same
+sign twice), with **ABNT2** the keys that print something else (the label of the keys of
+the US `;`, `[` and `'` changed) and with **off** the labels as before; the choice was kept
+when the page was loaded again. The tables of the two layouts were written from the
+layouts and the names of the HID usages, and they were **not compared with a physical
+keyboard**, nor tried on a real one.
+
+The faces of Shift (the arrow with its name under it), Enter and Space were checked in the
+same browser, on the QWERTY and the FN1 layers of the demo keyboard; the tests check that
+the names that the export writes to `led_colors.dtsi` are still `RET`, `SPACE` and `SHFT`.
+
+Following the layer of the keyboard was tried in a browser against the demo keyboard,
+through the same framing and message encoding as with a real keyboard (a headless
+Microsoft Edge driven through the DevTools protocol, as for the live values). With the box
+checked the view went through the layers as the demo keyboard changed them (QWERTY, FN1,
+RAISE and back) and the list marked the layer of the keyboard each time; unchecked, it
+stayed where it was and the mark went away, and the choice was kept when the page was
+loaded again; checked again, it went to the layer of the keyboard at once. It asked about
+ten times in two seconds (every 200 ms) with the Keys view open and not at all with the
+Lights view open, and with **Demo keyboard (no live status)** the box was disabled and
+faded. A key picked up on one layer and held while the demo keyboard changed layer was
+dropped on the new layer, and the two bindings were swapped across the layers. The rules
+are covered by `npm test`. It has **not been tried on a real keyboard**: how quickly the
+view follows a layer key over USB, what the asking does to the lock timer of a firmware
+that has it, and whether the layer that `get_live_status` reports is the one the keyboard
+really has active are unconfirmed.
 
 ## Using it
 
@@ -508,8 +615,10 @@ and they were **not compared with a physical keyboard**, nor tried on a real one
    central one), choose **USB**, and unlock it with the key bound to `&studio_unlock`.
 4. In **Keys**, click a key to edit it, or drag it onto another key to swap the two
    (hold Ctrl or Alt to copy). To drop it on another layer, hold it over that layer in the
-   list for a moment: the layer opens. The menu at the top right chooses whether the keys
-   show what they print with Shift held (US, ABNT2 or off).
+   list for a moment: the layer opens. With **Follow keyboard** checked, pressing the key of
+   a layer on the keyboard shows that layer too, also while you drag. The menu at the top
+   right chooses whether the keys show, above their label, what they print with Shift held
+   (US, ABNT2 or off).
 5. If the firmware has editable light maps, choose **Lights** in the header to edit the
    colors.
 6. If the firmware has display settings, choose **Display** to set the screens, when the
@@ -546,7 +655,8 @@ run dev`; on the published app, add `?demo` to the address
 **Demo keyboard (no display settings)** and **Demo keyboard (no live status)** answer like
 a firmware without them (the second has neither the Display nor the OLED tab, because the
 layout of the screens is made of display settings; the third has no Diagnostics tab, and
-its Live values say that the firmware cannot tell its state). See
+its Live values say that the firmware cannot tell its state, and its **Follow keyboard**
+box is disabled). See
 [`src/lights/demo/README.md`](src/lights/demo/README.md).
 
 To run the tests:
@@ -591,6 +701,9 @@ Added: `src/keyboard/bindingDisplay.tsx`, `src/keyboard/BindingLabel.tsx`,
 `src/keyboard/KeyDragGhost.tsx` (dragging keys, between layers too),
 `src/keyboard/shiftLegend.ts`, `src/keyboard/shiftLegend.test.ts`,
 `src/keyboard/ShiftLayoutContext.ts` (what the keys print with Shift held),
+`src/keyboard/keyFace.ts`, `src/keyboard/keyFace.test.ts` (the faces of Shift, Enter and Space),
+`src/keyboard/followLayer.ts`, `src/keyboard/followLayer.test.ts`,
+`src/keyboard/useActiveLayer.ts` (following the layer of the keyboard),
 `src/lights/` (the Lights tab, the demo keyboard and their tests),
 `src/display/` (the Display tab, the history of its changes and their tests; the demo keyboard answers its requests),
 `src/oled/` (the OLED tab, its sprites and its tests; the demo keyboard has the settings of the layout),
