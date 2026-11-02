@@ -62,10 +62,13 @@ Other changes:
   layer that is active on the keyboard (below), each key can show what it prints with Shift
   held, above its label and dimmed (below), and the Shift keys, Return and the spacebar are
   drawn as `Shift` under an up arrow, `Enter` and `Space` (below).
+- The list of the **Key** box opens at the key that is set, in the middle of the list,
+  instead of at the top of some hundreds of keys (below).
 
 What does not change: the editing of the keymap, and what the app reads from or writes to
 the keyboard for it. The icons, the legend of Shift and the faces of Shift, Enter and Space
-only affect how keys are drawn, and the hosting only how the app is served; dragging keys
+only affect how keys are drawn, the opening of the list of keys only where that list is
+scrolled to, and the hosting only how the app is served; dragging keys
 (below), also from one layer to another, writes with the same request as the binding
 picker; the Lights and Display tabs (further below) add requests of their own, and the OLED
 tab uses the ones of the Display tab. The Diagnostics tab, the live values of the OLED tab
@@ -237,6 +240,30 @@ labels of `src/hid-usage-name-overrides.json`, which this change does not touch.
   [`src/keyboard/keyFace.test.ts`](src/keyboard/keyFace.test.ts);
   [`src/keyboard/BindingLabel.tsx`](src/keyboard/BindingLabel.tsx) draws the arrow and
   [`src/keyboard/HidUsageLabel.tsx`](src/keyboard/HidUsageLabel.tsx) the other words.
+
+## The list of keys opens at the key that is set (the Keys view)
+
+The **Key** box under the keyboard, in the Keys view, opens a list of the keys the firmware
+accepts (644 on the demo keyboard), in two groups: Keyboard/Keypad and Consumer. Upstream
+always opens it at the top, so with **Left GUI** set the list shows `Keyboard A` and the key
+that is set is thousands of pixels down, out of sight. This fork opens the list scrolled to
+the key that is set, in the middle of the list, with its neighbors above and below.
+
+- **Why it did not before.** React Aria, the library that draws the list, brings the key
+  that is set into view only when the list is opened with the keyboard (the down arrow);
+  opened with a click on the button, the list stayed at the top. The fork does the scroll
+  itself, each time the list opens (`UsageList` in
+  [`src/behaviors/HidUsagePicker.tsx`](src/behaviors/HidUsagePicker.tsx)).
+- **When the list stays at the top.** When it is opened by typing in the box (it shows the
+  keys that match, from the first one; typing while the list is open does the same) and
+  when no key is set. The first and the last keys of the list are not centered, because the
+  list cannot scroll that far.
+- **Where it applies.** The box of a key (a HID usage), which the behaviors that take a key
+  as a parameter use (`Key Press`, `Mod-Tap`, `Layer-Tap`, ...). The lists of constants and
+  of layers are the browser's own `<select>`, which already opens on the value that is set.
+- How far to scroll so that the key is in the middle, wherever the list is scrolled to now,
+  is a plain function in [`src/behaviors/listScroll.ts`](src/behaviors/listScroll.ts),
+  covered by [`src/behaviors/listScroll.test.ts`](src/behaviors/listScroll.test.ts).
 
 ## Light colors (the Lights tab)
 
@@ -605,6 +632,21 @@ view follows a layer key over USB, what the asking does to the lock timer of a f
 that has it, and whether the layer that `get_live_status` reports is the one the keyboard
 really has active are unconfirmed.
 
+The list of keys opening at the key that is set was tried in a browser against the demo
+keyboard (the one embedded in an editor and a headless Microsoft Edge driven through the
+DevTools protocol), with the events that a mouse sends (a press with pressure and a click
+with a count of one) on the button of the **Key** box. With **Left GUI** set, the version
+that was published before this change opened the list at the top, with the key 5,167 px
+below the middle of the view and out of sight; this one opened it with the key in the
+middle, and also with a media key of the second group (Power, Volume Increment and
+Play/Pause).
+Picking another key and opening the list again went to the new key; closing with Esc and
+opening again, and opening with the down arrow, went to the key that is set; opening by
+typing showed the keys that match, from the first one, and typing while the list was open
+took it back to the top; a key press with no key set opened the list at the top. The
+arithmetic is covered by `npm test`. It has **not been tried with a physical mouse or with
+touch input**: the events above are the ones a mouse sends, not a mouse.
+
 ## Using it
 
 1. Open the page in a browser that supports WebSerial (Chrome, Edge or another
@@ -613,7 +655,8 @@ really has active are unconfirmed.
    [ZMK Studio documentation](https://zmk.dev/docs/features/studio).
 3. Connect the keyboard over USB (on a split keyboard, the half that runs Studio, the
    central one), choose **USB**, and unlock it with the key bound to `&studio_unlock`.
-4. In **Keys**, click a key to edit it, or drag it onto another key to swap the two
+4. In **Keys**, click a key to edit it (the list of its **Key** box opens at the key that
+   is set), or drag it onto another key to swap the two
    (hold Ctrl or Alt to copy). To drop it on another layer, hold it over that layer in the
    list for a moment: the layer opens. With **Follow keyboard** checked, pressing the key of
    a layer on the keyboard shows that layer too, also while you drag. The menu at the top
@@ -704,6 +747,7 @@ Added: `src/keyboard/bindingDisplay.tsx`, `src/keyboard/BindingLabel.tsx`,
 `src/keyboard/keyFace.ts`, `src/keyboard/keyFace.test.ts` (the faces of Shift, Enter and Space),
 `src/keyboard/followLayer.ts`, `src/keyboard/followLayer.test.ts`,
 `src/keyboard/useActiveLayer.ts` (following the layer of the keyboard),
+`src/behaviors/listScroll.ts`, `src/behaviors/listScroll.test.ts` (the list of keys opening at the key that is set),
 `src/lights/` (the Lights tab, the demo keyboard and their tests),
 `src/display/` (the Display tab, the history of its changes and their tests; the demo keyboard answers its requests),
 `src/oled/` (the OLED tab, its sprites and its tests; the demo keyboard has the settings of the layout),
@@ -719,6 +763,7 @@ Modified: `README.md` (replaced), `NOTICE`, `.gitignore`, `.prettierignore`, `in
 `src/keyboard/Keymap.tsx`, `src/keyboard/Key.tsx`, `src/keyboard/Keyboard.tsx`,
 `src/keyboard/PhysicalLayout.tsx`, `src/keyboard/LayerPicker.tsx`,
 `src/keyboard/HidUsageLabel.tsx`, `src/behaviors/BehaviorBindingPicker.tsx`,
+`src/behaviors/HidUsagePicker.tsx`,
 `src/hid-usage-name-overrides.json`, `src/App.tsx`,
 `src/AppFooter.tsx`, `src/AppHeader.tsx`, `src/ConnectModal.tsx`, `src/DownloadPage.tsx`,
 `src/rpc/logging.ts`, `src/undoRedo.ts`.

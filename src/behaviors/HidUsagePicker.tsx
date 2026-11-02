@@ -1,9 +1,13 @@
+// Modified by the lenerdz/zmk-studio fork: the list of keys opens scrolled to the key
+// that is set, in the middle of the list, instead of at its top (see UsageList below
+// and ./listScroll.ts).
 import {
   Button,
   Checkbox,
   CheckboxGroup,
   Collection,
   ComboBox,
+  ComboBoxStateContext,
   Header,
   Input,
   Key,
@@ -17,8 +21,15 @@ import {
   hid_usage_from_page_and_id,
   hid_usage_page_get_ids,
 } from "../hid-usages";
-import { useCallback, useMemo } from "react";
+import {
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react";
 import { ChevronDown } from "lucide-react";
+import { scrollSelectedToCenter } from "./listScroll";
 
 export interface HidUsagePage {
   id: number;
@@ -65,6 +76,53 @@ const UsageSection = ({ id, min, max }: UsageSectionProps) => {
         )}
       </Collection>
     </Section>
+  );
+};
+
+interface UsageListProps {
+  usagePages: HidUsagePage[];
+  // True while the list is open because the user typed in the box (see below).
+  openedByTyping: { current: boolean };
+}
+
+// The list of keys. It is in the page only while it is open, so each time it opens it
+// is built again and the first effect below runs.
+//
+// React Aria scrolls to the key that is set only when the list is opened with the
+// keyboard (Arrow Down). Opened with the mouse, the list stayed at its top, and the key
+// that is set was one among six hundred, out of sight. So it is brought to the middle
+// here, unless the list was opened by typing: then the keys that match what was typed
+// are shown from the top.
+const UsageList = ({ usagePages, openedByTyping }: UsageListProps) => {
+  const list = useRef<HTMLDivElement>(null);
+  const typed = useContext(ComboBoxStateContext)?.inputValue;
+  const lastTyped = useRef(typed);
+
+  useLayoutEffect(() => {
+    if (list.current && !openedByTyping.current) {
+      scrollSelectedToCenter(list.current);
+    }
+  }, [openedByTyping]);
+
+  // Typing while the list is open filters it: show the matches from the top again.
+  useLayoutEffect(() => {
+    if (typed !== lastTyped.current) {
+      lastTyped.current = typed;
+      if (list.current) {
+        list.current.scrollTop = 0;
+      }
+    }
+  }, [typed]);
+
+  return (
+    <ListBox
+      ref={list}
+      items={usagePages}
+      className="block max-h-[30vh] min-h-[unset] overflow-auto p-2"
+      selectionMode="single"
+    >
+      {({ id, min, max }) => <UsageSection id={id} min={min} max={max} />}
+    </ListBox>
   );
 };
 
@@ -134,6 +192,16 @@ export const HidUsagePicker = ({
     [onValueChanged, mods]
   );
 
+  // How the list was opened. The combo box says it when it opens the list: "manual" for
+  // the button and the arrow keys, "input" for typing. The list scrolls to the key that
+  // is set only in the first case (see UsageList).
+  const openedByTyping = useRef(false);
+  const openChanged = useCallback((isOpen: boolean, trigger?: string) => {
+    if (isOpen) {
+      openedByTyping.current = trigger === "input";
+    }
+  }, []);
+
   const modifiersChanged = useCallback(
     (m: string[]) => {
       if (!value) {
@@ -153,6 +221,7 @@ export const HidUsagePicker = ({
       <ComboBox
         selectedKey={value ? mask_mods(value) : null}
         onSelectionChange={selectionChanged}
+        onOpenChange={openChanged}
         aria-labelledby="hid-usage-picker"
       >
         <div className="flex">
@@ -162,13 +231,7 @@ export const HidUsagePicker = ({
           </Button>
         </div>
         <Popover className="w-[var(--trigger-width)] max-h-4 shadow-md text-base-content rounded border-base-content bg-base-100">
-          <ListBox
-            items={usagePages}
-            className="block max-h-[30vh] min-h-[unset] overflow-auto p-2"
-            selectionMode="single"
-          >
-            {({ id, min, max }) => <UsageSection id={id} min={min} max={max} />}
-          </ListBox>
+          <UsageList usagePages={usagePages} openedByTyping={openedByTyping} />
         </Popover>
       </ComboBox>
       <CheckboxGroup

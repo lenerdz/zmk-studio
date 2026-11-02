@@ -65,10 +65,13 @@ Outras mudanças:
   imprime com Shift pressionado, acima do rótulo e esmaecido (abaixo), e as teclas Shift, o
   Return e a barra de espaço são desenhados como `Shift` sob uma seta para cima, `Enter` e
   `Space` (abaixo).
+- A lista da caixa **Key** abre na tecla que está definida, no meio da lista, em vez de no
+  topo de algumas centenas de teclas (abaixo).
 
 O que não muda: a edição do keymap e o que o app lê do teclado ou grava nele para isso.
 Os ícones, a legenda do Shift e as faces de Shift, Enter e Space afetam apenas como as
-teclas são desenhadas, e a hospedagem apenas como o app é servido; arrastar teclas
+teclas são desenhadas, a abertura da lista de teclas apenas até onde essa lista é rolada, e
+a hospedagem apenas como o app é servido; arrastar teclas
 (abaixo), inclusive de uma camada para outra, grava com a mesma requisição do seletor de
 binding; as abas Lights e Display (mais abaixo) acrescentam requisições próprias, e a aba
 OLED usa as da aba Display. A aba Diagnostics, os valores ao vivo da aba OLED e o
@@ -242,6 +245,31 @@ compartilhados de `src/hid-usage-name-overrides.json`, que esta mudança não to
   [`src/keyboard/keyFace.test.ts`](src/keyboard/keyFace.test.ts);
   [`src/keyboard/BindingLabel.tsx`](src/keyboard/BindingLabel.tsx) desenha a seta e
   [`src/keyboard/HidUsageLabel.tsx`](src/keyboard/HidUsageLabel.tsx) as outras palavras.
+
+## A lista de teclas abre na tecla definida (a visão Keys)
+
+A caixa **Key** sob o teclado, na visão Keys, abre uma lista das teclas que o firmware
+aceita (644 no teclado de demonstração), em dois grupos: Keyboard/Keypad e Consumer. O
+upstream sempre a abre no topo; assim, com **Left GUI** definida, a lista mostra
+`Keyboard A` e a tecla definida está milhares de pixels abaixo, fora de vista. Este fork
+abre a lista rolada até a tecla definida, no meio da lista, com as vizinhas acima e abaixo.
+
+- **Por que não era assim.** O React Aria, a biblioteca que desenha a lista, só traz a tecla
+  definida para a vista quando a lista é aberta pelo teclado (a seta para baixo); aberta
+  com um clique no botão, a lista ficava no topo. O fork faz a rolagem ele mesmo, cada vez
+  que a lista abre (`UsageList` em
+  [`src/behaviors/HidUsagePicker.tsx`](src/behaviors/HidUsagePicker.tsx)).
+- **Quando a lista fica no topo.** Quando ela é aberta digitando na caixa (mostra as teclas
+  que combinam, a partir da primeira; digitar com a lista aberta faz o mesmo) e quando
+  nenhuma tecla está definida. A primeira e a última tecla da lista não ficam no meio,
+  porque a lista não consegue rolar tão longe.
+- **Onde vale.** A caixa de uma tecla (uma HID usage), que os comportamentos que recebem
+  uma tecla como parâmetro usam (`Key Press`, `Mod-Tap`, `Layer-Tap`, ...). As listas de
+  constantes e de camadas são o `<select>` do próprio navegador, que já abre no valor
+  definido.
+- Quanto rolar para que a tecla fique no meio, esteja a lista rolada para onde estiver
+  agora, é uma função simples em [`src/behaviors/listScroll.ts`](src/behaviors/listScroll.ts),
+  coberta por [`src/behaviors/listScroll.test.ts`](src/behaviors/listScroll.test.ts).
 
 ## Cores das luzes (a aba Lights)
 
@@ -621,6 +649,20 @@ por USB, o que as perguntas fazem ao temporizador de bloqueio de um firmware que
 se a camada que o `get_live_status` informa é a que o teclado realmente tem ativa não
 estão confirmados.
 
+A lista de teclas abrindo na tecla definida foi testada em um navegador com o teclado de
+demonstração (o embutido em um editor e um Microsoft Edge headless dirigido pelo protocolo
+DevTools), com os eventos que um mouse envia (um pressionar com pressão e um clique com
+contagem um) no botão da caixa **Key**. Com **Left GUI** definida, a versão que estava
+publicada antes desta mudança abria a lista no topo, com a tecla 5.167 px abaixo do meio da
+vista e fora de vista; esta a abriu com a tecla no meio, e também com uma tecla de mídia do
+segundo grupo (Power, Volume Increment e Play/Pause). Escolher outra tecla e abrir a lista de novo
+foi até a tecla nova; fechar com Esc e abrir de novo, e abrir com a seta para baixo, foram
+até a tecla definida; abrir digitando mostrou as teclas que combinam, a partir da primeira,
+e digitar com a lista aberta a levou de volta ao topo; um key press sem tecla definida abriu
+a lista no topo. A aritmética é coberta por `npm test`. Ela **não foi testada com um mouse
+físico nem com entrada por toque**: os eventos acima são os que um mouse envia, não um
+mouse.
+
 ## Como usar
 
 1. Abra a página em um navegador com suporte a WebSerial (Chrome, Edge ou outro
@@ -629,7 +671,8 @@ estão confirmados.
    [documentação do ZMK Studio](https://zmk.dev/docs/features/studio).
 3. Conecte o teclado por USB (em um teclado dividido, a metade que executa o Studio, a
    central), escolha **USB** e desbloqueie com a tecla associada a `&studio_unlock`.
-4. Em **Keys**, clique em uma tecla para editá-la, ou arraste-a sobre outra tecla para
+4. Em **Keys**, clique em uma tecla para editá-la (a lista da caixa **Key** dela abre na
+   tecla que está definida), ou arraste-a sobre outra tecla para
    trocar as duas (segure Ctrl ou Alt para copiar). Para soltá-la em outra camada, mantenha-a
    sobre essa camada na lista por um instante: a camada abre. Com **Follow keyboard**
    marcado, apertar no teclado a tecla de uma camada também mostra essa camada, inclusive
@@ -721,6 +764,7 @@ Adicionados: `src/keyboard/bindingDisplay.tsx`, `src/keyboard/BindingLabel.tsx`,
 `src/keyboard/keyFace.ts`, `src/keyboard/keyFace.test.ts` (as faces de Shift, Enter e Space),
 `src/keyboard/followLayer.ts`, `src/keyboard/followLayer.test.ts`,
 `src/keyboard/useActiveLayer.ts` (acompanhar a camada do teclado),
+`src/behaviors/listScroll.ts`, `src/behaviors/listScroll.test.ts` (a lista de teclas abrindo na tecla definida),
 `src/lights/` (a aba Lights, o teclado de demonstração e seus testes),
 `src/display/` (a aba Display, o histórico das mudanças dela e seus testes; o teclado de demonstração responde às requisições dela),
 `src/oled/` (a aba OLED, os sprites dela e seus testes; o teclado de demonstração tem as configurações do layout),
@@ -736,6 +780,7 @@ Modificados: `README.md` (substituído), `NOTICE`, `.gitignore`, `.prettierignor
 `src/keyboard/Keymap.tsx`, `src/keyboard/Key.tsx`, `src/keyboard/Keyboard.tsx`,
 `src/keyboard/PhysicalLayout.tsx`, `src/keyboard/LayerPicker.tsx`,
 `src/keyboard/HidUsageLabel.tsx`, `src/behaviors/BehaviorBindingPicker.tsx`,
+`src/behaviors/HidUsagePicker.tsx`,
 `src/hid-usage-name-overrides.json`, `src/App.tsx`,
 `src/AppFooter.tsx`, `src/AppHeader.tsx`, `src/ConnectModal.tsx`, `src/DownloadPage.tsx`,
 `src/rpc/logging.ts`, `src/undoRedo.ts`.
